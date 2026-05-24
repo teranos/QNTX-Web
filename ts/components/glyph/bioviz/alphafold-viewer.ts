@@ -4,35 +4,7 @@
  */
 
 import { preventDrag } from '@qntx/glyphs';
-
-let loaded = false;
-let loading: Promise<void> | null = null;
-
-function ensureMolstar(): Promise<void> {
-    if (loaded) return Promise.resolve();
-    if (loading) return loading;
-    loading = new Promise<void>((resolve, reject) => {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'https://cdn.jsdelivr.net/npm/molstar@4/build/viewer/molstar.css';
-        document.head.appendChild(link);
-
-        // Override Mol* canvas border
-        const style = document.createElement('style');
-        style.textContent = [
-            '.msp-plugin, .msp-plugin *, .msp-layout-static, .msp-viewport-canvas { border: none !important; outline: none !important; box-shadow: none !important; }',
-            '.msp-viewport-controls, .msp-highlight-info { display: none !important; }',
-        ].join('\n');
-        document.head.appendChild(style);
-
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/molstar@4/build/viewer/molstar.js';
-        script.onload = () => { loaded = true; resolve(); };
-        script.onerror = () => reject(new Error('Failed to load Mol*'));
-        document.head.appendChild(script);
-    });
-    return loading;
-}
+import { createMolstarViewer } from './molstar-loader';
 
 /**
  * Build an AlphaFold 3D structure viewer element using Mol* directly.
@@ -63,39 +35,7 @@ export function buildAlphaFoldViewer(structureId: string, _accession: string, ci
     placeholder.textContent = `Loading ${structureId}...`;
     wrapper.appendChild(placeholder);
 
-    ensureMolstar().then(async () => {
-        const molstar = (window as unknown as Record<string, unknown>).molstar as Record<string, unknown>;
-        if (!molstar) throw new Error('molstar not on window');
-
-        const Viewer = molstar.Viewer as {
-            create(el: HTMLElement, options: Record<string, unknown>): Promise<{
-                loadStructureFromUrl(url: string, format: string): Promise<void>;
-            }>;
-        };
-
-        const viewer = await Viewer.create(viewerDiv, {
-            layoutIsExpanded: false,
-            layoutShowControls: false,
-            layoutShowRemoteState: false,
-            layoutShowSequence: false,
-            layoutShowLog: false,
-            layoutShowLeftPanel: false,
-            viewportShowExpand: false,
-            viewportShowSelectionMode: false,
-            viewportShowAnimation: false,
-            viewportShowControls: false,
-        });
-
-        // Set dark background via canvas3d renderer
-        const plugin = (viewer as unknown as Record<string, unknown>).plugin as Record<string, unknown> | undefined;
-        const canvas3d = plugin?.canvas3d as { setProps(p: unknown): void } | undefined;
-        if (canvas3d) {
-            canvas3d.setProps({
-                renderer: { backgroundColor: 0x273235 },
-                camera: { helper: { axes: { name: 'off', params: {} } } },
-            });
-        }
-
+    createMolstarViewer(viewerDiv).then(async (viewer) => {
         placeholder.remove();
         await viewer.loadStructureFromUrl(cifUrl, 'mmcif');
     }).catch(() => {

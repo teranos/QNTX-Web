@@ -5,10 +5,10 @@ import { leavingFrom } from './leave';
 // no client exists, so the logger's third sink discards everything.
 
 describe('Tim', () => {
-    test('a DSN the build stamped turns the sink on, under the QNTX commit', () => {
+    test('a DSN the build stamped turns the sink on, under the QNTX-Web commit', () => {
         const going = leavingFrom({
             __SENTRY_DSN__: 'https://key@ingest.example/1',
-            __QNTX_WEB_BUILD__: { commit: 'aaa', build_time: 't', qntx: 'abc1234' },
+            __QNTX_WEB_BUILD__: { commit: 'aaa', build_time: 't', web: 'abc1234' },
         });
         expect(going).toEqual({ dsn: 'https://key@ingest.example/1', release: 'abc1234' });
     });

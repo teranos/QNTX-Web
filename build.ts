@@ -1,12 +1,12 @@
 /**
  * QNTX Web Bundle Builder
  *
- * Bundles all web assets into internal/server/dist/, which a static host
- * serves. The node serves no page.
+ * Bundles all web assets into dist/, which a static host serves and QNTX-App
+ * carries as its frontendDist. The node serves no page.
  *
  * This is sacred infrastructure code. Every line has blast radius across:
- * - Deployment (CloudFront/S3, Vercel)
- * - Developer workflow (build step in Makefile)
+ * - Deployment (CloudFront/S3)
+ * - Developer workflow (dev-server.ts rebuilds through this)
  */
 
 import { cp, mkdir, readdir, rm } from "fs/promises";
@@ -14,8 +14,12 @@ import { existsSync } from "fs";
 import { join } from "path";
 import { Database } from "bun:sqlite";
 
-const sourceDir = import.meta.dir; // web/
-const outputDir = join(sourceDir, "..", "internal", "server", "dist");
+const sourceDir = import.meta.dir;
+const outputDir = join(sourceDir, "dist");
+
+// QNTX's release builds these from its crates and attaches them; package.json
+// names the release. Developing the page needs no Rust.
+const wasmPackages = ["ats-wasm", "laye-p2p"];
 
 // Ground immediate delivery — notify active Claude sessions of build progress.
 const GROUND_DB = join(process.env.HOME ?? "", ".local", "share", "ground", "ground.db");
@@ -31,7 +35,7 @@ function groundNotify(name: string, detail: string): void {
     db.run(
       `INSERT OR IGNORE INTO attestations (id, subjects, predicates, contexts, actors, timestamp, source, attributes)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, '["qntx"]', `["immediate:${name}"]`, '["project:teranos/QNTX"]', '["make"]', ts, 'build.ts', JSON.stringify({ detail: `${detail} at ${time}`, after: 0 })]
+      [id, '["qntx-web"]', `["immediate:${name}"]`, '["project:teranos/QNTX-Web"]', '["bun"]', ts, 'build.ts', JSON.stringify({ detail: `${detail} at ${time}`, after: 0 })]
     );
     db.close();
   } catch { /* Ground unavailable — silent */ }
@@ -137,10 +141,10 @@ try {
   function resolveCommit(): string {
     const envCommit = process.env.GIT_COMMIT || process.env.GITHUB_SHA;
     if (envCommit) return envCommit;
-    return resolveQntxCommit();
+    return resolveWebCommit();
   }
   // The working tree is always the thing being compiled, whoever asked for it.
-  function resolveQntxCommit(): string {
+  function resolveWebCommit(): string {
     const proc = Bun.spawnSync(["git", "rev-parse", "HEAD"], { cwd: sourceDir });
     if (proc.exitCode === 0) {
       const out = proc.stdout.toString().trim();
@@ -149,14 +153,14 @@ try {
     return "unknown";
   }
   const buildCommit = resolveCommit();
-  const qntxCommit = resolveQntxCommit();
+  const webCommit = resolveWebCommit();
   const buildTime = new Date().toISOString();
-  console.log(`${lightPeach}Stamping web build: qntx ${qntxCommit.slice(0, 7)} via ${buildCommit.slice(0, 7)} @ ${buildTime}${reset}`);
+  console.log(`${lightPeach}Stamping web build: web ${webCommit.slice(0, 7)} via ${buildCommit.slice(0, 7)} @ ${buildTime}${reset}`);
   // commit stays first: consumers find it by cutting on the literal `commit: "`.
   updatedHtml = updatedHtml.replace(
     "</head>",
     `<script>
-        window.__QNTX_WEB_BUILD__ = { commit: "${buildCommit}", build_time: "${buildTime}", qntx: "${qntxCommit}" };
+        window.__QNTX_WEB_BUILD__ = { commit: "${buildCommit}", build_time: "${buildTime}", web: "${webCommit}" };
       </script>
       </head>`
   );
@@ -174,38 +178,31 @@ try {
   // Copy WASM files for browser IndexedDB storage
   // WASM binaries must be in /js/ alongside bundled JS (import.meta.url resolution)
   console.log(`${darkPeach}Copying WASM modules...${reset}`);
-  try {
-    const wasmSourceDir = join(sourceDir, "wasm");
-    const wasmFiles = await readdir(wasmSourceDir);
+  for (const pkg of wasmPackages) {
+    const pkgDir = join(sourceDir, "node_modules", pkg);
     let copiedCount = 0;
-
-    for (const file of wasmFiles) {
-      if (file.endsWith('.wasm')) {
-        await cp(
-          join(wasmSourceDir, file),
-          join(outputDir, "js", file)
-        );
-        copiedCount++;
+    try {
+      for (const file of await readdir(pkgDir)) {
+        if (file.endsWith('.wasm')) {
+          await cp(join(pkgDir, file), join(outputDir, "js", file));
+          copiedCount++;
+        }
       }
-    }
-
-    if (copiedCount === 0) {
+    } catch (error: unknown) {
       console.error(`\n${red}${'='.repeat(80)}${reset}`);
-      console.error(`${red}███ FATAL BUILD ERROR: No WASM files found ███${reset}`);
+      console.error(`${red}███ FATAL BUILD ERROR: Could not read ${pkgDir} ███${reset}`);
       console.error(`${red}${'='.repeat(80)}${reset}`);
-      console.error(`  Searched in: ${wasmSourceDir}`);
-      console.error(`  WASM files are required for the frontend to function`);
+      console.error(`  ${error}`);
+      console.error(`  Run: bun install`);
       console.error(`${red}${'='.repeat(80)}${reset}\n`);
       process.exit(1);
     }
-  } catch (error: unknown) {
-    const wasmSourceDir = join(sourceDir, "wasm");
-    console.error(`\n${red}${'='.repeat(80)}${reset}`);
-    console.error(`${red}███ FATAL BUILD ERROR: Could not read WASM directory ███${reset}`);
-    console.error(`${red}${'='.repeat(80)}${reset}`);
-    console.error(`  Path: ${wasmSourceDir}`);
-    console.error(`${red}${'='.repeat(80)}${reset}\n`);
-    process.exit(1);
+    if (copiedCount === 0) {
+      console.error(`\n${red}${'='.repeat(80)}${reset}`);
+      console.error(`${red}███ FATAL BUILD ERROR: No .wasm in ${pkgDir} ███${reset}`);
+      console.error(`${red}${'='.repeat(80)}${reset}\n`);
+      process.exit(1);
+    }
   }
 
   console.log(`${peach}Build complete!${reset}`);

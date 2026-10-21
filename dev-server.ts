@@ -22,8 +22,10 @@ interface AmConfig {
     };
 }
 
+// A node's am.toml says its ports. QNTX_AM_TOML names it; without that, one
+// here is read, and without that the defaults below stand.
 function readAmConfig(): AmConfig {
-    const configPath = join("..", "am.toml");
+    const configPath = process.env.QNTX_AM_TOML || "am.toml";
     if (existsSync(configPath)) {
         try {
             const tomlContent = readFileSync(configPath, "utf-8");
@@ -264,59 +266,6 @@ async function startServer() {
                 }
             }
 
-            // Hot-reload: serve plugin CSS from disk
-            if (url.pathname.startsWith("/api/") && url.pathname.endsWith(".css")) {
-                const parts = url.pathname.split("/"); // ["", "api", plugin, file.css]
-                if (parts.length === 4) {
-                    const plugin = parts[2];
-                    const cssFile = parts[3];
-                    const cssPath = join("..", "qntx-plugins", plugin, "web", cssFile);
-
-                    if (existsSync(cssPath)) {
-                        console.log(`${pink}[plugin-hot] Serving ${cssPath}${reset}`);
-                        return new Response(Bun.file(cssPath), {
-                            headers: { "Content-Type": "text/css" },
-                        });
-                    }
-                }
-            }
-
-            // Hot-reload: serve plugin module .ts source transpiled on the fly
-            // Matches /api/{plugin}/{module}.js and checks for .ts source on disk
-            if (url.pathname.startsWith("/api/") && url.pathname.endsWith(".js")) {
-                const parts = url.pathname.split("/"); // ["", "api", plugin, file.js]
-                if (parts.length === 4) {
-                    const plugin = parts[2];
-                    const jsFile = parts[3];
-                    const tsFile = jsFile.slice(0, -3) + ".ts";
-                    const tsPath = join("..", "qntx-plugins", plugin, "web", tsFile);
-
-                    if (existsSync(tsPath)) {
-                        try {
-                            const result = await Bun.build({
-                                entrypoints: [tsPath],
-                                format: "esm",
-                                target: "browser",
-                            });
-                            if (result.success && result.outputs.length > 0) {
-                                const code = await result.outputs[0].text();
-                                console.log(`${pink}[plugin-hot] Transpiled ${tsPath}${reset}`);
-                                return new Response(code, {
-                                    headers: { "Content-Type": "application/javascript" },
-                                });
-                            }
-                            console.error(`${darkPink}[plugin-hot] Build failed for ${tsPath}${reset}`);
-                            for (const log of result.logs) {
-                                console.error(`  ${log}`);
-                            }
-                        } catch (err) {
-                            console.error(`${darkPink}[plugin-hot] Error transpiling ${tsPath}:${reset}`, err);
-                        }
-                        // Fall through to backend proxy on failure
-                    }
-                }
-            }
-
             // Proxy API requests to backend
             if (isBackendPath(url.pathname)) {
                 const backendUrl = `${BACKEND_URL}${url.pathname}${url.search}`;
@@ -336,7 +285,7 @@ async function startServer() {
 
             // Serve static files from dist
             if (url.pathname === "/" || url.pathname === "") {
-                const html = await Bun.file("../internal/server/dist/index.html").text();
+                const html = await Bun.file("dist/index.html").text();
                 // A relayed node is never named to the browser: backendUrl()
                 // falls back to this origin, so the credential stays on the hop.
                 const backendScript = BACKEND.isRemote
@@ -373,7 +322,7 @@ async function startServer() {
             }
 
             // Serve other static files
-            const filePath = "../internal/server/dist" + url.pathname;
+            const filePath = "dist" + url.pathname;
             const file = Bun.file(filePath);
 
             if (await file.exists()) {

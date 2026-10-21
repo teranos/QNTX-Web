@@ -3,7 +3,9 @@
  * Pure rules only — dev-server.ts owns the sockets.
  */
 
-import openapi from "../server/openapi/openapi.json";
+// A copy of what the node serves at /openapi.json, kept here because that path
+// is behind the door and this is read before any credential is.
+import openapi from "./openapi.json";
 
 export interface Backend {
     url: string;

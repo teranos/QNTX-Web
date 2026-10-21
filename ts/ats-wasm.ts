@@ -8,7 +8,9 @@
  * across the TypeScript codebase.
  */
 
-import init, * as wasm from '../wasm/ats_wasm.js';
+// Built by QNTX's release from crates/ats-wasm and attached to it; package.json
+// names the release. Nothing here needs Rust.
+import init, * as wasm from 'ats-wasm';
 import { log, SEG } from './logger.ts';
 import { timed, timedAsync } from './wasm-metrics';
 import type { Attestation } from './generated/proto/plugin/grpc/protocol/atsstore';

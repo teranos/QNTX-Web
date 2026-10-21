@@ -4,10 +4,20 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import vectors from '../../crates/ats/testdata/spans.json';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { long, longAll, readout, relative, short, shortAll, spanBetween, spanOfMs, type Unit } from './span';
 
+// Rust is in QNTX. QNTX_SRC names a checkout; without one this parity is not checked and says so.
+const QNTX_SRC = process.env.QNTX_SRC;
+
 describe('span', () => {
+    if (!QNTX_SRC) {
+        test.skip('QNTX_SRC unset: crates/ats/testdata/spans.json is in QNTX, not here', () => {});
+        return;
+    }
+    const vectors = JSON.parse(readFileSync(join(QNTX_SRC, 'crates/ats/testdata/spans.json'), 'utf8'));
+
     test('between two moments, as Rust counts it', () => {
         for (const v of vectors.between) {
             const span = spanBetween(Date.parse(v.from), Date.parse(v.to));

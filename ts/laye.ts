@@ -1,4 +1,6 @@
-import init, * as laye from '../wasm/laye_p2p.js';
+// Built by QNTX's release from crates/laye-p2p and attached to it; package.json
+// names the release. Nothing here needs Rust.
+import init, * as laye from 'laye-p2p';
 import { log, SEG } from './logger.ts';
 import { apiFetch } from './client';
 import { timed, timedAsync } from './wasm-metrics';

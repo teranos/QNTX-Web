@@ -59,7 +59,9 @@ Browser `console.*` and `log.*` calls are forwarded to `tmp/qntx-{port}.log` (pr
 
 ## Build
 
-`build.ts` bundles into `internal/server/dist/` for Go embedding. Entry point: `ts/main.ts`. WASM `.wasm` files are copied to `dist/js/` (import.meta.url resolution). Build fails if no `.wasm` files found.
+`build.ts` bundles into `dist/`, which a static host serves and QNTX-App carries; the node serves no page. Entry point: `ts/main.ts`. The browser WASM (`ats-wasm`, `laye-p2p`) is a dependency in `package.json`, built by QNTX's release from its crates and attached to it; `.wasm` files are copied from `node_modules` to `dist/js/` (import.meta.url resolution). Build fails if a package has no `.wasm`. Developing this page needs no Rust.
+
+"QNTX-Web needs to be easy to be developed on, so need to be a way to develop on it without needing to build ATS or Laye"
 
 ## Testing
 

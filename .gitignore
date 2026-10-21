@@ -1,0 +1,20 @@
+# Which node this machine points at, and the credential it presents
+.env
+.env.local
+
+sess*
+
+node_modules/
+
+# What build.ts writes
+dist/
+design-system/dist/
+
+coverage/
+browser/test-results/
+browser/playwright-report/
+# The gate answers every call from these, session.json among them (sess* above)
+!browser/fixtures/**
+
+*.log
+.DS_Store

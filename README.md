@@ -1,6 +1,12 @@
 # QNTX Web UI
 
-Web interface for QNTX, built on [@teranos/elements](https://github.com/teranos/elements).
+Web interface for [QNTX](https://github.com/teranos/QNTX), built on [@teranos/elements](https://github.com/teranos/elements). It left QNTX's `web/` with its history:
+
+> web needs to leave the repo
+
+> the reason would be to separate the work better
+
+Three things consume `dist/`: a static host ([deploy-web](.github/workflows/deploy-web.yml), called by a deployment), [QNTX-App](https://github.com/teranos/QNTX-App) as its `frontendDist`, and `bun run dev` against any node. The node serves no page.
 
 "web/README.md is still refferring to Elements as the Glyphs System, which is outdated, and perhaps partly owned by Elements"
 
@@ -12,12 +18,12 @@ What an element is, the forms it takes (dot, window, panel, workspace, canvas), 
 
 The web UI is essential for QNTX's vision of Continuous Intelligence:
 - **Real-time updates** show intelligence evolving as new attestations arrive
-- **Foundation for visions** documented in [time-travel](../docs/vision/time-travel.md)
+- **Foundation for visions** documented in [time-travel](https://github.com/teranos/QNTX/blob/main/docs/vision/time-travel.md)
 
 ## Architecture
 
 ### Configuration
-Ports are configured in `../am.toml` at project root:
+Ports come from a node's `am.toml`, named by `QNTX_AM_TOML` (or one in this directory):
 - `[server].port` - Backend API port (default: 8770)
 - `[server].frontend_port` - Development server port (default: 8820)
 
@@ -48,7 +54,7 @@ One server calling another is neither.
 
 Mint the token in the node's own UI (`/auth/tokens` is gated on a session, so a
 token cannot mint another). It carries a DID, a minter, a namespace and a scope,
-and revoking it lands without a restart — see [ADR-025](../docs/adr/ADR-025-access-tokens.md).
+and revoking it lands without a restart — see [ADR-025](https://github.com/teranos/QNTX/blob/main/docs/adr/ADR-025-access-tokens.md).
 `QNTX_SESSION` accepts a copied `qntx_session` cookie instead, for a node where
 no token has been minted yet.
 
@@ -59,11 +65,12 @@ QNTX_DEV_PLUGIN_DIRS=pond=/abs/path/to/pond/web,garden=/abs/path/to/garden/dist
 ```
 
 Each `name=/abs/dir` is served as built, `.js`, `.css` and `.map`, under
-`/api/{name}/`, ahead of `../qntx-plugins` and the node. The page is told the
+`/api/{name}/`, ahead of the node. The page is told the
 names as `window.__DEV_PLUGINS__` and probes each for its `glyph-module.js`.
 
 ### Runtime Dependencies
-- **No NPM required at runtime** - All TypeScript is bundled and embedded in the Go binary
+- **No NPM required at runtime** - All TypeScript is bundled into `dist/`
+- **No Rust required to develop** - the browser WASM is a dependency, built by QNTX's release
 - WebSocket for real-time updates
 - CodeMirror 6 for the ATS query editor
 
@@ -82,15 +89,15 @@ This project uses **Bun** as a fast bundler and package manager. Bun is chosen b
 
 ### Building the Bundle
 
-The web assets are bundled into `internal/server/dist/` for embedding in the Go binary:
+The web assets are bundled into `dist/`:
 
 ```bash
-cd web
-bun install              # Install dependencies (creates bun.lock)
-bun run build            # Build bundle to internal/server/dist/
+bun install              # Install dependencies, the WASM packages among them
+bun run build            # Build bundle to dist/
 ```
 
-This is automatically called before `make cli` builds the Go binary.
+`ats-wasm` and `laye-p2p` in `package.json` point at the tarballs QNTX's release
+attached. Moving to a newer QNTX is changing that tag and running `bun install`.
 
 ### Understanding Dependencies
 
@@ -157,16 +164,10 @@ The `package.json` locks **exact versions** (no `^` or `~`):
 **After rebuilding, always test:**
 
 ```bash
-# Rebuild Go binary (includes new bundle)
-make cli
+# Serve dist/ against a node, with live reload
+QNTX_BACKEND=https://api.q.sbvh.nl bun run dev
 
-# Start server in test mode
-./bin/qntx server --test-mode
-
-# Or without test mode (requires existing database)
-./bin/qntx server
-
-# Visit http://localhost:8770 in browser
+# Visit the port it prints in a browser
 # Verify:
 # - Page loads
 # - CodeMirror editor appears
@@ -195,8 +196,7 @@ Check `js/main.js` size after build. If larger than expected:
 
 ### Changes not appearing in app
 1. Did you run `bun run build`? (Creates dist/)
-2. Did you run `make cli`? (Rebuilds Go binary with new dist/)
-3. Are you running the new binary? (`./bin/qntx`)
+2. Is what you are looking at serving this dist/? (`bun run dev` does; a deployment or QNTX-App carries its own build)
 
 ### Outdated versions causing issues
 Check `bun.lock` - if versions don't match package.json:

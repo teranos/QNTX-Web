@@ -14,7 +14,10 @@ import { resolve } from 'node:path';
 import { STANDING_ELEMENT_PUBLISHED } from './plugin-provided-elements';
 import { STANDING_APPROVAL } from '../../approvals-standing';
 
-const STANDING_GO = resolve(import.meta.dir, '../../../../ats/watcher/standing.go');
+// The Go is QNTX's. QNTX_SRC names a checkout; without one this parity is not
+// checked and says so.
+const QNTX_SRC = process.env.QNTX_SRC;
+const STANDING_GO = QNTX_SRC ? resolve(QNTX_SRC, 'ats/watcher/standing.go') : null;
 
 /** What Go declares a const to be, by its name. */
 function goConst(source: string, name: string): string | undefined {
@@ -31,6 +34,10 @@ function goConst(source: string, name: string): string | undefined {
 }
 
 describe('standing watcher ids', () => {
+    if (!STANDING_GO) {
+        test.skip('QNTX_SRC unset: ats/watcher/standing.go is in QNTX, not here', () => {});
+        return;
+    }
     test('the page routes on the id Go broadcasts under', () => {
         const source = readFileSync(STANDING_GO, 'utf8');
         const declared = goConst(source, 'StandingElementPublished');

@@ -464,6 +464,11 @@ async function init(): Promise<void> {
     // The restore below skips what tray.has, so the node is answered first.
     await registerDefaultElements(hasCanvas);
 
+    // > think ROOT SHAKE
+    import('./shake.ts')
+        .then(({ rootShake }) => { if (rootShake(who)) log.info(SEG.UI, '[Init] ROOT SHAKE is felt'); })
+        .catch(err => log.error(SEG.UI, '[Init] ROOT SHAKE was not wired:', err));
+
     // Restore minimized elements from persisted state
     const minimizedIds = hasCanvas ? uiState.getMinimizedWindows() : [];
     if (minimizedIds.length > 0) {

@@ -34,6 +34,7 @@
     "ts/**/*.ts",
     "mock/reach.ts",
     "mock/world.ts",
+    "mock/agents.ts",
     "ts/**/*.js",
     "types/**/*.ts",
     "types/**/*.d.ts"

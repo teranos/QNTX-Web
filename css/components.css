@@ -367,6 +367,16 @@
 .claude-brand .claude-send { background: var(--claude-clay); border-color: var(--claude-clay); color: var(--claude-slate); }
 .claude-brand .claude-send:disabled { opacity: 0.5; }
 .claude-says { flex: 1; min-width: 0; resize: none; background: var(--bg-almost-black); color: var(--text-on-dark); border: 1px solid var(--border-on-dark); font: inherit; padding: 2px 4px; }
+/* The picture said with the words: shown above the field until sent or let go of */
+.claude-attached:empty { display: none; }
+.claude-attached { flex: 1 1 100%; display: flex; gap: 6px; align-items: flex-start; }
+.claude-picture { max-height: 120px; max-width: 60%; border: 1px solid var(--border-on-dark); }
+.claude-brand .claude-attach { background: transparent; border-color: var(--claude-clay); color: var(--claude-ivory); }
+
+/* ROOT SHAKE: the element on screen, named above its own talk */
+.shake-head { padding: 3px 6px; border-bottom: 1px solid var(--claude-clay); color: var(--claude-ivory); font-size: var(--font-size-xs); overflow-wrap: anywhere; flex-shrink: 0; }
+.shake-body { display: flex; flex-direction: column; }
+.shake-talk { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 
 /* Agent element: a namespace's agent, its sign-in by Claude Code's own flow over the Claude element's conversation */
 .agent-head { padding: 3px 6px; border-bottom: 1px solid var(--border-on-dark); color: var(--text-on-dark-secondary); font-size: var(--font-size-xs); overflow-wrap: break-word; word-break: break-word; flex-shrink: 0; }

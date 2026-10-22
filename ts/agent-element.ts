@@ -12,7 +12,7 @@ import { apiJson } from './client';
 import { log, SEG } from './logger.ts';
 import { Agent } from './sym';
 import { standingNamespace } from './standing.ts';
-import { drawClaude, type ClaudeAm, type ClaudeSaid, type NodeAgent } from './claude-element';
+import { askOf, drawClaude, sayBody, type ClaudeAm, type ClaudeSaid, type NodeAgent } from './claude-element';
 import type { TranscriptRead } from './components/element/transcript-element';
 import { apiError, sacredEntry } from './components/sacred';
 
@@ -43,18 +43,22 @@ export interface NamespaceAgent extends NodeAgent {
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
-/** The agent of namespace, at the agents signum's path. */
-export function agentOf(namespace: string): NamespaceAgent {
+/**
+ * The agent of namespace, at the agents signum's path. Given an element, the
+ * talk is that element's own session with it.
+ * > each element is an agent as well, we default to claude
+ */
+export function agentOf(namespace: string, element = ''): NamespaceAgent {
     const at = `/api/agents/${encodeURIComponent(namespace)}`;
     return {
-        am: () => apiJson<AgentAm>(`${at}?harness=claude`).then(is => is.agent),
-        say: (says, mode) => apiJson<{ claude: ClaudeSaid }>(`${at}/say`, {
+        am: () => apiJson<AgentAm>(`${at}${askOf(element)}`).then(is => is.agent),
+        say: (says, mode, carried) => apiJson<{ claude: ClaudeSaid }>(`${at}/say`, {
             method: 'POST',
             headers: JSON_HEADERS,
-            body: JSON.stringify(mode ? { harness: 'claude', says, permission_mode: mode } : { harness: 'claude', says }),
+            body: sayBody(says, mode, carried, element),
         }).then(said => said.claude),
         // Its one session in Claude Code, shared by everyone who has reach on the namespace.
-        read: () => apiJson<{ transcript: TranscriptRead }>(`${at}/session?harness=claude`)
+        read: () => apiJson<{ transcript: TranscriptRead }>(`${at}/session${askOf(element)}`)
             .then(answer => answer.transcript),
         // Without a code a sign-in is begun and the URL given; with the code shown there it is finished.
         begin: () => apiJson<SignedIn>(`${at}/login`, { method: 'POST', headers: JSON_HEADERS, body: '{}' }),
@@ -80,7 +84,7 @@ function wordsOf(err: unknown): string {
  * The agent of namespace drawn into body: its sign-in while it is not signed in,
  * the conversation once it is. What it gives back stops reading a turn that is going.
  */
-export function drawAgent(body: HTMLElement, namespace: string, node: NamespaceAgent = agentOf(namespace)): () => void {
+export function drawAgent(body: HTMLElement, namespace: string, node: NamespaceAgent = agentOf(namespace), opening: { image?: Blob } = {}): () => void {
     const head = part('div', 'agent-head');
     head.textContent = `the agent of ${namespace}`;
     const signin = part('div', 'agent-signin');
@@ -99,7 +103,7 @@ export function drawAgent(body: HTMLElement, namespace: string, node: NamespaceA
     // Signed in: the conversation, the Claude element's own drawing of it.
     const converse = () => {
         signin.replaceChildren();
-        settle = drawClaude(talk, node);
+        settle = drawClaude(talk, node, undefined, opening);
         const says = talk.querySelector<HTMLTextAreaElement>('.claude-says');
         if (says) says.placeholder = `Say something to the agent of ${namespace}`;
     };

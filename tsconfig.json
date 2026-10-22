@@ -32,7 +32,8 @@
   },
   "include": [
     "ts/**/*.ts",
-    "browser/*.browser.ts",
+    "mock/reach.ts",
+    "mock/world.ts",
     "ts/**/*.js",
     "types/**/*.ts",
     "types/**/*.d.ts"

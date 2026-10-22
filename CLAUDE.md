@@ -38,20 +38,7 @@ Dark-mode first. Design tokens in `tokens.css`. Fix specificity at the source.
 
 Inside an element, text is sized with `sizeText(node, 'xs' | 'sm' | 'md' | 'lg')`. A stylesheet or `index.html` picks one of the package's sizes by its token, `font-size: var(--font-size-xs | sm | md | lg | field)`, and `tokens.css` says the package's number for each.
 
-Z-index hierarchy:
-
-- Loading screen: 200000
-- Brow (.brow, Dynamic Island status line): 100004 — above the door: a shut door still shows the node's vitals
-- Door (#door, the identity threshold in the system bar): 100003
-- Glyph tray (.glyph-run): 100002
-- Toast, and a refusal said over the canvas (.refusal-say): 100001
-- Panel fullscreen: 100000
-- Windows: 10003 and up — each one raised above the last, so the one you just
-  opened or touched is in front, including in front of a panel (z-order.ts)
-- System drawer: 10003
-- Panel glyphs: 10002
-- Canvas controls/toolbar: 10001
-- Canvas fullscreen: 10000
+The z-index stack is read from the source, never written down here: `bun run z-order` prints every declaration, highest first. Windows are raised above each other in `ts/z-order.ts`.
 
 ## Logging
 
@@ -101,7 +88,7 @@ the whole of the warning that the node is about to stop being where you are.
 
 ## UI: No Ellipsis
 
-**NEVER use `text-overflow: ellipsis`.** All text wraps — data is never hidden behind truncation. Use `word-break: break-word` and `overflow-wrap: break-word` for wrapping. This applies everywhere: CSS, inline styles, all UI components.
+All text wraps. `ts/no-ellipsis.test.ts` is the linter: a `text-overflow: ellipsis` anywhere in `css/`, `ts/` or `index.html` fails `bun test`.
 
 ---
 

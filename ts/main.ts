@@ -332,8 +332,14 @@ async function init(): Promise<void> {
     // WASM and canvas sync run in the background — neither is needed before the
     // canvas opens.  WASM powers search/attestation (user-initiated); canvas sync
     // reconciles with the backend (local IndexedDB state is already loaded above).
-    initQntxWasm().catch(err => log.error(SEG.WASM, '[Init] WASM init failed:', err));
-    initLaye().catch(err => log.error(SEG.WASM, '[Init] laye init failed:', err));
+    // Under the mock (mock/server.ts) neither module starts:
+    // > ats-less laye-less
+    if ((window as { __MOCK__?: unknown }).__MOCK__) {
+        log.info(SEG.WASM, '[Init] mock: ats-wasm and laye are not started');
+    } else {
+        initQntxWasm().catch(err => log.error(SEG.WASM, '[Init] WASM init failed:', err));
+        initLaye().catch(err => log.error(SEG.WASM, '[Init] laye init failed:', err));
+    }
     installCopyable();
 
     const synced = !hasCanvas ? Promise.resolve() : (async () => {

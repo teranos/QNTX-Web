@@ -113,9 +113,7 @@
 .canvas-card-name {
     font-size: var(--font-size-md);
     color: var(--text-on-dark-emphasis);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow-wrap: anywhere;
 }
 
 .canvas-card-kind,

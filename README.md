@@ -27,6 +27,23 @@ Ports come from a node's `am.toml`, named by `QNTX_AM_TOML` (or one in this dire
 - `[server].port` - Backend API port (default: 8770)
 - `[server].frontend_port` - Development server port (default: 8820)
 
+### The mock: no node at all
+
+> There needs to be a backendless, ats-less laye-less web ui, that only has mock data
+
+> so its trivial for future sessions to work with it fast.
+
+```bash
+bun install
+bun run mock      # http://localhost:8830
+```
+
+`mock/server.ts` stands in for a node. It answers from `mock/world.ts` (who you are, the canvas) and then from `mock/fixtures/<path>.json`; a path with neither is a 404 that names the file to add. Reach is real: `mock/tablet-of-reach` is QNTX's own development tablet, and a path it does not grant your level is a 403, the same as a node. The two WASM modules are not started.
+
+Who you are is a strip at the foot of the page: ROOT, USER or PUBLIC_REGISTRATION, each standing in `pond`. The canvas opens with a note that says it is the mock.
+
+> the mock seems like a valid place to develop out user stories as well
+
 ### Running a branch against a deployed node
 
 Which node this machine points at is a property of the machine, so it lives in

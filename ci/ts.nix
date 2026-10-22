@@ -19,10 +19,15 @@
   jobs.test = {
     name = "TypeScript Tests";
     runs-on = "ubuntu-latest";
+    # The two checkouts are siblings: `bun test` walks every directory under
+    # it, and a QNTX checkout inside this one once had a web/ts of its own,
+    # whose tests ran here without their setup and failed (run 2026-10-21).
+    defaults.run.working-directory = "web";
     steps = [
       {
         name = "Checkout repository";
         uses = "actions/checkout@v5";
+        "with".path = "web";
       }
 
       # Three tests hold this page to QNTX's Rust, Go and migrations, and read

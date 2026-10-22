@@ -1,0 +1,35 @@
+{
+  "namespaces": [
+    {
+      "name": "system",
+      "definition": null,
+      "kinds": [
+        "attestations"
+      ]
+    },
+    {
+      "name": "pond",
+      "definition": {
+        "owner": "google:104729",
+        "enabled": true,
+        "created_at": "2026-10-16T20:25:00Z"
+      },
+      "kinds": [
+        "attestations",
+        "watchers"
+      ]
+    },
+    {
+      "name": "garden",
+      "definition": {
+        "owner": "google:104729",
+        "enabled": true,
+        "created_at": "2026-10-16T20:25:00Z"
+      },
+      "kinds": [
+        "attestations",
+        "schedules"
+      ]
+    }
+  ]
+}

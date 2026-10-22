@@ -9,7 +9,8 @@
  */
 
 import type { Element } from '@teranos/elements';
-import { createTable, tableCell, tray } from '@teranos/elements';
+import { createTable, tableCell } from '@teranos/elements';
+import { openElement } from './sidebar.ts';
 import { apiJson } from './client/http';
 import { log, SEG } from './logger';
 import { openTokenElement } from './token-element';
@@ -153,5 +154,5 @@ export function createRolesElement(): Element {
 
 /** Opens the roles element. Called from ⍟. */
 export function openRolesElement(): void {
-    tray.open(ELEMENT_ID);
+    openElement(ELEMENT_ID);
 }

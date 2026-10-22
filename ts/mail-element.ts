@@ -10,6 +10,7 @@
 
 import type { Element } from '@teranos/elements';
 import { createTable, tray, pressFrom } from '@teranos/elements';
+import { openElement } from './sidebar.ts';
 import { apiJson } from './client/http';
 import { log, SEG } from './logger';
 import { stacked } from './table-cell';
@@ -446,5 +447,5 @@ export function createMailElement(): Element {
 
 /** Opens the Mail element. Called from ⍟, for ROOT. */
 export function openMailElement(): void {
-    tray.open(ELEMENT_ID);
+    openElement(ELEMENT_ID);
 }

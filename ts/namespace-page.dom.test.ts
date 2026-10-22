@@ -106,14 +106,15 @@ describe('the namespace page', () => {
     // jsdom has no page to build again, so entering a canvas builds nothing.
     const built = (rows: Parameters<typeof initNamespacePage>[1]) => initNamespacePage(root, rows, () => {});
 
-    test('names the namespace, lists no canvas, shows one ⌗ and no field, and takes who to its top-left', () => {
+    test('names the namespace, lists no canvas, shows one ⌗ and no field, and leaves who to the sidebar', () => {
         built([]);
         expect(document.querySelector('.namespace-page-name')?.textContent).toBe('aws');
         expect(document.querySelector('.canvas-none')).not.toBeNull();
         expect(document.querySelector('input.canvas-birth-name')).toBeNull();
         const symbols = document.querySelectorAll('button.canvas-birth-symbol');
         expect(symbols.length).toBe(1);
-        expect(document.querySelector('.namespace-page-top .who #who-picture')).not.toBeNull();
+        expect(document.querySelector('.namespace-page-top .who')).toBeNull();
+        expect(document.querySelector('#header .who #who-picture')).not.toBeNull();
         expect(document.getElementById('container')?.classList.contains('namespace-page-shown')).toBe(true);
     });
 

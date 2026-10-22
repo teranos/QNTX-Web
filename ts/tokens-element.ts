@@ -7,7 +7,8 @@
  */
 
 import type { Element } from '@teranos/elements';
-import { createTable, tray, pressFrom } from '@teranos/elements';
+import { createTable, pressFrom } from '@teranos/elements';
+import { openElement } from './sidebar.ts';
 import { apiJson } from './client/http';
 import { openTokenMintElement } from './token-mint-element';
 import { openTokenElement } from './token-element';
@@ -304,5 +305,5 @@ export function createTokensElement(): Element {
 
 /** Opens the access tokens element. Called from the Self element. */
 export function openTokensElement(): void {
-    tray.open(ELEMENT_ID);
+    openElement(ELEMENT_ID);
 }

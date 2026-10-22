@@ -10,7 +10,8 @@
 // Blackbird, its CSS under .obsidian/themes); the element does not read it yet.
 
 import type { Element } from '@teranos/elements';
-import { tray, pressFrom } from '@teranos/elements';
+import { pressFrom } from '@teranos/elements';
+import { openElement } from './sidebar.ts';
 import { apiFetch, apiJson } from './client';
 import { jsonBody } from './http-utils';
 import { refusal } from './self-person';
@@ -391,5 +392,5 @@ export function createObsidianElement(): Element {
 
 /** Opens the Obsidian element. */
 export function openObsidianElement(): void {
-    tray.open(ELEMENT_ID);
+    openElement(ELEMENT_ID);
 }

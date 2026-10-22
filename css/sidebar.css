@@ -1,0 +1,224 @@
+/* The sidebar — the node's standing elements, on the left (ts/sidebar.ts).
+   A column beside the page on a desktop; a drawer over it on a phone. */
+
+#sidebar {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    flex: 0 0 240px;
+    width: 240px;
+    min-width: 0;
+    font-family: var(--font-mono);
+    color: var(--text-on-dark);
+    /* The canvas's colour, under the list: a pressed button leaves a hole
+       (buttonFrom's gap) cut through the list, and what shows through is this,
+       as the canvas shows through the drawer on a phone. */
+    background: var(--bg-canvas);
+    border-right: 1px solid var(--border-on-dark);
+    outline: none;
+    /* The system bar lies over the foot of the page; the door is above it. */
+    padding-bottom: var(--drawer-height, 36px);
+    overflow: hidden;
+}
+
+/* Folded away on a desktop. The page takes the width back (--sidebar-width). */
+body:not(.sidebar-open) #sidebar {
+    display: none;
+}
+
+/* The canvas is fixed and edge to edge; the column pushes it the way the
+   system bar does on a phone (responsive.css). */
+@media (min-width: 769px) {
+    .canvas-fullscreen-adjusted {
+        left: var(--sidebar-width, 0px) !important;
+        width: calc(100vw - var(--sidebar-width, 0px)) !important;
+    }
+}
+
+.sidebar-head,
+.sidebar-list,
+.sidebar-foot {
+    background: var(--bg-almost-black);
+}
+
+.sidebar-head {
+    display: flex;
+    align-items: center;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border-on-dark);
+}
+
+/* The who block, drawn for this dark, as the namespace page drew it. */
+.sidebar-head .who {
+    gap: 10px;
+    cursor: pointer;
+    min-width: 0;
+}
+
+.sidebar-head #who-picture {
+    width: 32px;
+    height: 32px;
+    border-color: var(--border-on-dark);
+    background: var(--bg-dark-hover);
+}
+
+.sidebar-head #who-name {
+    color: var(--text-on-dark-emphasis);
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.sidebar-head #who-namespace {
+    color: var(--text-on-dark-secondary);
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.sidebar-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 6px 0;
+}
+
+/* A standing element at rest: its symbol, its name, one row. The row's height
+   is a finger's on a touch screen (Apple HIG: 44pt), a pointer's otherwise.
+   No flex on the row: the class stays on the element while it becomes a
+   window, and the package lays the window out as a flex column before the
+   form changes, so a row's align-items: center squeezed its body to its
+   padding, the package declared it too wide, and its notice was what the
+   window then measured. The row is laid out inline, and the padding centres. */
+.sidebar-button[data-form="button"] {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 32px;
+    padding: 7px 14px;
+    line-height: 18px;
+    color: var(--text-on-dark);
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    overflow-wrap: anywhere;
+}
+
+.sidebar-button[data-form="button"]::before {
+    content: attr(data-symbol);
+    display: inline-block;
+    width: 1.6em;
+    margin-right: 10px;
+    text-align: center;
+    color: var(--text-on-dark-secondary);
+}
+
+.sidebar-button[data-form="button"]:hover,
+.sidebar-button[data-form="button"]:focus-visible {
+    background: var(--bg-dark-hover);
+    color: var(--text-on-dark-emphasis);
+    outline: none;
+}
+
+@media (pointer: coarse) {
+    .sidebar-button[data-form="button"] {
+        min-height: 44px;
+        padding: 13px 14px;
+    }
+}
+
+/* The hole a pressed button leaves (buttonFrom's .button-gap): the list's own
+   height, so the rows below do not move while it is away. */
+.sidebar-list .button-gap {
+    display: block;
+    width: 100%;
+}
+
+.sidebar-foot {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 14px;
+    border-top: 1px solid var(--border-on-dark);
+}
+
+.sidebar-foot .build-stamp {
+    color: var(--text-on-dark-tertiary);
+}
+
+/* The latch: the person's picture at the left end of the system bar. The same
+   round frame as the head's, smaller. */
+.sidebar-latch {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 1px solid var(--border-on-dark);
+    border-radius: 50%;
+    background: var(--bg-dark-hover);
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.sidebar-latch img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.sidebar-latch img:not([src]) {
+    /* No src, so no broken-image glyph: the frame alone, as #who-picture.empty. */
+    visibility: hidden;
+}
+
+.sidebar-scrim {
+    display: none;
+}
+
+/* A phone: a drawer over the page, from the left edge, under the island and
+   clear of the home indicator. Above the tray; under the door and the brow. */
+@media (max-width: 768px) {
+    #sidebar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 100002;
+        width: min(300px, 85vw);
+        flex: none;
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-left: env(safe-area-inset-left, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.45);
+        transform: translateX(-100%);
+        transition: transform 0.25s ease-out;
+    }
+
+    body:not(.sidebar-open) #sidebar {
+        display: flex;
+    }
+
+    body.sidebar-open #sidebar {
+        transform: translateX(0);
+    }
+
+    .sidebar-scrim {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 100002;
+        background: rgba(0, 0, 0, 0.4);
+    }
+
+    .sidebar-scrim[hidden] {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #sidebar {
+        transition: none;
+    }
+}

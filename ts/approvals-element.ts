@@ -14,7 +14,8 @@
 // the page an approval moved; nothing polls.
 
 import type { Element, Approval as Card, ApprovalHandle, ApprovalOption, ApprovalStep, SegmentState } from '@teranos/elements';
-import { tray, renderApprovals } from '@teranos/elements';
+import { renderApprovals } from '@teranos/elements';
+import { openElement } from './sidebar.ts';
 import { apiFetch, apiJson } from './client';
 import { jsonBody } from './http-utils';
 import { refusal } from './self-person';
@@ -206,5 +207,5 @@ export function createApprovalsElement(): Element {
 
 /** Opens the Approvals element. Called from ⍟, for ROOT. */
 export function openApprovalsElement(): void {
-    tray.open(ELEMENT_ID);
+    openElement(ELEMENT_ID);
 }

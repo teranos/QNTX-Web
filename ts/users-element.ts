@@ -8,7 +8,8 @@
 // holds them; pressing a name opens that User, where the switch on them is.
 
 import type { Element } from '@teranos/elements';
-import { createTable, tray, type TableRow, pressFrom } from '@teranos/elements';
+import { createTable, type TableRow, pressFrom } from '@teranos/elements';
+import { openElement } from './sidebar.ts';
 import { apiJson } from './client/http';
 import { log, SEG } from './logger';
 import { person } from './self-person';
@@ -233,5 +234,5 @@ export function createUsersElement(): Element {
 
 /** Opens the Users element. Called from the Self element. */
 export function openUsersElement(): void {
-    tray.open(ELEMENT_ID);
+    openElement(ELEMENT_ID);
 }

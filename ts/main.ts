@@ -23,6 +23,7 @@ import { signedIn, openDoor } from './signin.ts';
 import { heldInvitation } from './invitation.ts';
 import { relayed, doorStand, showDoor, stricken, say } from './door.ts';
 import { initSystemDrawer, focusDrawerSearch } from './system-drawer.ts';
+import { initSidebar, openElement } from './sidebar.ts';
 import { wireLineTooltips } from '@teranos/elements';
 import { SAID_TIMING } from './components/said';
 import { initNamespacesBar } from './namespaces-bar.ts';
@@ -448,12 +449,17 @@ async function init(): Promise<void> {
         meldability: MELDABILITY,
         // The resting dot's size is the package's own since 1.12.0: 13px on a
         // phone, 15px up to 900px, 10px above, the sizes this passed.
+        // Under the sidebar's drawer on a phone (sidebar.css), and tray.css says the same.
+        trayZIndex: 100001,
     });
 
 
     // Initialize element run FIRST (before any elements are created)
     // This ensures the run is ready to receive elements
     tray.init();
+    // The sidebar before the standing elements rest in it. It takes the who
+    // block from the header, so it stands before the namespace page is built.
+    initSidebar();
 
     // The restore below skips what tray.has, so the node is answered first.
     await registerDefaultElements(hasCanvas);
@@ -528,15 +534,15 @@ async function init(): Promise<void> {
         // Menu items always show (never toggle/hide)
         // Panel show events from menu bar (menu items always show, never toggle)
         listenOrSay('show-pulse-panel', () => {
-            tray.open('pulse-element');
+            openElement('pulse-element');
         });
 
         listenOrSay('show-plugin-panel', () => {
-            tray.open('plugin-element');
+            openElement('plugin-element');
         });
 
         listenOrSay('show-handlers-panel', () => {
-            tray.open('handlers-element');
+            openElement('handlers-element');
         });
 
         listenOrSay('toggle-logs', () => {

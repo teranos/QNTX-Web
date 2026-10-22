@@ -6,7 +6,8 @@
 // "Agent setup is the claude login flow"
 
 import type { Element } from '@teranos/elements';
-import { preventDrag, tray } from '@teranos/elements';
+import { preventDrag } from '@teranos/elements';
+import { openElement } from './sidebar.ts';
 import { apiJson } from './client';
 import { log, SEG } from './logger.ts';
 import { Agent } from './sym';
@@ -190,5 +191,5 @@ export function createAgentElement(): Element {
 
 /** Opens the Agent element. */
 export function openAgentElement(): void {
-    tray.open(ELEMENT_ID);
+    openElement(ELEMENT_ID);
 }

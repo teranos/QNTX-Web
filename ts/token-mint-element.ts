@@ -11,7 +11,7 @@ import { ordered, type Namespace } from './namespaces-view';
 import { person } from './self-person';
 import { openTokenElement } from './token-element';
 
-interface CreateTokenResponse {
+export interface CreateTokenResponse {
     id: string;
     label: string;
     token: string;
@@ -27,8 +27,9 @@ const ELEMENT_ID = 'token-mint-element';
 let onMinted: (() => void) | undefined;
 
 // What a token may read and write is not asked here: the roles its DID holds
-// say, through their WRITE and READ lines (ADR-034).
-async function createToken(
+// say, through their WRITE and READ lines (ADR-034). The MCP element mints a
+// client through here too (mcp-element.ts).
+export async function createToken(
     label: string,
     level: string,
     namespaces: string[],

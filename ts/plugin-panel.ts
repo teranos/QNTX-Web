@@ -665,6 +665,7 @@ function renderPlugin(plugin: PluginInfo): string {
     const stateClass = getStateClass(plugin.state);
     const stateIcon = getStateIcon(plugin.state);
 
+    // Every press of the card in one row, under what the card says.
     let controls = '';
     if (plugin.pausable) {
         if (plugin.state === 'running') {
@@ -674,16 +675,15 @@ function renderPlugin(plugin: PluginInfo): string {
         }
     }
 
+    if (plugin.state === 'running') {
+        controls += pressPlace(`plugin-restart-${plugin.name}`, 'plugin-restart-btn');
+    }
+
     if (enables(plugin)) {
         controls += pressPlace(`plugin-enable-${plugin.name}`, 'plugin-enable-btn');
     }
     if (disables(plugin)) {
         controls += pressPlace(`plugin-disable-${plugin.name}`, 'plugin-disable-btn');
-    }
-
-    let restartBtn = '';
-    if (plugin.state === 'running') {
-        restartBtn = pressPlace(`plugin-restart-${plugin.name}`, 'plugin-restart-btn');
     }
 
     const notRunning = NOT_RUNNING.includes(plugin.state);
@@ -706,7 +706,6 @@ function renderPlugin(plugin: PluginInfo): string {
                         <span class="plugin-status-text">${statusText}</span>
                     </div>`}
                     ${renderSigilBadges(plugin)}
-                    ${restartBtn}
                 </div>
             </div>
             ${plugin.repo ? `<a class="plugin-repo plugin-mono" href="${escapeHtml(plugin.repo)}" target="_blank" rel="noopener noreferrer">${escapeHtml(plugin.repo)}</a>` : ''}

@@ -3,7 +3,7 @@
 // "IT MEANS WE ALSO NEED A PI ELEMENT"
 
 import type { Element } from '@teranos/elements';
-import { tray } from '@teranos/elements';
+import { openElement } from './sidebar.ts';
 import { apiJson } from './client';
 import { Pi } from './sym';
 import { drawClaude, type ClaudeAm, type ClaudeSaid, type NodeAgent } from './claude-element';
@@ -93,5 +93,5 @@ export function createPiElement(): Element {
 
 /** Opens the Pi element. */
 export function openPiElement(): void {
-    tray.open(ELEMENT_ID);
+    openElement(ELEMENT_ID);
 }

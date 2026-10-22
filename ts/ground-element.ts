@@ -25,7 +25,8 @@
 // Not drawn yet, every session file on disk and its import state: loom's SessionList.svelte at d512ffb2.
 
 import type { Element } from '@teranos/elements';
-import { tray, renderSparkline } from '@teranos/elements';
+import { renderSparkline } from '@teranos/elements';
+import { openElement } from './sidebar.ts';
 import { apiJson } from './client/http';
 import { log, SEG } from './logger';
 import { Ground } from './sym';
@@ -942,5 +943,5 @@ export function createGroundElement(): Element {
 
 /** Opens the Ground element. */
 export function openGroundElement(): void {
-    tray.open(ELEMENT_ID);
+    openElement(ELEMENT_ID);
 }

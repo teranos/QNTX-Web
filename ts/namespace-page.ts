@@ -1,7 +1,7 @@
 /**
  * The page behind the canvas: the namespace's.
  *
- * Who is looking, top-left. The namespace's name. "the list of canvasses in
+ * The namespace's name. "the list of canvasses in
  * that namespace" — each with its owners and its state; a disabled one
  * desaturated, and still openable. "⌗" to create one: pressed, it reveals
  * the name field with a same-sized + beside it, and the + is the system's
@@ -258,8 +258,8 @@ function attach(el: HTMLElement): void {
 
 /**
  * Builds the namespace's page into the container, behind whatever canvas is
- * open, and takes the who block from the header to its own top-left. Nobody
- * signed in, or a node with one universe, gets no page.
+ * open. Who is looking is the sidebar's to show (sidebar.ts), beside every
+ * page. Nobody signed in, or a node with one universe, gets no page.
  */
 export function initNamespacePage(person: Person | null, rows: CanvasRow[], again: (id: string) => void = (id) => go(standingNamespace(), id)): void {
     const container = document.getElementById('container');
@@ -275,8 +275,6 @@ export function initNamespacePage(person: Person | null, rows: CanvasRow[], agai
 
     const top = document.createElement('div');
     top.className = 'namespace-page-top';
-    const whoBlock = document.querySelector<HTMLElement>('#header .who');
-    if (whoBlock) top.append(whoBlock);
     const out = pressFrom({ id: 'namespace-page-out', title: 'the door', mark: '[<]', does: () => { standAtTheDoor(); } });
     out.element.classList.add('namespace-page-out');
     top.append(out.element);

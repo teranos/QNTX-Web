@@ -3,7 +3,8 @@
 // What it is and why is ADR-048's; this draws what the claude signum answers.
 
 import type { Element } from '@teranos/elements';
-import { declareSay, preventDrag, tray } from '@teranos/elements';
+import { declareSay, preventDrag } from '@teranos/elements';
+import { openElement } from './sidebar.ts';
 import { apiJson } from './client';
 import { log, SEG } from './logger.ts';
 import { Claude } from './sym';
@@ -239,5 +240,5 @@ export function createClaudeElement(): Element {
 
 /** Opens the Claude element. */
 export function openClaudeElement(): void {
-    tray.open(ELEMENT_ID);
+    openElement(ELEMENT_ID);
 }

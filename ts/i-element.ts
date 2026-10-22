@@ -15,7 +15,8 @@ import { I } from './sym';
 import { escapeHtml } from './html-utils';
 import { log, SEG } from './logger.ts';
 import { person, personSection, personSwitch, personUnbecome, type Person } from './self-person.ts';
-import { tray, pressFrom } from '@teranos/elements';
+import { pressFrom } from '@teranos/elements';
+import { hasElement } from './sidebar.ts';
 import { openTokensElement, ELEMENT_ID as TOKENS_ID } from './tokens-element.ts';
 import { openRolesElement, ELEMENT_ID as ROLES_ID } from './roles-element.ts';
 import { openUsersElement, ELEMENT_ID as USERS_ID } from './users-element.ts';
@@ -116,7 +117,7 @@ function renderI(): void {
     // "the ui needs to stop suggesting things that arent possible, needs to stop handing out dead birds"
     // A way to an element is offered when the tray holds it, which is when the node said the viewer reaches it.
     for (const way of WAYS) {
-        if (!tray.has(way.id)) continue;
+        if (!hasElement(way.id)) continue;
         actions.appendChild(pressFrom({ id: `i-way-${way.label}`, title: way.label, does: async () => way.open() }).element);
     }
 

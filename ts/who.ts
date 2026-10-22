@@ -13,9 +13,16 @@ import { apiFetch } from './client';
 import { log, SEG } from './logger';
 import type { Person } from './self-person';
 
+// The same picture, smaller, wherever the page shows the person again: the
+// sidebar's latch in the system bar (sidebar.ts). Drawn from the one fetch.
+function mirrors(): HTMLImageElement[] {
+    return Array.from(document.querySelectorAll<HTMLImageElement>('img[data-who-mirror]'));
+}
+
 function empty(picture: HTMLImageElement): void {
     picture.removeAttribute('src');
     picture.classList.add('empty');
+    for (const mirror of mirrors()) mirror.removeAttribute('src');
 }
 
 /**
@@ -54,6 +61,7 @@ export async function drawWho(who: Person | null): Promise<void> {
         }
         picture.src = URL.createObjectURL(await response.blob());
         picture.classList.remove('empty');
+        for (const mirror of mirrors()) mirror.src = picture.src;
     } catch (err: unknown) {
         log.warn(SEG.UI, '[Who] The picture was not fetched:', err);
         empty(picture);

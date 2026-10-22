@@ -11,7 +11,7 @@ import { DB, Sigma } from './sym';
 import { openDoor, signedIn, standAtTheDoor } from './signin';
 import { log, SEG } from './logger';
 import { signalConnectivityInTray, spawnConnectivityElement } from './components/element/connectivity-element';
-import { tray } from '@teranos/elements';
+import { openElement } from './sidebar.ts';
 import { connectingLabel } from './reconnect';
 
 interface StatusIndicator {
@@ -306,7 +306,7 @@ class StatusIndicatorManager {
      * Show database information modal
      */
     private showDatabaseInfo(): void {
-        tray.open('database-element');
+        openElement('database-element');
     }
 
     /**
@@ -317,7 +317,7 @@ class StatusIndicatorManager {
             id: 'sigma',
             label: `${Sigma}`,
             clickable: true,
-            onClick: () => tray.open('sigma-panel'),
+            onClick: () => openElement('sigma-panel'),
             initialState: 'inactive'
         });
     }

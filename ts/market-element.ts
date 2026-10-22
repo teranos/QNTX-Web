@@ -11,7 +11,8 @@
 // event; a stand writes only under staand:*, so nothing here sets a predicate.
 
 import type { Element } from '@teranos/elements';
-import { tray, buttonFrom, pressFrom } from '@teranos/elements';
+import { buttonFrom, pressFrom } from '@teranos/elements';
+import { openElement } from './sidebar.ts';
 import { apiJson } from './client/http';
 import { backendUrl } from './client/url';
 import { tooltip } from './components/tooltip';
@@ -555,5 +556,5 @@ export function createMarketElement(): Element {
 
 /** Opens the Stands element. */
 export function openMarketElement(): void {
-    tray.open(ELEMENT_ID);
+    openElement(ELEMENT_ID);
 }

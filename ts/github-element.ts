@@ -10,7 +10,8 @@
 // the Actions runner. Asked on open and after each press; nothing polls.
 
 import type { Element } from '@teranos/elements';
-import { createTable, tray, pressFrom } from '@teranos/elements';
+import { createTable, pressFrom } from '@teranos/elements';
+import { openElement } from './sidebar.ts';
 import { apiFetch, apiJson } from './client';
 import { jsonBody } from './http-utils';
 import { refusal } from './self-person';
@@ -467,5 +468,5 @@ export function createGitHubElement(): Element {
 
 /** Opens the GitHub element. Called from ⍟, for ROOT. */
 export function openGitHubElement(): void {
-    tray.open(ELEMENT_ID);
+    openElement(ELEMENT_ID);
 }

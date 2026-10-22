@@ -6,6 +6,7 @@
  */
 
 import { tray } from '@teranos/elements';
+import { restInSidebar } from './sidebar.ts';
 import { forTheViewer, askTheNode, type Audience } from './audience';
 import { createCanvasElement, needs as canvasNeeds } from './components/element/canvas/canvas-element';
 import { createDbElement, needs as dbNeeds } from './db-element';
@@ -91,7 +92,14 @@ export async function registerDefaultElements(hasCanvas: boolean = true): Promis
     ];
 
     const forThem = await forTheViewer(offered, askTheNode);
-    for (const each of forThem) tray.add(each.create());
+    // A standing element rests in the sidebar; the tray is for what is put
+    // down and for the temporal (sidebar.ts). The canvas opens as the
+    // workspace, which a button cannot become, so it alone rests in the tray.
+    for (const each of forThem) {
+        const item = each.create();
+        if (item.opensAs === 'workspace') tray.add(item);
+        else restInSidebar(item);
+    }
 
     log.debug(SEG.UI, 'Default elements registered:', {
         offered: offered.length,

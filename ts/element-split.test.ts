@@ -21,7 +21,7 @@ const HERE = import.meta.dir;
 // The migrations are QNTX's. QNTX_SRC names a checkout; without one the tests
 // that read them are not run and say so.
 const QNTX_SRC = process.env.QNTX_SRC;
-const MIGRATIONS = QNTX_SRC ? join(QNTX_SRC, 'db/sqlite/migrations') : null;
+const MIGRATIONS = QNTX_SRC ? join(QNTX_SRC, 'internal/db/sqlite/migrations') : null;
 
 const i = readFileSync(join(HERE, 'i-element.ts'), 'utf8');
 const am = readFileSync(join(HERE, 'am-element.ts'), 'utf8');
@@ -41,7 +41,7 @@ describe('the split', () => {
 
     test('the migrations rename to the id the tray registers', () => {
         if (!MIGRATIONS) {
-            console.log('QNTX_SRC unset: db/sqlite/migrations is in QNTX, not here');
+            console.log('QNTX_SRC unset: internal/db/sqlite/migrations is in QNTX, not here');
             return;
         }
         // 061 wrote self's id as i-glyph; 066 moves every fixed -glyph id to -element.

@@ -4,15 +4,11 @@
  * Proxies API calls to the Go backend and serves frontend with hot reload
  */
 
-import { watch } from "fs";
-import { exec } from "child_process";
-import { promisify } from "util";
 import { parse as parseToml } from "smol-toml";
 import { readFileSync, existsSync } from "fs";
 import { join, extname } from "path";
 import { resolveBackend, resolveCredential, resolveOrigin, resolveDevPluginDirs, backendHeaders, dropSetCookie, backendWsUrl, isBackendPath } from "./dev-proxy";
-
-const execAsync = promisify(exec);
+import { build, setupWatcher, findAvailablePort, reloadStream, RELOAD_PATH, RELOAD_SCRIPT, lightPink, pink, darkPink, reset, dim } from "./dev-build";
 
 // Read am.toml configuration
 interface AmConfig {
@@ -93,7 +89,6 @@ const DEV_PORT_START = parseInt(
     10
 );  // Preferred development server port
 const DEV_PORT_MAX = DEV_PORT_START + 10;     // Try up to 10 ports above start
-const BUILD_DEBOUNCE = 300; // ms to wait before rebuilding
 
 // One browser socket, the socket it is relayed onto, and what arrived early.
 interface WsRelay {
@@ -108,91 +103,6 @@ function credentialLabel(): string {
     if (BACKEND_CREDENTIAL.token) return "QNTX_TOKEN (bearer)";
     if (BACKEND_CREDENTIAL.session) return "QNTX_SESSION (cookie)";
     return "nothing — the node will refuse anything it gates";
-}
-
-let buildTimeout: NodeJS.Timeout | null = null;
-let isBuilding = false;
-let clients: Set<any> = new Set();
-
-// Light pink color palette
-const lightPink = "\x1b[38;5;225m";
-const pink = "\x1b[38;5;218m";
-const darkPink = "\x1b[38;5;211m";
-const reset = "\x1b[0m";
-const dim = "\x1b[2m";
-
-// Build function
-async function build() {
-    if (isBuilding) {
-        console.log(`${dim}Build already in progress, skipping...${reset}`);
-        return;
-    }
-
-    isBuilding = true;
-    console.log(`${pink}Building...${reset}`);
-    try {
-        await execAsync("bun run build.ts");
-        console.log(`${lightPink}Build complete${reset}`);
-        // Notify all connected clients to reload
-        broadcastReload();
-    } catch (error: unknown) {
-        console.error(`${darkPink}Build failed:${reset}`, error);
-    } finally {
-        isBuilding = false;
-    }
-}
-
-// Broadcast reload to all connected clients
-function broadcastReload() {
-    const message = "data: reload\n\n";
-    clients.forEach(client => {
-        client.write(message);
-    });
-}
-
-// Check if port is available
-async function isPortAvailable(port: number): Promise<boolean> {
-    try {
-        const server = Bun.serve({
-            port,
-            fetch() {
-                return new Response("test");
-            }
-        });
-        server.stop();
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-// Find next available port
-async function findAvailablePort(startPort: number, maxPort: number): Promise<number> {
-    for (let port = startPort; port <= maxPort; port++) {
-        if (await isPortAvailable(port)) {
-            return port;
-        }
-    }
-    throw new Error(`No available ports found between ${startPort} and ${maxPort}`);
-}
-
-// Watch for file changes
-function setupWatcher() {
-    const dirs = ["./ts", "./css", "./index.html"];
-
-    dirs.forEach(dir => {
-        watch(dir, { recursive: true }, (eventType, filename) => {
-            if (filename?.endsWith('.ts') || filename?.endsWith('.css') || filename?.endsWith('.html')) {
-                console.log(`${pink}Changed: ${filename}${reset}`);
-
-                // Debounce builds
-                if (buildTimeout) clearTimeout(buildTimeout);
-                buildTimeout = setTimeout(build, BUILD_DEBOUNCE);
-            }
-        });
-    });
-
-    console.log(`${dim}Watching for changes in: ${dirs.join(", ")}${reset}`);
 }
 
 // Find available port and create development server
@@ -224,29 +134,8 @@ async function startServer() {
             }
 
             // Server-Sent Events endpoint for live reload
-            if (url.pathname === "/__dev_reload__") {
-                return new Response(
-                    new ReadableStream({
-                        start(controller) {
-                            const client = {
-                                write: (data: string) => controller.enqueue(data)
-                            };
-                            clients.add(client);
-
-                            // Clean up on disconnect
-                            req.signal.addEventListener("abort", () => {
-                                clients.delete(client);
-                            });
-                        }
-                    }),
-                    {
-                        headers: {
-                            "Content-Type": "text/event-stream",
-                            "Cache-Control": "no-cache",
-                            "Connection": "keep-alive",
-                        }
-                    }
-                );
+            if (url.pathname === RELOAD_PATH) {
+                return reloadStream(req);
             }
 
             // A named plugin's files come from its directory, ahead of qntx-plugins and the node.
@@ -304,16 +193,7 @@ async function startServer() {
                     </head>`
                 ).replace(
                     "</body>",
-                    `<script>
-                        // Live reload for development
-                        const evtSource = new EventSource("/__dev_reload__");
-                        evtSource.onmessage = (event) => {
-                            if (event.data === "reload") {
-                                console.log("Reloading...");
-                                location.reload();
-                            }
-                        };
-                    </script>
+                    `${RELOAD_SCRIPT}
                     </body>`
                 );
                 return new Response(modifiedHtml, {
@@ -400,6 +280,7 @@ async function startServer() {
         const listed = [...DEV_PLUGIN_DIRS].map(([name, dir]) => `${name} <- ${dir}`).join(", ");
         console.log(`${lightPink}Dev plugins: ${listed}${reset}`);
     }
+    void server;
 }
 
 // Initial build

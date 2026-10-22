@@ -136,9 +136,7 @@ body.disconnected #container {
 /* The build stamp gives way to the person, never the other way round. */
 .build-stamp {
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
     font-size: var(--font-size-sm);
     color: #888;
 }

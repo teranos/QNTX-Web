@@ -201,8 +201,8 @@ function landingsHTML(landings: Landing[] | undefined, failed: any, onePath: str
     const w = windowOfSeen(landings.flatMap(one => [...seenOfCommon(one.top_predicates), ...seenOfCommon(one.top_contexts)]), now);
     const rows = landings.map(one => `
         <div style="display: grid; grid-template-columns: ${LANDING_COLUMNS}; gap: 8px; padding: 2px 0; max-width: ${LANDING_WIDTH};">
-            <span style="color: #e2e8f0; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(one.namespace)}</span>
-            <span style="color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left;">${escapeHtml(one.path)}</span>
+            <span style="color: #e2e8f0; overflow-wrap: anywhere;">${escapeHtml(one.namespace)}</span>
+            <span style="color: #475569; overflow-wrap: anywhere;">${escapeHtml(one.path)}</span>
             <span style="color: #64748b; text-align: right;">db ${formatBytes(one.bytes)}</span>
             <span style="color: ${one.wal_bytes > 8 * 1024 * 1024 ? '#f59e0b' : '#64748b'}; text-align: right;">wal ${formatBytes(one.wal_bytes)}</span>
             <span style="color: #475569; text-align: right;">${one.actors.toLocaleString()}a ${one.subjects.toLocaleString()}s ${one.contexts.toLocaleString()}c</span>
@@ -250,7 +250,7 @@ function recordSpendHTML(spend: Spend[] | undefined, failed: any): string {
     // and the same number beside "on the node" is the record doing its job.
     const rows = spend.map(one => `
         <div style="display: grid; grid-template-columns: ${SPEND_COLUMNS}; gap: 8px; padding: 2px 0;">
-            <span style="color: ${one.held_on_node ? '#e2e8f0' : '#f59e0b'}; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(one.of)}</span>
+            <span style="color: ${one.held_on_node ? '#e2e8f0' : '#f59e0b'}; overflow-wrap: anywhere;">${escapeHtml(one.of)}</span>
             <span style="color: ${one.held_on_node ? '#475569' : '#f59e0b'};">${one.held_on_node ? 'on the node' : 'record only'}</span>
             <span style="color: #64748b;">${escapeHtml(one.request)}</span>
             <span style="color: #94a3b8; text-align: right;">${one.count.toLocaleString()}</span>

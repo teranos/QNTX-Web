@@ -6,6 +6,8 @@
   "scripts": {
     "build": "bun run build.ts",
     "dev": "bun run dev-server.ts",
+    "mock": "bun run mock/server.ts",
+    "z-order": "bun run z-order.ts",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "test:watch": "bun test --watch",

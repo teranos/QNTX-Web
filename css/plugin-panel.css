@@ -153,6 +153,8 @@
 
 .plugin-card-header {
     display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 4px;
@@ -179,6 +181,7 @@
 /* Plugin badges container */
 .plugin-badges {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
     align-items: center;
     font-size: var(--font-size-md);
@@ -232,6 +235,7 @@
     padding-top: 10px;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
 }
 

@@ -13,7 +13,6 @@ import type {
     JobUpdateMessage,
     DaemonStatusMessage,
     LLMStreamMessage,
-    PluginHealthMessage,
     SystemCapabilitiesMessage,
     DatabaseStatsMessage,
     WatcherMatchMessage,
@@ -23,7 +22,6 @@ import type {
 } from '../../types/websocket';
 import type { RichSearchResultsMessage } from '../generated/proto/plugin/grpc/protocol/server.ts';
 import { handleJobNotification, handleDaemonStatusNotification } from '../tauri-notifications';
-import { handlePluginHealth } from '../websocket-handlers/plugin-health';
 import { handleSystemCapabilities } from '../websocket-handlers/system-capabilities';
 import { handleWatcherQueueStatus } from '../websocket-handlers/watcher-queue-status';
 import { STANDING_ELEMENT_PUBLISHED } from '../components/element/plugin-provided-elements';
@@ -140,16 +138,6 @@ const MESSAGE_HANDLERS = {
     llm_stream: (data: LLMStreamMessage) => {
         log.debug(SEG.PULSE, 'LLM stream:', data.job_id, data.content.length, 'chars', data.done ? '(done)' : '');
         dispatch('llm_stream', () => messageHandlers['llm_stream']?.(data));
-    },
-
-    plugin_health: (data: PluginHealthMessage) => {
-        log.info(SEG.PULSE, 'Plugin health:', data.name, data.state, data.healthy ? 'healthy' : 'unhealthy');
-
-        // Handle toast notification and indicator update
-        handlePluginHealth(data);
-
-        // Invoke registered handler
-        dispatch('plugin_health', () => messageHandlers['plugin_health']?.(data));
     },
 
     system_capabilities: (data: SystemCapabilitiesMessage) => {

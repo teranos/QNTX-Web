@@ -45,9 +45,6 @@ export type MessageType =
   | 'llm_stream'
   | 'version'
   | 'logs'
-  | 'import_progress'
-  | 'import_stats'
-  | 'import_complete'
   | 'ix_progress'
   | 'ix_error'
   | 'ix_complete'
@@ -62,7 +59,6 @@ export type MessageType =
   | 'pulse_execution_log_stream'
   | 'storage_warning'
   | 'storage_eviction'
-  | 'plugin_health'
   | 'system_capabilities'
   | 'watcher_match'
   | 'watcher_error'
@@ -200,45 +196,6 @@ export interface JobDetailsMessage extends BaseMessage {
 }
 
 /**
- * Import progress update
- */
-export interface ImportProgressMessage extends BaseMessage {
-  type: 'import_progress';
-  stage: string;
-  current: number;
-  total: number;
-  message?: string;
-}
-
-/**
- * Import statistics
- */
-export interface ImportStatsMessage extends BaseMessage {
-  type: 'import_stats';
-  imported?: number;
-  skipped?: number;
-  failed?: number;
-  duration?: number;
-  contacts?: number;
-  attestations?: number;
-  companies?: number;
-}
-
-/**
- * Import completion
- */
-export interface ImportCompleteMessage extends BaseMessage {
-  type: 'import_complete';
-  success: boolean;
-  message: string;
-  stats?: {
-    imported: number;
-    skipped: number;
-    failed: number;
-  };
-}
-
-/**
  * IX operation progress
  */
 export interface IXProgressMessage extends BaseMessage {
@@ -353,18 +310,6 @@ export interface StorageEvictionMessage extends BaseMessage {
   context: string;
   entity: string;
   deletions_count: number;
-  message: string;
-}
-
-/**
- * Plugin health update notification
- * Sent when plugin state changes (pause/resume) or health check fails
- */
-export interface PluginHealthMessage extends BaseMessage {
-  type: 'plugin_health';
-  name: string;
-  healthy: boolean;
-  state: 'running' | 'paused' | 'stopped';
   message: string;
 }
 
@@ -508,9 +453,6 @@ export type WebSocketMessage =
   | LLMStreamMessage
   | VersionMessage
   | ErrorMessage
-  | ImportProgressMessage
-  | ImportStatsMessage
-  | ImportCompleteMessage
   | IXProgressMessage
   | IXErrorMessage
   | IXCompleteMessage
@@ -523,7 +465,6 @@ export type WebSocketMessage =
   | PulseExecutionCompletedMessage
   | PulseExecutionLogStreamMessage
   | StorageEvictionMessage
-  | PluginHealthMessage
   | SystemCapabilitiesMessage
   | WatcherMatchMessage
   | WatcherErrorMessage
@@ -554,9 +495,6 @@ export interface MessageHandlers {
   version?: MessageHandler<VersionMessage>;
   error?: MessageHandler<ErrorMessage>;
   logs?: MessageHandler<LogsMessage>;
-  import_progress?: MessageHandler<ImportProgressMessage>;
-  import_stats?: MessageHandler<ImportStatsMessage>;
-  import_complete?: MessageHandler<ImportCompleteMessage>;
   ix_progress?: MessageHandler<IXProgressMessage>;
   ix_error?: MessageHandler<IXErrorMessage>;
   ix_complete?: MessageHandler<IXCompleteMessage>;
@@ -567,7 +505,6 @@ export interface MessageHandlers {
   pulse_execution_completed?: MessageHandler<PulseExecutionCompletedMessage>;
   pulse_execution_log_stream?: MessageHandler<PulseExecutionLogStreamMessage>;
   storage_eviction?: MessageHandler<StorageEvictionMessage>;
-  plugin_health?: MessageHandler<PluginHealthMessage>;
   system_capabilities?: MessageHandler<SystemCapabilitiesMessage>;
   watcher_match?: MessageHandler<WatcherMatchMessage>;
   watcher_error?: MessageHandler<WatcherErrorMessage>;
@@ -609,9 +546,6 @@ export interface WebSocketConfig {
 // Type Aliases for Data Payloads (for backwards compatibility)
 // ============================================================================
 
-export type ImportProgressData = ImportProgressMessage;
-export type ImportStatsData = ImportStatsMessage;
-export type ImportCompleteData = ImportCompleteMessage;
 export type IxProgressData = IXProgressMessage;
 export type IxErrorData = IXErrorMessage;
 export type IxCompleteData = IXCompleteMessage;

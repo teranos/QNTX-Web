@@ -17,7 +17,7 @@
  */
 
 import { apiFetch, apiJson, backendPath } from './client';
-import { assertOk, jsonBody } from './http-utils.ts';
+import { jsonBody } from './http-utils.ts';
 import { escapeHtml, formatBuildTime } from './html-utils.ts';
 import { log, SEG } from './logger';
 import { handleError } from './error-handler.ts';
@@ -665,6 +665,7 @@ function renderPlugin(plugin: PluginInfo): string {
     const stateClass = getStateClass(plugin.state);
     const stateIcon = getStateIcon(plugin.state);
 
+    // Every press of the card in one row, under what the card says.
     let controls = '';
     if (plugin.pausable) {
         if (plugin.state === 'running') {
@@ -674,16 +675,15 @@ function renderPlugin(plugin: PluginInfo): string {
         }
     }
 
+    if (plugin.state === 'running') {
+        controls += pressPlace(`plugin-restart-${plugin.name}`, 'plugin-restart-btn');
+    }
+
     if (enables(plugin)) {
         controls += pressPlace(`plugin-enable-${plugin.name}`, 'plugin-enable-btn');
     }
     if (disables(plugin)) {
         controls += pressPlace(`plugin-disable-${plugin.name}`, 'plugin-disable-btn');
-    }
-
-    let restartBtn = '';
-    if (plugin.state === 'running') {
-        restartBtn = pressPlace(`plugin-restart-${plugin.name}`, 'plugin-restart-btn');
     }
 
     const notRunning = NOT_RUNNING.includes(plugin.state);
@@ -706,7 +706,6 @@ function renderPlugin(plugin: PluginInfo): string {
                         <span class="plugin-status-text">${statusText}</span>
                     </div>`}
                     ${renderSigilBadges(plugin)}
-                    ${restartBtn}
                 </div>
             </div>
             ${plugin.repo ? `<a class="plugin-repo plugin-mono" href="${escapeHtml(plugin.repo)}" target="_blank" rel="noopener noreferrer">${escapeHtml(plugin.repo)}</a>` : ''}
@@ -747,38 +746,31 @@ function getStateIcon(state: string): string {
     }
 }
 
+// Pause, resume and restart throw the node's refusal: it is the press's to show, beside it.
 async function pausePlugin(name: string): Promise<void> {
-    try {
-        log.debug(SEG.UI, 'Pausing plugin:', name);
-        const response = await apiFetch(`/api/plugins/${name}/pause`, { method: 'POST' });
-        await assertOk(response, `Failed to pause ${name}`);
+    log.debug(SEG.UI, 'Pausing plugin:', name);
+    const response = await apiFetch(`/api/plugins/${encodeURIComponent(name)}/pause`, { method: 'POST' });
+    if (!response.ok) throw new Error(await refusal(response));
 
-        await fetchPlugins();
-        render();
-        log.debug(SEG.UI, 'Plugin paused:', name);
-    } catch (error: unknown) {
-        handleError(error, 'Failed to pause plugin', { context: SEG.UI });
-    }
+    await fetchPlugins();
+    render();
+    log.debug(SEG.UI, 'Plugin paused:', name);
 }
 
 async function resumePlugin(name: string): Promise<void> {
-    try {
-        log.debug(SEG.UI, 'Resuming plugin:', name);
-        const response = await apiFetch(`/api/plugins/${name}/resume`, { method: 'POST' });
-        await assertOk(response, `Failed to resume ${name}`);
+    log.debug(SEG.UI, 'Resuming plugin:', name);
+    const response = await apiFetch(`/api/plugins/${encodeURIComponent(name)}/resume`, { method: 'POST' });
+    if (!response.ok) throw new Error(await refusal(response));
 
-        await fetchPlugins();
-        render();
-        log.debug(SEG.UI, 'Plugin resumed:', name);
-    } catch (error: unknown) {
-        handleError(error, 'Failed to resume plugin', { context: SEG.UI });
-    }
+    await fetchPlugins();
+    render();
+    log.debug(SEG.UI, 'Plugin resumed:', name);
 }
 
 async function restartPlugin(name: string): Promise<void> {
     log.debug(SEG.UI, 'Restarting plugin:', name);
-    const response = await apiFetch(`/api/plugins/${name}/restart`, { method: 'POST' });
-    await assertOk(response, `Failed to restart ${name}`);
+    const response = await apiFetch(`/api/plugins/${encodeURIComponent(name)}/restart`, { method: 'POST' });
+    if (!response.ok) throw new Error(await refusal(response));
 
     await fetchPlugins();
     render();
@@ -1336,17 +1328,10 @@ export function createPluginElement(): Element {
             // Attach delegated listeners once — they survive innerHTML replacements
             attachEventDelegation();
 
-            // Live-update when health polling detects a change
-            const onHealthChange = () => {
-                fetchPlugins().then(() => render()).catch((err: unknown) => log.error(SEG.UI, '[PluginPanel] refresh failed:', err));
-            };
-            document.addEventListener('plugin-health-change', onHealthChange);
-
-            // Auto-refresh every 10s while the panel is open
+            // Plugin state is asked of /api/plugins, every 10s while the panel is open
             const refreshInterval = setInterval(() => {
                 if (!contentElement?.isConnected) {
                     clearInterval(refreshInterval);
-                    document.removeEventListener('plugin-health-change', onHealthChange);
                     return;
                 }
                 fetchPlugins().then(() => render()).catch((err: unknown) => log.error(SEG.UI, '[PluginPanel] refresh failed:', err));

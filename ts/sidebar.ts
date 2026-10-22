@@ -142,13 +142,6 @@ export function restInSidebar(item: Element): void {
         throw new Error(`the sidebar is not up; ${item.id} has nowhere to rest`);
     }
     if (elements.has(item.id)) return;
-    // Known, and the package's: Button Form measures its body itself as it opens
-    // and writes that as the window's last size, which the window path keeps as
-    // a size a person gave, so a window opened from here stays the size its
-    // body had when pressed, often its loading line, where a dot's window grows
-    // with what arrives. Measured against main: the fix is for morphDotToWindow
-    // to measure the body the button carries, as morphDotToPanel already takes
-    // one, and for Button Form to set no last size of its own.
     const button = buttonFrom(item, { className: 'sidebar-button' });
     // The symbol is drawn by the stylesheet from this, in button form only: the
     // package puts nothing but the label in a button, and stashes anything else.

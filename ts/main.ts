@@ -33,7 +33,6 @@ import { drawWho } from './who.ts';
 import type { CanvasRow } from './api/canvases.ts';
 import { initGlobalKeyboard } from './keyboard.ts';
 import { formatDateTime } from './html-utils.ts';
-import { handleImportProgress, handleImportStats, handleImportComplete, initQueryFileDrop } from './file-upload.ts';
 import { uiState } from './state/ui.ts';
 import { appState } from './state/app.ts';
 import { initSyncBadge } from './sync-badge.ts';
@@ -220,9 +219,6 @@ async function init(): Promise<void> {
 
     const handlers: MessageHandlers = {
         'version': handleVersion,
-        'import_progress': handleImportProgress,
-        'import_stats': handleImportStats,
-        'import_complete': handleImportComplete,
         'daemon_status': handleDaemonStatus,
         'pulse_execution_started': handlePulseExecutionStarted,
         'pulse_execution_failed': handlePulseExecutionFailed,
@@ -517,9 +513,6 @@ async function init(): Promise<void> {
     import('./components/element/plugin-provided-elements.ts')
         .then(({ loadPluginElements }) => loadPluginElements())
         .catch(err => log.warn(SEG.UI, '[Init] Failed to load plugin elements:', err));
-
-    if (window.logLoaderStep) window.logLoaderStep('Setting up file upload...');
-    initQueryFileDrop();
 
     if (window.logLoaderStep) window.logLoaderStep('Initializing UI controls...');
     initSyncBadge();

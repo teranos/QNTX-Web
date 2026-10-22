@@ -17,7 +17,7 @@
  */
 
 import { apiFetch, apiJson, backendPath } from './client';
-import { assertOk, jsonBody } from './http-utils.ts';
+import { jsonBody } from './http-utils.ts';
 import { escapeHtml, formatBuildTime } from './html-utils.ts';
 import { log, SEG } from './logger';
 import { handleError } from './error-handler.ts';
@@ -747,38 +747,31 @@ function getStateIcon(state: string): string {
     }
 }
 
+// Pause, resume and restart throw the node's refusal: it is the press's to show, beside it.
 async function pausePlugin(name: string): Promise<void> {
-    try {
-        log.debug(SEG.UI, 'Pausing plugin:', name);
-        const response = await apiFetch(`/api/plugins/${name}/pause`, { method: 'POST' });
-        await assertOk(response, `Failed to pause ${name}`);
+    log.debug(SEG.UI, 'Pausing plugin:', name);
+    const response = await apiFetch(`/api/plugins/${encodeURIComponent(name)}/pause`, { method: 'POST' });
+    if (!response.ok) throw new Error(await refusal(response));
 
-        await fetchPlugins();
-        render();
-        log.debug(SEG.UI, 'Plugin paused:', name);
-    } catch (error: unknown) {
-        handleError(error, 'Failed to pause plugin', { context: SEG.UI });
-    }
+    await fetchPlugins();
+    render();
+    log.debug(SEG.UI, 'Plugin paused:', name);
 }
 
 async function resumePlugin(name: string): Promise<void> {
-    try {
-        log.debug(SEG.UI, 'Resuming plugin:', name);
-        const response = await apiFetch(`/api/plugins/${name}/resume`, { method: 'POST' });
-        await assertOk(response, `Failed to resume ${name}`);
+    log.debug(SEG.UI, 'Resuming plugin:', name);
+    const response = await apiFetch(`/api/plugins/${encodeURIComponent(name)}/resume`, { method: 'POST' });
+    if (!response.ok) throw new Error(await refusal(response));
 
-        await fetchPlugins();
-        render();
-        log.debug(SEG.UI, 'Plugin resumed:', name);
-    } catch (error: unknown) {
-        handleError(error, 'Failed to resume plugin', { context: SEG.UI });
-    }
+    await fetchPlugins();
+    render();
+    log.debug(SEG.UI, 'Plugin resumed:', name);
 }
 
 async function restartPlugin(name: string): Promise<void> {
     log.debug(SEG.UI, 'Restarting plugin:', name);
-    const response = await apiFetch(`/api/plugins/${name}/restart`, { method: 'POST' });
-    await assertOk(response, `Failed to restart ${name}`);
+    const response = await apiFetch(`/api/plugins/${encodeURIComponent(name)}/restart`, { method: 'POST' });
+    if (!response.ok) throw new Error(await refusal(response));
 
     await fetchPlugins();
     render();
@@ -1336,17 +1329,10 @@ export function createPluginElement(): Element {
             // Attach delegated listeners once — they survive innerHTML replacements
             attachEventDelegation();
 
-            // Live-update when health polling detects a change
-            const onHealthChange = () => {
-                fetchPlugins().then(() => render()).catch((err: unknown) => log.error(SEG.UI, '[PluginPanel] refresh failed:', err));
-            };
-            document.addEventListener('plugin-health-change', onHealthChange);
-
-            // Auto-refresh every 10s while the panel is open
+            // Plugin state is asked of /api/plugins, every 10s while the panel is open
             const refreshInterval = setInterval(() => {
                 if (!contentElement?.isConnected) {
                     clearInterval(refreshInterval);
-                    document.removeEventListener('plugin-health-change', onHealthChange);
                     return;
                 }
                 fetchPlugins().then(() => render()).catch((err: unknown) => log.error(SEG.UI, '[PluginPanel] refresh failed:', err));

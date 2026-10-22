@@ -52,8 +52,8 @@ export async function handleForceTrigger(
 
         await loadExecutionsForJob(jobId, ctx);
     } catch (error: unknown) {
-        handleError(error, 'Force trigger failed', { context: SEG.PULSE, showBuildInfo: true });
-        throw error; // Re-throw so Button component can show error state
+        handleError(error, 'Force trigger failed', { context: SEG.PULSE, silent: true });
+        throw error; // The press says it, beside it
     }
 }
 
@@ -81,8 +81,8 @@ export async function handleJobAction(
 
         await ctx.loadJobs();
     } catch (error: unknown) {
-        handleError(error, `Failed to ${action} job`, { context: SEG.PULSE });
-        throw error; // Re-throw so Button component can show error state
+        handleError(error, `Failed to ${action} job`, { context: SEG.PULSE, silent: true });
+        throw error; // The press says it, beside it
     }
 }
 
@@ -123,7 +123,8 @@ export async function loadExecutionsForJob(
         ctx.state.jobExecutions.set(jobId, response.executions);
         ctx.state.executionErrors.delete(jobId);
     } catch (error: unknown) {
-        const err = handleError(error, 'Failed to load execution history', { context: SEG.PULSE });
+        // Said in the job's own execution history, where it was asked for.
+        const err = handleError(error, 'Failed to load execution history', { context: SEG.PULSE, silent: true });
         ctx.state.executionErrors.set(jobId, err.message);
     } finally {
         ctx.state.loadingExecutions.delete(jobId);

@@ -10,6 +10,7 @@ import { apiJson } from './client/http';
 import { ordered, type Namespace } from './namespaces-view';
 import { person } from './self-person';
 import { openTokenElement } from './token-element';
+import { styled, labelled } from './element-parts';
 
 export interface CreateTokenResponse {
     id: string;
@@ -54,16 +55,6 @@ export async function createToken(
 export const SUPER = 'SUPER';
 export const ATTESTOR = 'ATTESTOR';
 export const OAUTH = 'OAUTH';
-
-function styled<T extends HTMLElement>(field: T): T {
-    field.style.padding = '6px 8px';
-    field.style.fontFamily = 'var(--font-mono)';
-    field.style.color = 'var(--text-on-dark)';
-    field.style.background = 'var(--bg-dark-light)';
-    field.style.border = '1px solid var(--border-on-dark)';
-    field.style.borderRadius = 'var(--border-radius)';
-    return field;
-}
 
 function option(value: string, text: string): HTMLOptionElement {
     const made = document.createElement('option');
@@ -182,20 +173,6 @@ function namespaceField(): HTMLSelectElement {
         select.appendChild(option('', err instanceof Error ? err.message : String(err)));
     });
     return select;
-}
-
-function labelled(text: string, field: HTMLElement): HTMLElement {
-    const wrap = document.createElement('label');
-    wrap.style.display = 'flex';
-    wrap.style.flexDirection = 'column';
-    wrap.style.gap = '4px';
-
-    const caption = document.createElement('span');
-    caption.style.color = 'var(--text-on-dark-tertiary)';
-    caption.textContent = text;
-
-    wrap.append(caption, field);
-    return wrap;
 }
 
 function mintElement(): Element {

@@ -16,6 +16,7 @@ import { person } from './self-person';
 import { stacked } from './table-cell';
 import { openUserElement } from './user-element';
 import { openInvitationCancel, openUserInviteElement, type InvitationRecord } from './user-invite-element';
+import { cell, errorBox } from './element-parts';
 
 /** One User, as the record holds them. Nothing here is a secret: a key is a
  *  DID and an account is what a provider calls it. */
@@ -57,13 +58,6 @@ export function nameOf(u: UserRecord): string {
 export function fmt(ms: number): string {
     if (!ms) return '—';
     return new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
-}
-
-function cell(text: string, className = ''): HTMLTableCellElement {
-    const td = document.createElement('td');
-    td.className = className;
-    td.textContent = text;
-    return td;
 }
 
 /** On or off, and who switched it. */
@@ -212,19 +206,7 @@ export function createUsersElement(): Element {
             refreshList(listContainer).catch((err: unknown) => {
                 log.error(SEG.UI, '[UsersElement] the node did not list its Users', err);
                 listContainer.innerHTML = '';
-                const message = `the node did not list its Users: ${err instanceof Error ? err.message : String(err)}`;
-                const errBox = document.createElement('div');
-                errBox.className = 'element-error';
-                errBox.textContent = message;
-                errBox.style.cursor = 'pointer';
-                errBox.title = 'press to copy';
-                errBox.addEventListener('click', () => {
-                    void navigator.clipboard.writeText(message).then(
-                        () => { errBox.textContent = 'copied'; setTimeout(() => { errBox.textContent = message; }, 1200); },
-                        () => { errBox.textContent = 'refused'; setTimeout(() => { errBox.textContent = message; }, 1200); },
-                    );
-                });
-                listContainer.appendChild(errBox);
+                listContainer.appendChild(errorBox(`the node did not list its Users: ${err instanceof Error ? err.message : String(err)}`));
             });
 
             return content;

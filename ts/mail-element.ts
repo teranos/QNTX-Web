@@ -14,6 +14,7 @@ import { openElement } from './sidebar.ts';
 import { apiJson } from './client/http';
 import { log, SEG } from './logger';
 import { stacked } from './table-cell';
+import { row, section, cell, said } from './element-parts';
 
 /** One mail the node sent or tried to, as /api/mail gives it. */
 export interface MailRow {
@@ -93,44 +94,6 @@ export const ELEMENT_ID = 'mail-element';
 export function fmt(at: string): string {
     if (!at) return '—';
     return at.slice(0, 19).replace('T', ' ');
-}
-
-function row(label: string, value: string): HTMLDivElement {
-    const div = document.createElement('div');
-    div.className = 'element-row';
-    const l = document.createElement('span');
-    l.className = 'label';
-    l.textContent = label;
-    const v = document.createElement('span');
-    v.className = 'element-value';
-    v.textContent = value;
-    div.appendChild(l);
-    div.appendChild(v);
-    return div;
-}
-
-function section(title: string): HTMLDivElement {
-    const div = document.createElement('div');
-    div.className = 'element-section';
-    const h = document.createElement('h3');
-    h.className = 'element-section-title';
-    h.textContent = title;
-    div.appendChild(h);
-    return div;
-}
-
-function cell(text: string, className = ''): HTMLTableCellElement {
-    const td = document.createElement('td');
-    td.className = className;
-    td.textContent = text;
-    return td;
-}
-
-function said(text: string): HTMLDivElement {
-    const div = document.createElement('div');
-    div.className = 'element-loading';
-    div.textContent = text;
-    return div;
 }
 
 const yes = (b: boolean) => (b ? 'yes' : 'no');

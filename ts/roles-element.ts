@@ -15,6 +15,7 @@ import { apiJson } from './client/http';
 import { log, SEG } from './logger';
 import { openTokenElement } from './token-element';
 import { openUsersElement } from './users-element';
+import { errorBox } from './element-parts';
 
 /** One line as the node answers it: the five slots, when, and who. */
 export interface Line {
@@ -62,21 +63,6 @@ export function said(line: Line): string {
 function fmt(at: string): string {
     const d = new Date(at);
     return isNaN(d.getTime()) ? at : d.toISOString().slice(0, 19).replace('T', ' ');
-}
-
-function errorBox(message: string): HTMLDivElement {
-    const box = document.createElement('div');
-    box.className = 'element-error';
-    box.textContent = message;
-    box.style.cursor = 'pointer';
-    box.title = 'press to copy';
-    box.addEventListener('click', () => {
-        void navigator.clipboard.writeText(message).then(
-            () => { box.textContent = 'copied'; setTimeout(() => { box.textContent = message; }, 1200); },
-            () => { box.textContent = 'refused'; setTimeout(() => { box.textContent = message; }, 1200); },
-        );
-    });
-    return box;
 }
 
 /** Exported for tests: the table, one row per line. */

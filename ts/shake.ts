@@ -16,10 +16,8 @@ import type { Element } from '@teranos/elements';
 import { tray } from '@teranos/elements';
 import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
-import { agentOf } from './agent-element';
-import { drawClaude, theNodeFor } from './claude-element';
+import { drawClaude, elementAgent } from './claude-element';
 import { log, SEG } from './logger.ts';
-import { standingNamespace } from './standing.ts';
 import { Shake } from './sym';
 import type { Person } from './self-person';
 
@@ -116,17 +114,18 @@ function part<K extends keyof HTMLElementTagNameMap>(tag: K, className: string):
     return el;
 }
 
-// The chat: this element's own session with the agent of the namespace, or
-// with the Node Agent where there is no namespace, the picture already in the composer.
+// The chat: the element's own agent, the picture already in the composer.
+
+// > AND THAT ELEMENT IS THE AGENT,
+
+// > DAY 3 SHAKE AGAIN, SAME ELEMENT
 function draw(into: HTMLElement, shaken: Shaken): void {
     settle();
     const head = part('div', 'shake-head');
     head.textContent = `${shaken.symbol} ${shaken.id}`.trim();
     const talk = part('div', 'shake-talk');
     into.replaceChildren(head, talk);
-    const namespace = standingNamespace();
-    const node = namespace ? agentOf(namespace, shaken.id) : theNodeFor(shaken.id);
-    settle = drawClaude(talk, node, undefined, shaken.image ? { image: shaken.image } : {});
+    settle = drawClaude(talk, elementAgent(shaken.id), undefined, shaken.image ? { image: shaken.image } : {});
     const says = talk.querySelector<HTMLTextAreaElement>('.claude-says');
     if (says) {
         says.placeholder = `Say what is wrong with ${shaken.id}`;

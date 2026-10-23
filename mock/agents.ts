@@ -113,7 +113,7 @@ export class Agent {
         const now = new Date().toISOString();
         const saw = fileId ? ` I was handed a picture, file ${fileId}.` : '';
         const about = element ? ` This is ${element}'s own session with me.` : '';
-        const answer = `MOCK ${this.of} answers.${about}${saw} You said: ${says}`;
+        const answer = `MOCK ${this.of} answers, turn ${held.turns.length / 2 + 1} of our one conversation.${about}${saw} You said: ${says}`;
         held.turns.push({ at: now, speaker: 'person', text: says, of: 'person' });
         held.turns.push({ at: now, speaker: 'agent', text: answer, of: 'agent' });
         held.ended = now;

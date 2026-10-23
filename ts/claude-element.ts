@@ -60,38 +60,38 @@ export interface NodeAgent {
     read(): Promise<TranscriptRead | undefined>;
 }
 
-/** The say body: harness, words, the mode when one is chosen, what is carried, and the element when the talk is one element's. */
-export function sayBody(says: string, mode: string, carried: Carried | undefined, element: string): string {
+/** The say body: harness, words, the mode when one is chosen, and what is carried. */
+export function sayBody(says: string, mode: string, carried: Carried | undefined): string {
     const body: Record<string, string> = { harness: 'claude', says };
     if (mode) body.permission_mode = mode;
     if (carried?.file_id) body.file_id = carried.file_id;
-    if (element) body.element = element;
     return JSON.stringify(body);
 }
 
-/** `?harness=claude`, and the element when the session read is one element's. */
-export function askOf(element: string): string {
-    return element ? `?harness=claude&element=${encodeURIComponent(element)}` : '?harness=claude';
-}
-
-// The Node Agent in Claude Code, at the agent signum's path. Given an element,
-// the talk is that element's own session with it.
-// > each element is an agent as well, we default to claude
-export function theNodeFor(element = ''): NodeAgent {
+/** An agent of ROOT's kind at its path: the Node Agent at /api/agent, an element at /api/elements/<id>. */
+function agentAt(at: string): NodeAgent {
     return {
-        am: () => apiJson<{ claude: ClaudeAm }>(`/api/agent${askOf(element)}`).then(is => is.claude),
-        say: (says, mode, carried) => apiJson<{ claude: ClaudeSaid }>('/api/agent/say', {
+        am: () => apiJson<{ claude: ClaudeAm }>(`${at}?harness=claude`).then(is => is.claude),
+        say: (says, mode, carried) => apiJson<{ claude: ClaudeSaid }>(`${at}/say`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: sayBody(says, mode, carried, element),
+            body: sayBody(says, mode, carried),
         }).then(said => said.claude),
         // Its one session, read whole wherever whoever reads it stands.
-        read: () => apiJson<{ transcript: TranscriptRead }>(`/api/agent/session${askOf(element)}`)
+        read: () => apiJson<{ transcript: TranscriptRead }>(`${at}/session?harness=claude`)
             .then(answer => answer.transcript),
     };
 }
 
-const theNode: NodeAgent = theNodeFor();
+// The Node Agent in Claude Code, at the agent signum's path.
+const theNode: NodeAgent = agentAt('/api/agent');
+
+// > AGENT PER ELEMENT, EACH ELEMENT IS ITS OWN CONVERSATION
+
+/** The element's own agent, at the elements signum's path (ADR-054). */
+export function elementAgent(element: string): NodeAgent {
+    return agentAt(`/api/elements/${encodeURIComponent(element)}`);
+}
 
 // What is said with a picture and no words.
 const LOOK = 'Look at the picture.';

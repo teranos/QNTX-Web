@@ -12,7 +12,7 @@ import { apiJson } from './client';
 import { log, SEG } from './logger.ts';
 import { Agent } from './sym';
 import { standingNamespace } from './standing.ts';
-import { askOf, drawClaude, sayBody, type ClaudeAm, type ClaudeSaid, type NodeAgent } from './claude-element';
+import { drawClaude, sayBody, type ClaudeAm, type ClaudeSaid, type NodeAgent } from './claude-element';
 import type { TranscriptRead } from './components/element/transcript-element';
 import { apiError, sacredEntry } from './components/sacred';
 
@@ -43,22 +43,18 @@ export interface NamespaceAgent extends NodeAgent {
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
-/**
- * The agent of namespace, at the agents signum's path. Given an element, the
- * talk is that element's own session with it.
- * > each element is an agent as well, we default to claude
- */
-export function agentOf(namespace: string, element = ''): NamespaceAgent {
+/** The agent of namespace, at the agents signum's path. */
+export function agentOf(namespace: string): NamespaceAgent {
     const at = `/api/agents/${encodeURIComponent(namespace)}`;
     return {
-        am: () => apiJson<AgentAm>(`${at}${askOf(element)}`).then(is => is.agent),
+        am: () => apiJson<AgentAm>(`${at}?harness=claude`).then(is => is.agent),
         say: (says, mode, carried) => apiJson<{ claude: ClaudeSaid }>(`${at}/say`, {
             method: 'POST',
             headers: JSON_HEADERS,
-            body: sayBody(says, mode, carried, element),
+            body: sayBody(says, mode, carried),
         }).then(said => said.claude),
         // Its one session in Claude Code, shared by everyone who has reach on the namespace.
-        read: () => apiJson<{ transcript: TranscriptRead }>(`${at}/session${askOf(element)}`)
+        read: () => apiJson<{ transcript: TranscriptRead }>(`${at}/session?harness=claude`)
             .then(answer => answer.transcript),
         // Without a code a sign-in is begun and the URL given; with the code shown there it is finished.
         begin: () => apiJson<SignedIn>(`${at}/login`, { method: 'POST', headers: JSON_HEADERS, body: '{}' }),

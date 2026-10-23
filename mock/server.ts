@@ -116,10 +116,20 @@ function agentOf(namespace: string): Agent {
     }
     return held;
 }
+// > AGENT PER ELEMENT, EACH ELEMENT IS ITS OWN CONVERSATION
+const elementAgents = new Map<string, Agent>();
+function elementAgent(element: string): Agent {
+    let held = elementAgents.get(element);
+    if (!held) {
+        held = new Agent(`the element ${element}`, `did:key:mock-element-${element}`);
+        elementAgents.set(element, held);
+    }
+    return held;
+}
 const files = new Files();
 
-/** The agent paths, answered live: am, session and say, the element and the picture carried along. */
-async function agentAnswer(level: Level, method: string, path: string, url: URL, req: Request): Promise<Response | null> {
+/** The agent paths, answered live: am, session and say, the picture carried along. */
+async function agentAnswer(level: Level, method: string, path: string, _url: URL, req: Request): Promise<Response | null> {
     let agent: Agent | null = null;
     let rest = "";
     let wrap: (am: unknown) => unknown = am => ({ claude: am });
@@ -132,20 +142,24 @@ async function agentAnswer(level: Level, method: string, path: string, url: URL,
         agent = agentOf(decodeURIComponent(namespace));
         rest = more.length ? `/${more.join("/")}` : "";
         wrap = am => ({ namespace, set_by: PEOPLE[level].user, agent: am });
+    } else if (path.startsWith("/api/elements/")) {
+        const [element, ...more] = path.slice("/api/elements/".length).split("/");
+        if (!element) return null;
+        agent = elementAgent(decodeURIComponent(element));
+        rest = more.length ? `/${more.join("/")}` : "";
     }
     if (!agent) return null;
 
-    const asked = url.searchParams.get("element") ?? "";
-    if (rest === "" && method === "GET") return json(wrap(agent.am(asked)));
+    if (rest === "" && method === "GET") return json(wrap(agent.am("")));
     if (rest === "/session" && method === "GET") {
-        const transcript = agent.read(asked);
-        return transcript ? json({ transcript }) : json({ error: `${agent.of} has no session for ${asked || "itself"}` }, 404);
+        const transcript = agent.read("");
+        return transcript ? json({ transcript }) : json({ error: `${agent.of} has no session yet` }, 404);
     }
     if (rest === "/say" && method === "POST") {
         const sent = (await req.json()) as Record<string, string>;
         if (!sent.says) return json({ error: "says is required" }, 400);
-        const said = agent.say(sent.says, sent.element ?? "", sent.file_id ?? "", sent.permission_mode ?? "");
-        console.log(`${pink}${level} said to ${agent.of}${sent.element ? ` about ${sent.element}` : ""}${sent.file_id ? ` with ${sent.file_id}` : ""}: ${sent.says}${reset}`);
+        const said = agent.say(sent.says, "", sent.file_id ?? "", sent.permission_mode ?? "");
+        console.log(`${pink}${level} said to ${agent.of}${sent.file_id ? ` with ${sent.file_id}` : ""}: ${sent.says}${reset}`);
         return json({ claude: said });
     }
     if (rest === "/login" && method === "POST") return json({ url: "", signed_in: true, auth_method: "mock", api_provider: "mock" });

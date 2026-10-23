@@ -2,7 +2,7 @@
 
 import { describe, expect, test } from 'bun:test';
 import { elementOnScreen, SHAKE_ID } from './shake';
-import { askOf, sayBody } from './claude-element';
+import { sayBody } from './claude-element';
 
 function placed(id: string, form: string, z: string, symbol = ''): HTMLElement {
     const el = document.createElement('div');
@@ -64,16 +64,11 @@ describe('the element on screen', () => {
 
 describe('what say carries', () => {
     test('words alone', () => {
-        expect(JSON.parse(sayBody('hi', '', undefined, ''))).toEqual({ harness: 'claude', says: 'hi' });
+        expect(JSON.parse(sayBody('hi', '', undefined))).toEqual({ harness: 'claude', says: 'hi' });
     });
 
-    test('the mode, the picture and the element', () => {
-        expect(JSON.parse(sayBody('look', 'plan', { file_id: 'f1' }, 'note-1')))
-            .toEqual({ harness: 'claude', says: 'look', permission_mode: 'plan', file_id: 'f1', element: 'note-1' });
-    });
-
-    test('the session asked is the element\'s', () => {
-        expect(askOf('')).toBe('?harness=claude');
-        expect(askOf('a b')).toBe('?harness=claude&element=a%20b');
+    test('the mode and the picture', () => {
+        expect(JSON.parse(sayBody('look', 'plan', { file_id: 'f1' })))
+            .toEqual({ harness: 'claude', says: 'look', permission_mode: 'plan', file_id: 'f1' });
     });
 });

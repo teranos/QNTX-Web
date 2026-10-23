@@ -11,6 +11,7 @@ import { isBackendPath } from "../dev-proxy";
 import { build, setupWatcher, findAvailablePort, reloadStream, RELOAD_PATH, RELOAD_SCRIPT, lightPink, pink, darkPink, reset, dim } from "../dev-build";
 import { Tablet, LEVELS, type Level } from "./reach";
 import { PEOPLE, authStatus, canvases, canvasElements, compositions, minimizedWindows } from "./world";
+import { Agent, Files, type Transcript } from "./agents";
 
 const here = import.meta.dir;
 const web = join(here, "..");
@@ -102,13 +103,80 @@ function worldAnswer(level: Level, method: string, path: string, url: URL): Resp
     return null;
 }
 
+// The agents, each with its seeded session where a fixture gives one.
+const theNodeAgent = new Agent("the Node Agent", "did:key:mock-node-agent", (fixture("api/claude/session") as { transcript: Transcript }).transcript);
+const namespaceAgents = new Map<string, Agent>();
+function agentOf(namespace: string): Agent {
+    let held = namespaceAgents.get(namespace);
+    if (!held) {
+        const seeded = fixtureFile(`api/agents/${namespace}/session`);
+        const seed = seeded ? (JSON.parse(readFileSync(seeded, "utf8")) as { transcript: Transcript }).transcript : undefined;
+        held = new Agent(`the agent of ${namespace}`, `did:key:mock-agent-${namespace}`, seed);
+        namespaceAgents.set(namespace, held);
+    }
+    return held;
+}
+const files = new Files();
+
+/** The agent paths, answered live: am, session and say, the element and the picture carried along. */
+async function agentAnswer(level: Level, method: string, path: string, url: URL, req: Request): Promise<Response | null> {
+    let agent: Agent | null = null;
+    let rest = "";
+    let wrap: (am: unknown) => unknown = am => ({ claude: am });
+    if (path === "/api/agent" || path.startsWith("/api/agent/")) {
+        agent = theNodeAgent;
+        rest = path.slice("/api/agent".length);
+    } else if (path.startsWith("/api/agents/")) {
+        const [namespace, ...more] = path.slice("/api/agents/".length).split("/");
+        if (!namespace) return null;
+        agent = agentOf(decodeURIComponent(namespace));
+        rest = more.length ? `/${more.join("/")}` : "";
+        wrap = am => ({ namespace, set_by: PEOPLE[level].user, agent: am });
+    }
+    if (!agent) return null;
+
+    const asked = url.searchParams.get("element") ?? "";
+    if (rest === "" && method === "GET") return json(wrap(agent.am(asked)));
+    if (rest === "/session" && method === "GET") {
+        const transcript = agent.read(asked);
+        return transcript ? json({ transcript }) : json({ error: `${agent.of} has no session for ${asked || "itself"}` }, 404);
+    }
+    if (rest === "/say" && method === "POST") {
+        const sent = (await req.json()) as Record<string, string>;
+        if (!sent.says) return json({ error: "says is required" }, 400);
+        const said = agent.say(sent.says, sent.element ?? "", sent.file_id ?? "", sent.permission_mode ?? "");
+        console.log(`${pink}${level} said to ${agent.of}${sent.element ? ` about ${sent.element}` : ""}${sent.file_id ? ` with ${sent.file_id}` : ""}: ${sent.says}${reset}`);
+        return json({ claude: said });
+    }
+    if (rest === "/login" && method === "POST") return json({ url: "", signed_in: true, auth_method: "mock", api_provider: "mock" });
+    return null;
+}
+
+/** The files the page sends up, kept in memory and served back by id. */
+async function filesAnswer(method: string, path: string, req: Request): Promise<Response | null> {
+    if (path === "/api/files" && method === "POST") {
+        const form = await req.formData();
+        const file = form.get("file");
+        if (!(file instanceof File)) return json({ error: "no file field" }, 400);
+        const kept = files.keep(new Uint8Array(await file.arrayBuffer()), file.type, file.name);
+        console.log(`${pink}file ${kept.id}: ${kept.filename}, ${kept.content_type}, ${kept.size} bytes${reset}`);
+        return json(kept);
+    }
+    if (path.startsWith("/api/files/") && method === "GET") {
+        const held = files.get(path.slice("/api/files/".length));
+        if (!held) return json({ error: `${path}: the mock holds no such file` }, 404);
+        return new Response(held.bytes, { headers: { "Content-Type": held.type } });
+    }
+    return null;
+}
+
 function refused(level: Level, path: string): Response {
     const line = tablet.line(path);
     const named = line ? line.levels.join(" ") : "nobody: the tablet has no line for it";
     return json({ error: `${path} is not reached by ${level}; the tablet names ${named}` }, 403);
 }
 
-function answer(req: Request, url: URL): Response {
+async function answer(req: Request, url: URL): Promise<Response> {
     const level = whoIs(req);
     const path = url.pathname;
     const method = req.method;
@@ -128,7 +196,9 @@ function answer(req: Request, url: URL): Response {
         return refused(level, path);
     }
 
-    const said = worldAnswer(level, method, path, url);
+    const said = worldAnswer(level, method, path, url)
+        ?? await agentAnswer(level, method, path, url, req)
+        ?? await filesAnswer(method, path, req);
     if (said) return said;
 
     if (method !== "GET" && method !== "HEAD") {
@@ -150,7 +220,10 @@ function strip(level: Level): string {
     const links = LEVELS.map(each => each === level
         ? `<b>${each}</b>`
         : `<a href="${AS_PATH}${each}">${each}</a>`).join(" · ");
-    return `<div id="mock-strip" style="position:fixed;left:0;right:0;bottom:0;z-index:2147483647;padding:4px 12px;font:12px/1.4 monospace;background:#fde68a;color:#111;text-align:center">MOCK, no node · you are ${links} · <a href="${AS_PATH}nobody">sign out</a></div>`;
+    // > think ROOT SHAKE
+    // The strip's shake is the phone's: the page hears one event either way (ts/shake.ts).
+    const shake = level === "ROOT" ? ` · <a href="#" onclick="window.dispatchEvent(new Event('qntx-shake'));return false">shake</a>` : "";
+    return `<div id="mock-strip" style="position:fixed;left:0;right:0;bottom:0;z-index:2147483647;padding:4px 12px;font:12px/1.4 monospace;background:#fde68a;color:#111;text-align:center">MOCK, no node · you are ${links} · <a href="${AS_PATH}nobody">sign out</a>${shake}</div>`;
 }
 
 async function page(level: Level): Promise<Response> {

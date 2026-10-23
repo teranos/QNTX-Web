@@ -11,6 +11,7 @@ import { Claude } from './sym';
 import { spark } from './claude-spark';
 import { apiError, sacredEntry } from './components/sacred';
 import { renderTranscript, type TranscriptRead } from './components/element/transcript-element';
+import { uploadFile } from './api/files';
 
 const ELEMENT_ID = 'claude-element';
 
@@ -46,25 +47,54 @@ export interface ClaudeSaid {
     unwritten: string;
 }
 
+// What travels with the words: a picture, as the id /api/files gave it.
+// > say being able to carry an image sounds usefull to me
+export interface Carried {
+    file_id?: string;
+}
+
 // The node, as this element asks it.
 export interface NodeAgent {
     am(): Promise<ClaudeAm>;
-    say(says: string, mode: string): Promise<ClaudeSaid>;
+    say(says: string, mode: string, carried?: Carried): Promise<ClaudeSaid>;
     read(): Promise<TranscriptRead | undefined>;
 }
 
-// The Node Agent in Claude Code, at the agent signum's path.
-const theNode: NodeAgent = {
-    am: () => apiJson<{ claude: ClaudeAm }>('/api/agent?harness=claude').then(is => is.claude),
-    say: (says, mode) => apiJson<{ claude: ClaudeSaid }>('/api/agent/say', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(mode ? { harness: 'claude', says, permission_mode: mode } : { harness: 'claude', says }),
-    }).then(said => said.claude),
-    // Its one session, read whole wherever whoever reads it stands.
-    read: () => apiJson<{ transcript: TranscriptRead }>('/api/agent/session?harness=claude')
-        .then(answer => answer.transcript),
-};
+/** The say body: harness, words, the mode when one is chosen, what is carried, and the element when the talk is one element's. */
+export function sayBody(says: string, mode: string, carried: Carried | undefined, element: string): string {
+    const body: Record<string, string> = { harness: 'claude', says };
+    if (mode) body.permission_mode = mode;
+    if (carried?.file_id) body.file_id = carried.file_id;
+    if (element) body.element = element;
+    return JSON.stringify(body);
+}
+
+/** `?harness=claude`, and the element when the session read is one element's. */
+export function askOf(element: string): string {
+    return element ? `?harness=claude&element=${encodeURIComponent(element)}` : '?harness=claude';
+}
+
+// The Node Agent in Claude Code, at the agent signum's path. Given an element,
+// the talk is that element's own session with it.
+// > each element is an agent as well, we default to claude
+export function theNodeFor(element = ''): NodeAgent {
+    return {
+        am: () => apiJson<{ claude: ClaudeAm }>(`/api/agent${askOf(element)}`).then(is => is.claude),
+        say: (says, mode, carried) => apiJson<{ claude: ClaudeSaid }>('/api/agent/say', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: sayBody(says, mode, carried, element),
+        }).then(said => said.claude),
+        // Its one session, read whole wherever whoever reads it stands.
+        read: () => apiJson<{ transcript: TranscriptRead }>(`/api/agent/session${askOf(element)}`)
+            .then(answer => answer.transcript),
+    };
+}
+
+const theNode: NodeAgent = theNodeFor();
+
+// What is said with a picture and no words.
+const LOOK = 'Look at the picture.';
 
 // How often a turn that is going is read again.
 const FOLLOW_MS = 2000;
@@ -90,7 +120,7 @@ function wordsOf(err: unknown): string {
  * The Node Agent drawn into body: who it is, its session, and where something
  * is said to it. What it gives back stops reading a turn that is going.
  */
-export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: number = FOLLOW_MS): () => void {
+export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: number = FOLLOW_MS, opening: { image?: Blob } = {}): () => void {
     const who = part('div', 'claude-who');
     who.textContent = 'Asking the node who answers…';
     const session = part('div', 'claude-session tr');
@@ -105,8 +135,17 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     says.placeholder = 'Say something to the Node Agent';
     const send = part('button', 'qntx-btn qntx-btn-small claude-send');
     send.textContent = 'Say';
+    // > being able to attach an imagine whne in a mobile chat
+    const pick = part('input', 'claude-pick');
+    pick.type = 'file';
+    pick.accept = 'image/*';
+    pick.hidden = true;
+    const attach = part('button', 'qntx-btn qntx-btn-small claude-attach');
+    attach.textContent = 'Picture';
+    attach.title = 'A picture said with the words';
+    const attached = part('div', 'claude-attached');
     const form = part('div', 'claude-say');
-    form.append(mode, says, send);
+    form.append(mode, attach, pick, send, attached, says);
     // "the inputfield take up the entire bottom of the screen for chat elements like claude or pi"
     declareSay(says);
     // What is typed and pressed here is not a drag of the element.
@@ -118,6 +157,29 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     let reading = '';
     let sending = false;
     let following: ReturnType<typeof setInterval> | null = null;
+    let picture: Blob | null = null;
+
+    // The picture to be said, shown until it is sent or let go of.
+    const carry = (image: Blob | null) => {
+        picture = image;
+        attached.replaceChildren();
+        if (!image) return;
+        const shown = part('img', 'claude-picture');
+        shown.src = URL.createObjectURL(image);
+        shown.alt = 'the picture to be said';
+        shown.addEventListener('load', () => URL.revokeObjectURL(shown.src));
+        const drop = part('button', 'qntx-btn qntx-btn-small claude-drop');
+        drop.textContent = 'Without it';
+        drop.addEventListener('click', () => carry(null));
+        attached.append(shown, drop);
+    };
+    attach.addEventListener('click', () => pick.click());
+    pick.addEventListener('change', () => {
+        const chosen = pick.files?.[0] ?? null;
+        pick.value = '';
+        if (chosen) carry(chosen);
+    });
+    if (opening.image) carry(opening.image);
 
     const fails = (what: string, err: unknown) => {
         const said = wordsOf(err);
@@ -160,17 +222,26 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         }, every);
     };
 
+    // The picture goes up first, as a file of the node's; what comes back names it to say.
+    const carried = (): Promise<Carried | undefined> => {
+        if (!picture) return Promise.resolve(undefined);
+        const file = new File([picture], 'said.png', { type: picture.type || 'image/png' });
+        return uploadFile(file).then(stored => ({ file_id: stored.id }));
+    };
+
     const sendIt = () => {
-        const words = says.value.trim();
+        const words = says.value.trim() || (picture ? LOOK : '');
         if (!words || sending) return;
         sending = true;
         hold(true);
         failed.replaceChildren();
         denied.textContent = '';
         follow();
-        node.say(words, mode.value)
+        carried()
+            .then(carries => node.say(words, mode.value, carries))
             .then(answer => {
                 says.value = '';
+                carry(null);
                 reading = answer.session;
                 if (answer.denied.length > 0) denied.textContent = `It reached for ${answer.denied.join(', ')} and was not allowed.`;
                 if (answer.unwritten) fails('session', new Error(`a row of the session was not written down: ${answer.unwritten}`));

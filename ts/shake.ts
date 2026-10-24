@@ -164,7 +164,9 @@ export async function shaken(): Promise<void> {
     }
     current = { id: on.id, symbol: on.symbol, image };
     if (!tray.has(SHAKE_ID)) tray.add(createShakeElement());
-    if (body?.isConnected) draw(body, current);
+    // The panel's content is drawn once and kept across its forms, so every
+    // shake draws it again for the element in front, before the panel opens.
+    if (body) draw(body, current);
     tray.open(SHAKE_ID);
 }
 

@@ -27,6 +27,12 @@ export interface Signum {
    */
   description: string;
   tags: string[];
+  /**
+   * The skills of OASF's taxonomy it performs, each by its path there:
+   * software_engineering/version_control/pull_request_management. A Record
+   * names a skill by that path and the id derived from it.
+   */
+  oasf: string[];
 }
 
 /**

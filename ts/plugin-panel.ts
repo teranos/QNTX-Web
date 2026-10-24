@@ -46,6 +46,8 @@ interface PluginInfo {
     repo?: string;
     /** Whether its record has it switched on. */
     enabled?: boolean;
+    /** What still stands between it and its tools working, besides Enable, as the node reads its record. Empty is nothing. */
+    setup?: string[];
 }
 
 /** One sigil a plugin handed the node (ADR-039), as server/plugin_sigils.go sends it. */
@@ -706,6 +708,7 @@ function renderPlugin(plugin: PluginInfo): string {
                         <span class="plugin-status-text">${statusText}</span>
                     </div>`}
                     ${renderSigilBadges(plugin)}
+                    ${renderSetupBadge(plugin)}
                 </div>
             </div>
             ${plugin.repo ? `<a class="plugin-repo plugin-mono" href="${escapeHtml(plugin.repo)}" target="_blank" rel="noopener noreferrer">${escapeHtml(plugin.repo)}</a>` : ''}
@@ -871,6 +874,13 @@ export function renderSigilBadges(plugin: PluginInfo): string {
         badges += `<span class="plugin-sigil-refused has-tooltip" data-tooltip="${escapeHtml(refused.join('\n'))}">signum refused</span>`;
     }
     return badges;
+}
+
+/** The key: what the node says still stands before this plugin's tools work, read on hover. Nothing standing, no key. */
+export function renderSetupBadge(plugin: PluginInfo): string {
+    const setup = plugin.setup ?? [];
+    if (setup.length === 0) return '';
+    return `<span class="plugin-setup has-tooltip" data-tooltip="${escapeHtml(setup.join('\n'))}"><span class="plugin-setup-key" aria-hidden="true">⚿</span> setup</span>`;
 }
 
 /** Who reaches a sigil over one surface, in words. ROOT reaches everything. */

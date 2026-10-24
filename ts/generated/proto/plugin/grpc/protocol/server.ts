@@ -537,6 +537,11 @@ export interface Vault {
    * not in it sends nothing: it is opted into, never assumed.
    */
   sends: { [key: string]: string };
+  /**
+   * What still stands between this vault and its folders working: its copy
+   * not being on the box at path (#1091). Empty is nothing.
+   */
+  setup: string;
 }
 
 export interface Vault_SendsEntry {

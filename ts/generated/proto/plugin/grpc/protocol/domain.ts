@@ -564,6 +564,12 @@ export interface PluginInfo {
    */
   repo: string;
   enabled: boolean;
+  /**
+   * What still stands between this plugin and its tools working, besides
+   * enabling it: each thing its record lacks, as the node reads it. Empty is
+   * nothing.
+   */
+  setup: string[];
 }
 
 export interface PluginInfo_DetailsEntry {

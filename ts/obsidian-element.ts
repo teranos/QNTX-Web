@@ -23,6 +23,8 @@ export interface Vault {
     path: string;
     /** Each folder it holds, as host/path@branch:path=place (github.com/owner/repo@main:docs=Notes), place being where in the vault it is. */
     folders: string[];
+    /** What still stands before its folders work: its copy not on the box at path (#1091). Empty is nothing. */
+    setup?: string;
 }
 
 /** What one bound folder is now, as /api/vault/states gives it. */
@@ -108,6 +110,14 @@ export function renderVault(container: HTMLElement, view: View, reload: () => Pr
     container.innerHTML = '';
     const header = div('obsidian-vault');
     header.append(div('obsidian-vault-name', view.vault.name), div('obsidian-vault-path', view.vault.path));
+    if (view.vault.setup) {
+        // The key: what the node says still stands before the vault works, read on hover.
+        const key = div('obsidian-setup', '⚿ setup');
+        key.title = view.vault.setup;
+        key.setAttribute('role', 'img');
+        key.setAttribute('aria-label', view.vault.setup);
+        header.appendChild(key);
+    }
     container.appendChild(header);
 
     const byPlace = new Map(view.states.map(s => [s.place, s]));

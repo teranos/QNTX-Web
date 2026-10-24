@@ -18,6 +18,7 @@ import { refusal } from './self-person';
 import { log, SEG } from './logger';
 import { stacked } from './table-cell';
 import { renderSparklines, windowOf } from './components/sparkline';
+import { row, section, cell, said } from './element-parts';
 
 /** GitHub's core rate limit for one namespace's token. */
 export interface GitHubRate {
@@ -98,48 +99,6 @@ const DEFAULT_RUNNER_PATH = '/opt/actions-runner';
 function fmt(at: string | undefined): string {
     if (!at) return '—';
     return at.slice(0, 19).split('T').join(' ');
-}
-
-function row(label: string, value: string | HTMLElement): HTMLDivElement {
-    const div = document.createElement('div');
-    div.className = 'element-row';
-    const l = document.createElement('span');
-    l.className = 'label';
-    l.textContent = label;
-    const v = document.createElement('span');
-    v.className = 'element-value';
-    if (typeof value === 'string') {
-        v.textContent = value;
-    } else {
-        v.appendChild(value);
-    }
-    div.appendChild(l);
-    div.appendChild(v);
-    return div;
-}
-
-function section(title: string): HTMLDivElement {
-    const div = document.createElement('div');
-    div.className = 'element-section';
-    const h = document.createElement('h3');
-    h.className = 'element-section-title';
-    h.textContent = title;
-    div.appendChild(h);
-    return div;
-}
-
-function cell(text: string, className = ''): HTMLTableCellElement {
-    const td = document.createElement('td');
-    td.className = className;
-    td.textContent = text;
-    return td;
-}
-
-function said(text: string): HTMLDivElement {
-    const div = document.createElement('div');
-    div.className = 'element-loading';
-    div.textContent = text;
-    return div;
 }
 
 function pill(text: string, on: boolean): HTMLSpanElement {

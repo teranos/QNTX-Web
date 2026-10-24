@@ -12,6 +12,7 @@ import { spawnAttestationAsWindow } from './components/element/attestation-eleme
 import { jsonBody } from './http-utils';
 import { log, SEG } from './logger';
 import { kindOf, ordered, type Namespace } from './namespaces-view';
+import { errorBox } from './element-parts';
 
 /** What the node says about a token. No hash, ever. */
 export interface TokenInfo {
@@ -137,21 +138,6 @@ function reveal(container: HTMLElement, raw: string): void {
 
 /** An element-error box whose text is a press away from the clipboard — the same
  *  copy-on-click acknowledgement as tokens-element.ts didCell(). */
-function errorBox(message: string): HTMLDivElement {
-    const box = document.createElement('div');
-    box.className = 'element-error';
-    box.textContent = message;
-    box.style.cursor = 'pointer';
-    box.title = 'press to copy';
-    box.addEventListener('click', () => {
-        void navigator.clipboard.writeText(message).then(
-            () => { box.textContent = 'copied'; setTimeout(() => { box.textContent = message; }, 1200); },
-            () => { box.textContent = 'refused'; setTimeout(() => { box.textContent = message; }, 1200); },
-        );
-    });
-    return box;
-}
-
 function mayRead(t: TokenInfo): string {
     if (!t.words?.read.length) return '—';
     return t.words.read.join(', ') + (t.words.all ? ' (all)' : '');

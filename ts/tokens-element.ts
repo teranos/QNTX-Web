@@ -16,6 +16,7 @@ import { log, SEG } from './logger';
 import { person } from './self-person';
 import { long, spanBetween } from './span';
 import { stacked } from './table-cell';
+import { errorBox } from './element-parts';
 
 interface TokenInfo {
     id: string;
@@ -283,19 +284,7 @@ export function createTokensElement(): Element {
             refreshList(listContainer).catch(err => {
                 log.error(SEG.UI, '[TokensElement] Failed to load tokens', err);
                 listContainer.innerHTML = '';
-                const message = `Failed to load tokens: ${err instanceof Error ? err.message : String(err)}`;
-                const errBox = document.createElement('div');
-                errBox.className = 'element-error';
-                errBox.textContent = message;
-                errBox.style.cursor = 'pointer';
-                errBox.title = 'press to copy';
-                errBox.addEventListener('click', () => {
-                    void navigator.clipboard.writeText(message).then(
-                        () => { errBox.textContent = 'copied'; setTimeout(() => { errBox.textContent = message; }, 1200); },
-                        () => { errBox.textContent = 'refused'; setTimeout(() => { errBox.textContent = message; }, 1200); },
-                    );
-                });
-                listContainer.appendChild(errBox);
+                listContainer.appendChild(errorBox(`Failed to load tokens: ${err instanceof Error ? err.message : String(err)}`));
             });
 
             return content;

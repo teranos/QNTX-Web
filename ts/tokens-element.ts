@@ -219,6 +219,9 @@ export function renderList(container: HTMLElement, tokens: TokenInfo[], now = ne
     // "I wish the status col would give me a way to filter out everything revoked and expired."
     const statusHead = table.tHead?.rows[0].cells[3];
     if (!statusHead) throw new Error('the tokens table has no Status head');
+    // "I don't need to see the did in mobile as it's own col": on a phone the
+    // DID column goes, and the token's own element still carries it.
+    for (const row of table.rows) row.cells[2]?.classList.add('element-wide-only');
     statusHead.append(' ', liveOnlyToggle(() => { renderList(container, tokens, now); }));
     container.appendChild(table);
 }

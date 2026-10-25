@@ -21,9 +21,7 @@ import { createRolesElement, needs as rolesNeeds } from './roles-element.ts';
 import { createUsersElement, needs as usersNeeds } from './users-element.ts';
 import { createMarketElement, needs as marketNeeds } from './market-element.ts';
 import { createMailElement, needs as mailNeeds } from './mail-element.ts';
-import { createGitHubElement, needs as githubNeeds } from './github-element.ts';
 import { createApprovalsElement, needs as approvalsNeeds } from './approvals-element.ts';
-import { createObsidianElement, needs as obsidianNeeds } from './obsidian-element.ts';
 import { createGroundElement, needs as groundNeeds } from './ground-element.ts';
 import { createClaudeElement, needs as claudeNeeds } from './claude-element.ts';
 import { createPiElement, needs as piNeeds } from './pi-element.ts';
@@ -58,7 +56,8 @@ export async function registerDefaultElements(hasCanvas: boolean = true): Promis
         { needs: iNeeds, create: createIElement },
         // ≡ — what the node is, and what it was told to be
         { needs: amNeeds, create: createAmElement },
-        // ⧉ — a connection set up for an app, its URL, id and secret said where it was made
+        // ⧉ — Connectors: ChatGPT, Claude, Obsidian, OpenRouter and GitHub, each its own story.
+        // Obsidian and GitHub open from here, and are not in the tray of their own.
         { needs: connectorNeeds, create: createConnectorElement },
         // Access Tokens Element — opened from ⍟ (ADR-025)
         { needs: tokensNeeds, create: createTokensElement },
@@ -69,12 +68,8 @@ export async function registerDefaultElements(hasCanvas: boolean = true): Promis
         { needs: marketNeeds, create: createMarketElement },
         // Mail Element — what the node mails on plugins' behalf, opened from ⍟ (ADR-041)
         { needs: mailNeeds, create: createMailElement },
-        // GitHub Element — the node's GitHub and its Actions runner, opened from ⍟ (ADR-043)
-        { needs: githubNeeds, create: createGitHubElement },
         // Approvals Element — what waits on the human, opened from ⍟ (ADR-052)
         { needs: approvalsNeeds, create: createApprovalsElement },
-        // Obsidian Element — the vaults the node keeps, and the folders each holds (ADR-049)
-        { needs: obsidianNeeds, create: createObsidianElement },
         // Ground Element — aware of anything Ground; the sessions it recorded, each opened as a Transcript
         { needs: groundNeeds, create: createGroundElement },
         // ✻ — the Node Agent: said to, and read as the session it continues (ADR-048)

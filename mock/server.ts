@@ -12,6 +12,7 @@ import { build, setupWatcher, findAvailablePort, reloadStream, RELOAD_PATH, RELO
 import { Tablet, LEVELS, type Level } from "./reach";
 import { PEOPLE, authStatus, canvases, canvasElements, compositions, minimizedWindows } from "./world";
 import { Agent, Files, type Transcript } from "./agents";
+import { CodexAgents, codexDocument } from "./codex";
 
 const here = import.meta.dir;
 const web = join(here, "..");
@@ -77,6 +78,7 @@ function fixture(name: string): unknown {
 
 /** The answers that depend on who is asking. Null hands the request to the fixtures. */
 function worldAnswer(level: Level, method: string, path: string, url: URL): Response | null {
+    if (path === "/openapi.json") return json(codexDocument);
     const who = PEOPLE[level];
     if (path === "/setup") return json({ claimed: true });
     if (path === "/auth/status") return json(authStatus(level));
@@ -104,7 +106,10 @@ function worldAnswer(level: Level, method: string, path: string, url: URL): Resp
 }
 
 // The agents, each with its seeded session where a fixture gives one.
-const theNodeAgent = new Agent("the Node Agent", "did:key:mock-node-agent", (fixture("api/claude/session") as { transcript: Transcript }).transcript);
+const nodeSeed = fixtureFile("api/claude/session");
+const theNodeAgent = new Agent("the Node Agent", "did:key:mock-node-agent", nodeSeed
+    ? (JSON.parse(readFileSync(nodeSeed, "utf8")) as { transcript: Transcript }).transcript
+    : undefined);
 const namespaceAgents = new Map<string, Agent>();
 function agentOf(namespace: string): Agent {
     let held = namespaceAgents.get(namespace);
@@ -127,6 +132,7 @@ function elementAgent(element: string): Agent {
     return held;
 }
 const files = new Files();
+const codexAgents = new CodexAgents();
 
 /** The agent paths, answered live: am, session and say, the picture carried along. */
 async function agentAnswer(level: Level, method: string, path: string, _url: URL, req: Request): Promise<Response | null> {
@@ -211,6 +217,7 @@ async function answer(req: Request, url: URL): Promise<Response> {
     }
 
     const said = worldAnswer(level, method, path, url)
+        ?? await codexAgents.answer(req)
         ?? await agentAnswer(level, method, path, url, req)
         ?? await filesAnswer(method, path, req);
     if (said) return said;

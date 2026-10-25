@@ -61,7 +61,7 @@ const MODEL = 'claude-fable-5-1';
 export class Agent {
     private sessions = new Map<string, Transcript>();
 
-    constructor(readonly of: string, readonly did: string, seed?: Transcript) {
+    constructor(readonly of: string, readonly did: string, seed?: Transcript, readonly model = MODEL) {
         if (seed) this.sessions.set('', seed);
     }
 
@@ -77,7 +77,7 @@ export class Agent {
                 ended: now,
                 turns: [],
                 folded: 0,
-                model: MODEL,
+                model: this.model,
                 effort: 'high',
             };
             this.sessions.set(element, held);
@@ -89,7 +89,7 @@ export class Agent {
         const held = this.sessions.get(element);
         return {
             did: this.did,
-            model: MODEL,
+            model: this.model,
             effort: 'high',
             permission_mode: 'default',
             permission_modes: ['default', 'acceptEdits', 'plan'],
@@ -122,7 +122,7 @@ export class Agent {
             is_error: false,
             subtype: 'success',
             session: held.session,
-            model: MODEL,
+            model: this.model,
             claude_code: 'mock',
             permission_mode: mode || 'default',
             denied: [],

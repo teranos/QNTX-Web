@@ -217,7 +217,8 @@ export function renderList(container: HTMLElement, tokens: TokenInfo[], now = ne
 
     const table = createTable('tokens', ['Label', 'Owner', 'DID', 'Status'], rows);
     // "I wish the status col would give me a way to filter out everything revoked and expired."
-    const statusHead = table.tHead?.rows[0].cells[3];
+    // Read by selector: happy-dom gives a thead no rows, JSDOM and a browser do.
+    const statusHead = table.querySelector('thead tr')?.children[3];
     if (!statusHead) throw new Error('the tokens table has no Status head');
     // "I don't need to see the did in mobile as it's own col": on a phone the
     // DID column goes, and the token's own element still carries it.

@@ -8,7 +8,7 @@
  */
 
 import { describe, test, expect, beforeEach } from 'bun:test';
-import { reachedInWords, renderSigilBadges, renderSigils } from './plugin-panel.ts';
+import { reachedInWords, renderSetupBadge, renderSigilBadges, renderSigils } from './plugin-panel.ts';
 
 const USE_JSDOM = process.env.USE_JSDOM === '1';
 
@@ -107,6 +107,26 @@ describe('Plugin panel sigils', () => {
     test('the header counts the sigils', () => {
         container.innerHTML = renderSigilBadges(datapunt());
         expect(container.textContent).toBe('1 sigil');
+    });
+});
+
+// "you can now immediately see, you need to do some separate shit first"
+describe('the key of what still stands', () => {
+    if (!USE_JSDOM) {
+        test.skip('Skipped locally (run with USE_JSDOM=1 to enable)', () => {});
+        return;
+    }
+
+    test('a plugin whose record lacks something wears the key, and says what on hover', () => {
+        const container = document.createElement('div');
+        container.innerHTML = renderSetupBadge(datapunt({ state: 'disabled', setup: ['plugin datapunt names no build.command'] }));
+        expect(container.textContent).toContain('setup');
+        expect(container.querySelector('.plugin-setup')?.getAttribute('data-tooltip')).toBe('plugin datapunt names no build.command');
+    });
+
+    test('nothing standing, no key', () => {
+        expect(renderSetupBadge(datapunt())).toBe('');
+        expect(renderSetupBadge(datapunt({ setup: [] }))).toBe('');
     });
 });
 

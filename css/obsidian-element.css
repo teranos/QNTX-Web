@@ -33,6 +33,13 @@
     color: var(--text-on-dark-emphasis);
 }
 
+/* The key: something stands before the vault works, said on hover. */
+.obsidian-setup {
+    color: var(--color-warning);
+    font-size: var(--font-size-sm);
+    cursor: help;
+}
+
 .obsidian-tree ul {
     list-style: none;
     margin: 0;

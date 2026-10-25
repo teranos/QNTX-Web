@@ -75,6 +75,21 @@ describe('setting a vault up is not built yet', () => {
     });
 });
 
+// "you need to do some separate shit first before you can use your synced obsidian vault"
+describe('the key of what still stands', () => {
+    test('a vault whose copy is not on the box wears the key, and says what on hover', () => {
+        const gone = 'the vault\'s copy is not on the box at /var/lib/obsidian/abcd: sign in to Obsidian Sync there and keep it syncing, by hand until #1091';
+        const container = shown({ vault: { ...vault, setup: gone }, dirs, states: [] });
+        const key = container.querySelector<HTMLElement>('.obsidian-setup')!;
+        expect(key.textContent).toContain('setup');
+        expect(key.title).toBe(gone);
+    });
+
+    test('nothing standing, no key', () => {
+        expect(shown().querySelector('.obsidian-setup')).toBeNull();
+    });
+});
+
 describe('the vault is its folders', () => {
     test('the top folders show, and a folder opens to show its own', () => {
         const container = shown();

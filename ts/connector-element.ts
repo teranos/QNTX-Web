@@ -9,7 +9,7 @@ import type { Element } from '@teranos/elements';
 import { AtField, fieldFrom, pressFrom, tray } from '@teranos/elements';
 import { apiJson } from './client/http';
 import { log, SEG } from './logger';
-import { CLAUDE, GITHUB, OBSIDIAN, OPENAI, OPENROUTER, markOf, type BrandMark } from './brand-marks';
+import { ANTHROPIC, CLAUDE, GITHUB, OBSIDIAN, OPENAI, OPENROUTER, markOf, type BrandMark } from './brand-marks';
 import { createGitHubElement } from './github-element';
 import { createObsidianElement } from './obsidian-element';
 import { person } from './self-person';
@@ -117,29 +117,31 @@ function chatgptStory(panel: HTMLElement, at: ConnectorsAt): void {
     panel.append(note(`ChatGPT reaches ${at.standing}.`), callback.element, press.element, result);
 }
 
-/** Story 14: the key is kept sealed by the namespace stood in, and never shown again (ADR-051). */
-function openrouterStory(panel: HTMLElement, at: ConnectorsAt): void {
-    const key = fieldFrom({ id: 'openrouter-key', label: 'OpenRouter API key', placeholder: 'sk-or-…' });
-    key.input.type = 'password';
-    const result = document.createElement('div');
-    const press = pressFrom({
-        id: 'connect-openrouter',
-        title: 'Keep the key',
-        again: `keeps the OpenRouter key in ${at.standing}`,
-        creates: true,
-        does: async () => {
-            const value = key.input.value;
-            if (!value.trim()) throw new AtField(key.input, 'no key');
-            await apiJson(`/api/keys/${encodeURIComponent(at.standing)}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: 'openrouter', value }),
-            });
-            key.input.value = '';
-            result.replaceChildren(note(`Kept, sealed, in ${at.standing}. It is never shown again.`));
-        },
-    });
-    panel.append(key.element, press.element, result);
+/** Story 14: a provider's key, kept sealed by the namespace stood in under the provider's name (ADR-051). */
+function keyStory(provider: string, title: string, placeholder: string) {
+    return (panel: HTMLElement, at: ConnectorsAt): void => {
+        const key = fieldFrom({ id: `${provider}-key`, label: `${title} API key`, placeholder });
+        key.input.type = 'password';
+        const result = document.createElement('div');
+        const press = pressFrom({
+            id: `connect-${provider}`,
+            title: 'Keep the key',
+            again: `keeps the ${title} key in ${at.standing}`,
+            creates: true,
+            does: async () => {
+                const value = key.input.value;
+                if (!value.trim()) throw new AtField(key.input, 'no key');
+                await apiJson(`/api/keys/${encodeURIComponent(at.standing)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: provider, value }),
+                });
+                key.input.value = '';
+                result.replaceChildren(note(`Kept, sealed, in ${at.standing}. It is never shown again.`));
+            },
+        });
+        panel.append(key.element, press.element, result);
+    };
 }
 
 /** One thing a USER connects: its maker's mark, and the story it leads to. */
@@ -155,7 +157,10 @@ const CONNECTIONS: Connection[] = [
     { brand: OPENAI, name: 'ChatGPT', story: chatgptStory },
     { brand: CLAUDE, name: 'Claude', story: claudeStory },
     { brand: OBSIDIAN, name: 'Obsidian', opens: 'obsidian-element' },
-    { brand: OPENROUTER, name: 'OpenRouter', story: openrouterStory },
+    // The providers the namespace agent in Pi calls, each with its own key (server/agents.go piProviders).
+    { brand: OPENROUTER, name: 'OpenRouter', story: keyStory('openrouter', 'OpenRouter', 'sk-or-…') },
+    { brand: ANTHROPIC, name: 'Anthropic', story: keyStory('anthropic', 'Anthropic', 'sk-ant-…') },
+    { brand: OPENAI, name: 'OpenAI', story: keyStory('openai', 'OpenAI', 'sk-…') },
     { brand: GITHUB, name: 'GitHub', opens: 'github-element' },
 ];
 

@@ -12,13 +12,14 @@
  */
 
 import { apiFetch } from './client';
+import { apiJson } from './client/http';
 import { AM } from './sym';
 import { escapeHtml } from './html-utils';
 import { log, SEG } from './logger.ts';
 import { formatBuildTime } from './components/tooltip.ts';
 import type { StatusItem } from './brow.ts';
 import { a2aCardRow } from './a2a-card-element.ts';
-import { rootsClient } from './mcp-element.ts';
+import { nodeMCPOf, rootsClient, type CardMCP } from './connector-element.ts';
 import { person } from './self-person.ts';
 import type { VersionMessage, SystemCapabilitiesMessage } from '../types/websocket';
 
@@ -182,15 +183,22 @@ function renderAm(): void {
     if (amRootsClient) amElement.firstElementChild?.appendChild(amRootsClient);
 }
 
-// Whether the viewer is ROOT, which ROOT's client is drawn for.
+// Whether the viewer is ROOT, which ROOT's client is drawn for, and where the
+// node's MCP server answers, which the app is set up with.
 async function loadRootsClient(): Promise<void> {
     try {
         const who = await person();
         if (who.level !== 'ROOT') return;
-        amRootsClient = rootsClient();
+        const said = await apiJson<{ card: CardMCP }>('/am/node');
+        const node = nodeMCPOf(said.card ?? {});
+        if (!node) {
+            log.warn(SEG.SELF, '[am] the node card names no MCP server');
+            return;
+        }
+        amRootsClient = rootsClient(node);
         if (amElement) renderAm();
     } catch (error: unknown) {
-        log.warn(SEG.SELF, `[am] /auth/status failed: ${error instanceof Error ? error.message : String(error)}`);
+        log.warn(SEG.SELF, `[am] ROOT's client: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 

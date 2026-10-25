@@ -16,6 +16,8 @@ export interface CreateTokenResponse {
     id: string;
     label: string;
     token: string;
+    /** The token's DID: a client's id, which an app is set up with beside its secret. */
+    did?: string;
     created_at: string;
     expires_at?: string;
 }
@@ -28,18 +30,21 @@ const ELEMENT_ID = 'token-mint-element';
 let onMinted: (() => void) | undefined;
 
 // What a token may read and write is not asked here: the roles its DID holds
-// say, through their WRITE and READ lines (ADR-034). The MCP element mints a
-// client through here too (mcp-element.ts).
+// say, through their WRITE and READ lines (ADR-034). The Connector element mints
+// a client through here too (connector-element.ts).
 export async function createToken(
     label: string,
     level: string,
     namespaces: string[],
     returnAddress: string,
+    root = false,
 ): Promise<CreateTokenResponse> {
     // A token says when it ends, and one minted here does not: it says so.
     // A client's, and only a client's: the node refuses one on any other kind.
     const body: Record<string, unknown> = { label, level, namespaces, expires_at: 'never' };
     if (returnAddress) body.return_address = returnAddress;
+    // ROOT's client for the node's MCP server (ADR-038), ROOT's alone to mint.
+    if (root) body.root = true;
     return await apiJson<CreateTokenResponse>('/auth/tokens', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

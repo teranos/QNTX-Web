@@ -64,7 +64,7 @@ describe('Tim: ROOT connects an app to the node', () => {
 describe('Tim: USER sees what can be connected', () => {
     test('each with its own mark and color, and no namespace to pick', () => {
         const held = drawn('Clean');
-        for (const brand of ['ChatGPT', 'Claude', 'Obsidian', 'OpenRouter', 'GitHub']) {
+        for (const brand of ['ChatGPT', 'Claude', 'Obsidian', 'OpenRouter', 'Anthropic', 'OpenAI', 'GitHub']) {
             const tile = held.querySelector(`[data-connect="${brand}"]`);
             expect(tile, brand).not.toBeNull();
             expect(tile!.querySelector('svg path')?.getAttribute('d')).toBeTruthy();
@@ -119,18 +119,20 @@ describe('Tim: each leads to its own story', () => {
         expect(labels[0]).not.toBe(labels[1]);
     });
 
-    test('OpenRouter: the key is kept by the namespace stood in (story 14)', async () => {
-        const held = drawn('Clean');
-        choose(held, 'OpenRouter');
-        const key = held.querySelector('input') as HTMLInputElement;
-        expect(key.type).toBe('password');
-        key.value = 'sk-or-secret';
-        await pressTwice(held, 'connect-openrouter');
+    for (const [brand, provider] of [['OpenRouter', 'openrouter'], ['Anthropic', 'anthropic'], ['OpenAI', 'openai']] as const) {
+        test(`${brand}: the key is kept by the namespace stood in, by the provider's name (story 14)`, async () => {
+            const held = drawn('Clean');
+            choose(held, brand);
+            const key = held.querySelector('input') as HTMLInputElement;
+            expect(key.type).toBe('password');
+            key.value = 'sk-secret';
+            await pressTwice(held, `connect-${provider}`);
 
-        const set = asked.find((a) => a.url.endsWith('/api/keys/Clean'))!;
-        expect(set.body).toEqual({ name: 'openrouter', value: 'sk-or-secret' });
-        expect(held.textContent).not.toContain('sk-or-secret');
-    });
+            const set = asked.find((a) => a.url.endsWith('/api/keys/Clean'))!;
+            expect(set.body).toEqual({ name: provider, value: 'sk-secret' });
+            expect(held.textContent).not.toContain('sk-secret');
+        });
+    }
 
     test('Obsidian and GitHub open their own elements (stories 13 and 5)', () => {
         const opened: string[] = [];

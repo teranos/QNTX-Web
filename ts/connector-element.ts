@@ -218,10 +218,14 @@ export function renderConnectors(container: HTMLElement, at: ConnectorsAt): void
     container.append(tiles, panel);
 }
 
-/** ROOT's client for the node's MCP server, set up on am (story 10, ADR-038). */
+/** ROOT's client for the node's MCP server, set up on am (story 10, ADR-038): folded until ROOT opens it. */
 export function rootsClient(node: string): HTMLElement {
-    const held = document.createElement('div');
+    const held = document.createElement('details');
     held.className = 'element-section';
+    const summary = document.createElement('summary');
+    summary.textContent = "ROOT's client for the node's MCP server";
+    summary.style.cursor = 'pointer';
+    held.appendChild(summary);
     const label = fieldFrom({ id: 'roots-client-label', label: "ROOT's client", placeholder: 'what this client is for' });
     const returnAddress = fieldFrom({ id: 'roots-client-return', label: 'Return address', placeholder: 'the callback URL the app shows' });
     const result = document.createElement('div');

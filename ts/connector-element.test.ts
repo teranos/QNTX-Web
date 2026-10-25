@@ -47,6 +47,9 @@ describe('Tim: ROOT connects an app to the node', () => {
     test("ROOT's client names no namespace, and the node's server URL is said with its id and secret", async () => {
         const held = rootsClient(NODE);
         document.body.appendChild(held);
+        // "should be like a fold out when you want it"
+        expect(held.tagName).toBe('DETAILS');
+        expect((held as HTMLDetailsElement).open).toBe(false);
         (held.querySelector('[data-field="roots-client-label"] input') as HTMLInputElement).value = 'chatgpt';
         (held.querySelector('[data-field="roots-client-return"] input') as HTMLInputElement).value = 'https://chatgpt.com/connector/oauth/abc';
         await pressTwice(held, 'roots-client');

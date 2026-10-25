@@ -10,11 +10,14 @@ import { apiJson } from './client/http';
 import { ordered, type Namespace } from './namespaces-view';
 import { person } from './self-person';
 import { openTokenElement } from './token-element';
+import { styled, labelled } from './element-parts';
 
 export interface CreateTokenResponse {
     id: string;
     label: string;
     token: string;
+    /** The token's DID: a client's id, which an app is set up with beside its secret. */
+    did?: string;
     created_at: string;
     expires_at?: string;
 }
@@ -27,18 +30,21 @@ const ELEMENT_ID = 'token-mint-element';
 let onMinted: (() => void) | undefined;
 
 // What a token may read and write is not asked here: the roles its DID holds
-// say, through their WRITE and READ lines (ADR-034). The MCP element mints a
-// client through here too (mcp-element.ts).
+// say, through their WRITE and READ lines (ADR-034). The Connector element mints
+// a client through here too (connector-element.ts).
 export async function createToken(
     label: string,
     level: string,
     namespaces: string[],
     returnAddress: string,
+    root = false,
 ): Promise<CreateTokenResponse> {
     // A token says when it ends, and one minted here does not: it says so.
     // A client's, and only a client's: the node refuses one on any other kind.
     const body: Record<string, unknown> = { label, level, namespaces, expires_at: 'never' };
     if (returnAddress) body.return_address = returnAddress;
+    // ROOT's client for the node's MCP server (ADR-038), ROOT's alone to mint.
+    if (root) body.root = true;
     return await apiJson<CreateTokenResponse>('/auth/tokens', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -54,16 +60,6 @@ export async function createToken(
 export const SUPER = 'SUPER';
 export const ATTESTOR = 'ATTESTOR';
 export const OAUTH = 'OAUTH';
-
-function styled<T extends HTMLElement>(field: T): T {
-    field.style.padding = '6px 8px';
-    field.style.fontFamily = 'var(--font-mono)';
-    field.style.color = 'var(--text-on-dark)';
-    field.style.background = 'var(--bg-dark-light)';
-    field.style.border = '1px solid var(--border-on-dark)';
-    field.style.borderRadius = 'var(--border-radius)';
-    return field;
-}
 
 function option(value: string, text: string): HTMLOptionElement {
     const made = document.createElement('option');
@@ -182,20 +178,6 @@ function namespaceField(): HTMLSelectElement {
         select.appendChild(option('', err instanceof Error ? err.message : String(err)));
     });
     return select;
-}
-
-function labelled(text: string, field: HTMLElement): HTMLElement {
-    const wrap = document.createElement('label');
-    wrap.style.display = 'flex';
-    wrap.style.flexDirection = 'column';
-    wrap.style.gap = '4px';
-
-    const caption = document.createElement('span');
-    caption.style.color = 'var(--text-on-dark-tertiary)';
-    caption.textContent = text;
-
-    wrap.append(caption, field);
-    return wrap;
 }
 
 function mintElement(): Element {

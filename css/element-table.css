@@ -177,3 +177,10 @@ table.element-table th {
     padding: 2px 0;
     cursor: pointer;
 }
+
+/* A column a phone has no room for: the row's own element still says it. */
+@media (max-width: 768px) {
+    .element-table .element-wide-only {
+        display: none;
+    }
+}

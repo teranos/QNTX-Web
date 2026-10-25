@@ -30,7 +30,7 @@ import { createPiElement, needs as piNeeds } from './pi-element.ts';
 import { createAgentElement, needs as agentNeeds } from './agent-element.ts';
 import { createIElement, needs as iNeeds } from './i-element.ts';
 import { createAmElement, needs as amNeeds } from './am-element.ts';
-import { createMCPElement, needs as mcpNeeds } from './mcp-element.ts';
+import { createConnectorElement, needs as connectorNeeds } from './connector-element.ts';
 import { createParityElement, needs as parityNeeds } from './parity-element.ts';
 import { log, SEG } from './logger.ts';
 
@@ -58,8 +58,8 @@ export async function registerDefaultElements(hasCanvas: boolean = true): Promis
         { needs: iNeeds, create: createIElement },
         // ≡ — what the node is, and what it was told to be
         { needs: amNeeds, create: createAmElement },
-        // ⧉ — the MCP servers this person reaches, the node's and each namespace's, and a connector for one
-        { needs: mcpNeeds, create: createMCPElement },
+        // ⧉ — a connection set up for an app, its URL, id and secret said where it was made
+        { needs: connectorNeeds, create: createConnectorElement },
         // Access Tokens Element — opened from ⍟ (ADR-025)
         { needs: tokensNeeds, create: createTokensElement },
         { needs: usersNeeds, create: createUsersElement },

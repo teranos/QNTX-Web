@@ -12,12 +12,15 @@
  */
 
 import { apiFetch } from './client';
+import { apiJson } from './client/http';
 import { AM } from './sym';
 import { escapeHtml } from './html-utils';
 import { log, SEG } from './logger.ts';
 import { formatBuildTime } from './components/tooltip.ts';
 import type { StatusItem } from './brow.ts';
 import { a2aCardRow } from './a2a-card-element.ts';
+import { nodeMCPOf, rootsClient, type CardMCP } from './connector-element.ts';
+import { person } from './self-person.ts';
 import type { VersionMessage, SystemCapabilitiesMessage } from '../types/websocket';
 
 // What the node has said about itself. Null is nothing asked yet, which draws
@@ -27,6 +30,9 @@ let amVersion: VersionMessage | null = null;
 let amCapabilities: SystemCapabilitiesMessage | null = null;
 let amNodeDID: string | null = null;
 let amStatusRow: StatusItem[] = [];
+// ROOT's client for the node's MCP server, held so a redraw keeps what was typed.
+// Null for anybody but ROOT.
+let amRootsClient: HTMLElement | null = null;
 
 /** The build, pushed on the connect frame. */
 export function updateAmVersion(data: VersionMessage): void {
@@ -173,6 +179,27 @@ function renderAm(): void {
     `;
     // The A2A card rests here as a button; the same one every redraw.
     amElement.firstElementChild?.appendChild(a2aCardRow());
+    // "for root it can be in i of the root or on am"
+    if (amRootsClient) amElement.firstElementChild?.appendChild(amRootsClient);
+}
+
+// Whether the viewer is ROOT, which ROOT's client is drawn for, and where the
+// node's MCP server answers, which the app is set up with.
+async function loadRootsClient(): Promise<void> {
+    try {
+        const who = await person();
+        if (who.level !== 'ROOT') return;
+        const said = await apiJson<{ card: CardMCP }>('/am/node');
+        const node = nodeMCPOf(said.card ?? {});
+        if (!node) {
+            log.warn(SEG.SELF, '[am] the node card names no MCP server');
+            return;
+        }
+        amRootsClient = rootsClient(node);
+        if (amElement) renderAm();
+    } catch (error: unknown) {
+        log.warn(SEG.SELF, `[am] ROOT's client: ${error instanceof Error ? error.message : String(error)}`);
+    }
 }
 
 // Who this is for: whoever reaches these (audience.ts).
@@ -191,6 +218,7 @@ export function createAmElement() {
             if (!amNodeDID) void loadNodeDID();
             if (!amCapabilities) void loadSyscap();
             void loadStatusRow();
+            if (!amRootsClient) void loadRootsClient();
             return content;
         },
     };

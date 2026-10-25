@@ -111,41 +111,13 @@ interface Landing {
     bytes: number;
     wal_bytes: number;
     attestations: number;
-    actors: number;
-    subjects: number;
-    contexts: number;
-    top_predicates: Common[] | null;
-    top_contexts: Common[] | null;
-    over: Record<string, number> | null;
-}
-
-// One line per namespace, of when its attestations landed. The chart below
-// was written for distillation's histograms and drew nothing once a node
-// stopped distilling; this is the same chart reading what the node holds.
-function landedOverTime(landings: Landing[] | undefined): Record<string, Record<string, number>> | null {
-    if (!landings || landings.length === 0) {
-        return null;
-    }
-    const lines: Record<string, Record<string, number>> = {};
-    for (const one of landings) {
-        if (one.over && Object.keys(one.over).length > 0) {
-            lines[one.namespace] = one.over;
-        }
-    }
-    return Object.keys(lines).length > 0 ? lines : null;
-}
-
-interface Common {
-    name: string;
-    last: string;
-    over: Record<string, number> | null;
 }
 
 // A panel is as wide as the canvas lets it be, and a row laid out across all
 // of that puts its last column an arm's length from its first. These are
 // tables: fixed columns, and a width a row is read across rather than scanned.
 const LANDING_WIDTH = '860px';
-const LANDING_COLUMNS = '110px minmax(0, 1fr) 84px 84px 132px 72px';
+const LANDING_COLUMNS = '110px minmax(0, 1fr) 84px 84px 72px';
 const SPEND_COLUMNS = '132px 92px 60px 64px';
 
 // A name that opens the way a type does: the same class and data-type the
@@ -173,21 +145,10 @@ function windowOfSeen(rows: Seen[], now: number = Date.now()): Window {
     return windowOf(rows.flatMap(one => one.times), now);
 }
 
-const seenOfCommon = (common: Common[] | null): Seen[] =>
-    (common ?? []).map(one => seenOver(one.name, one.over, one.last));
-
-// What a namespace has used lately, each over time.
-function commonHTML(label: string, common: Common[] | null, w: Window): string {
-    if (!common || common.length === 0) {
-        return '';
-    }
-    return `<div style="padding: 1px 0 3px 12px; max-width: ${LANDING_WIDTH};">${sparklinesHTML(label, seenOfCommon(common), w)}</div>`;
-}
-
 // A read is answered from the database of its namespace and never from the
 // record (ADR-037), so there is one of these per namespace and the single
 // path this panel used to print was hiding all but one of them.
-function landingsHTML(landings: Landing[] | undefined, failed: any, onePath: string, now: number = Date.now()): string {
+function landingsHTML(landings: Landing[] | undefined, failed: any, onePath: string): string {
     if (failed) {
         return renderStatsError(failed);
     }
@@ -198,18 +159,14 @@ function landingsHTML(landings: Landing[] | undefined, failed: any, onePath: str
     }
 
     const held = landings.reduce((sum, one) => sum + one.attestations, 0);
-    const w = windowOfSeen(landings.flatMap(one => [...seenOfCommon(one.top_predicates), ...seenOfCommon(one.top_contexts)]), now);
     const rows = landings.map(one => `
         <div style="display: grid; grid-template-columns: ${LANDING_COLUMNS}; gap: 8px; padding: 2px 0; max-width: ${LANDING_WIDTH};">
             <span style="color: #e2e8f0; overflow-wrap: anywhere;">${escapeHtml(one.namespace)}</span>
             <span style="color: #475569; overflow-wrap: anywhere;">${escapeHtml(one.path)}</span>
             <span style="color: #64748b; text-align: right;">db ${formatBytes(one.bytes)}</span>
             <span style="color: ${one.wal_bytes > 8 * 1024 * 1024 ? '#f59e0b' : '#64748b'}; text-align: right;">wal ${formatBytes(one.wal_bytes)}</span>
-            <span style="color: #475569; text-align: right;">${one.actors.toLocaleString()}a ${one.subjects.toLocaleString()}s ${one.contexts.toLocaleString()}c</span>
             <span style="color: #94a3b8; text-align: right;">${one.attestations.toLocaleString()}</span>
-        </div>
-        ${commonHTML('predicates', one.top_predicates, w)}
-        ${commonHTML('contexts', one.top_contexts, w)}`).join('');
+        </div>`).join('');
 
     return `
         <div style="padding: 8px 0; border-bottom: 1px solid var(--border-color, #333);">
@@ -290,9 +247,9 @@ function renderDbStats(): void {
         renderChartWithControls(sectionChart, dbStats.predicate_histograms);
     } else {
         // A node that persists to the record rather than distilling has no
-        // histograms and drew nothing here. What it does have is when its
-        // attestations landed, per namespace.
-        renderChartWithControls(sectionChart, landedOverTime(dbStats.landings));
+        // histograms. The per-namespace line this drew instead was read by
+        // scanning every landing table every 30 s, and that scan is gone.
+        renderChartWithControls(sectionChart, null);
     }
 
     // -- Overview: compact stats row --
@@ -311,9 +268,6 @@ function renderDbStats(): void {
         <div style="display: flex; flex-wrap: wrap; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--border-color, #333);">
             <span><span class="label">Backend:</span> <span class="element-value">${storageBackend}</span></span>
             ${countSpan('Attestations', dbStats.total_attestations)}
-            ${countSpan('Actors', dbStats.unique_actors)}
-            ${countSpan('Subjects', dbStats.unique_subjects)}
-            ${countSpan('Contexts', dbStats.unique_contexts)}
         </div>
         ${landingsHTML(dbStats.landings, dbStats.landings_error, String(dbStats.path ?? ''))}
     `;

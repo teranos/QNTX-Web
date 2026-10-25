@@ -42,7 +42,7 @@ export const Parity = '≍';     // a signum held to a reference it follows
 export const Claude = '✻';     // the Node Agent: Claude Code, run by the node as itself
 export const Pi = 'π';         // the Node Agent in Pi, its other harness
 export const Agent = '✦';      // the agent of a namespace, shared by everyone who has reach on it, on its own sign-in
-export const MCP = '⧉';        // the MCP servers a viewer reaches: the node's, and each namespace's
+export const CONNECTOR = '⧉';  // a connection set up for an app, in one namespace
 export const Shake = '⩕';      // ROOT SHAKE: the phone shaken, the element on screen talked to, the picture said with it
 
 /** Segment to its glyph. */

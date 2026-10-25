@@ -22,6 +22,7 @@ import { apiJson } from './client/http';
 import { fetchProviders, type ProviderDescription } from './ceremony';
 import { providerMark } from './provider-marks';
 import { log, SEG } from './logger';
+import { styled, labelled } from './element-parts';
 
 const ELEMENT_ID = 'user-invite-element';
 
@@ -53,16 +54,6 @@ async function sendInvitation(body: InvitationBody): Promise<void> {
     });
 }
 
-function styled<T extends HTMLElement>(field: T): T {
-    field.style.padding = '6px 8px';
-    field.style.fontFamily = 'var(--font-mono)';
-    field.style.color = 'var(--text-on-dark)';
-    field.style.background = 'var(--bg-dark-light)';
-    field.style.border = '1px solid var(--border-on-dark)';
-    field.style.borderRadius = 'var(--border-radius)';
-    return field;
-}
-
 function textField(name: string, type: string, placeholder: string): HTMLInputElement {
     const input = styled(document.createElement('input'));
     input.name = name;
@@ -70,21 +61,6 @@ function textField(name: string, type: string, placeholder: string): HTMLInputEl
     input.placeholder = placeholder;
     input.size = 28;
     return input;
-}
-
-// A label activates its first control when anything inside it is pressed, so
-// a group of buttons is captioned in a div: in a label, pressing GitHub also
-// pressed Google.
-function labelled(text: string, field: HTMLElement, tag: 'label' | 'div' = 'label'): HTMLElement {
-    const wrap = document.createElement(tag);
-    wrap.style.display = 'flex';
-    wrap.style.flexDirection = 'column';
-    wrap.style.gap = '4px';
-    const caption = document.createElement('span');
-    caption.style.color = 'var(--text-on-dark-tertiary)';
-    caption.textContent = text;
-    wrap.append(caption, field);
-    return wrap;
 }
 
 /** A provider's toggle: its mark and its name, pressed or not. */

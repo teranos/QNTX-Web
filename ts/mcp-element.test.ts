@@ -1,8 +1,8 @@
 // MCP Element (⧉) — the MCP servers a viewer reaches, and a connector minted for one.
 // Tim: the node's server and each namespace's. Spike: what is not said.
 
-import { describe, test, expect, beforeEach } from 'bun:test';
-import { mcpServers, nodeMCPOf, renderMCP } from './mcp-element';
+import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { mcpServers, nodeMCPOf, renderMCP, rootsClient } from './mcp-element';
 
 const NODE = 'https://api.q.sbvh.nl/mcp';
 
@@ -47,5 +47,39 @@ describe('Spike: what is not said', () => {
     test('nothing in it is underlined: no URL here is a link out', () => {
         renderMCP(container, NODE, ['Clean']);
         expect(container.querySelector('a')).toBeNull();
+    });
+});
+
+// "but i want a MCP specifically for the Node, only for ROOT"
+describe("Tim: ROOT's client for the node's MCP server", () => {
+    const originalFetch = globalThis.fetch;
+    let sent: Record<string, unknown> | undefined;
+
+    beforeEach(() => {
+        document.body.innerHTML = '';
+        sent = undefined;
+        globalThis.fetch = mock((url: any, init: any) => {
+            if (String(url).endsWith('/auth/tokens')) sent = JSON.parse(String(init?.body));
+            return Promise.resolve(new Response(JSON.stringify({ id: 'AT_1', label: 'chatgpt', token: 'qntx_x', created_at: '' }), {
+                status: 200, headers: { 'Content-Type': 'application/json' },
+            }));
+        }) as unknown as typeof fetch;
+    });
+    afterEach(() => { globalThis.fetch = originalFetch; });
+
+    test("it is minted as ROOT's: an OAUTH client naming no namespace, with where its codes go", async () => {
+        const held = rootsClient();
+        document.body.appendChild(held);
+        const [label, returning] = Array.from(held.querySelectorAll('input'));
+        label!.value = 'chatgpt';
+        returning!.value = 'https://chatgpt.com/connector/oauth/abc';
+        // The second press creates: the first arms it.
+        const press = held.querySelector('[data-press]') as HTMLElement;
+        press.click();
+        press.click();
+        for (let i = 0; i < 50 && !sent; i++) await new Promise((r) => setTimeout(r, 1));
+
+        expect(sent).toMatchObject({ label: 'chatgpt', level: 'OAUTH', root: true, return_address: 'https://chatgpt.com/connector/oauth/abc' });
+        expect(sent!.namespaces).toEqual([]);
     });
 });

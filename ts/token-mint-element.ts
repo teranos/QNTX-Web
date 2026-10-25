@@ -35,11 +35,14 @@ export async function createToken(
     level: string,
     namespaces: string[],
     returnAddress: string,
+    root = false,
 ): Promise<CreateTokenResponse> {
     // A token says when it ends, and one minted here does not: it says so.
     // A client's, and only a client's: the node refuses one on any other kind.
     const body: Record<string, unknown> = { label, level, namespaces, expires_at: 'never' };
     if (returnAddress) body.return_address = returnAddress;
+    // ROOT's client for the node's MCP server (ADR-038), ROOT's alone to mint.
+    if (root) body.root = true;
     return await apiJson<CreateTokenResponse>('/auth/tokens', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

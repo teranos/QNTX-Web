@@ -87,6 +87,34 @@ function connectorPress(server: MCPServer, label: HTMLInputElement, returnAddres
     });
 }
 
+// "but i want a MCP specifically for the Node, only for ROOT"
+// "for root it can be in i of the root or on am"
+
+/** ROOT's client for the node's MCP server, drawn on am for ROOT (ADR-038): its secret shown once. */
+export function rootsClient(): HTMLElement {
+    const held = document.createElement('div');
+    held.className = 'element-section';
+    const label = fieldFrom({ id: 'roots-client-label', label: "ROOT's client", placeholder: 'what this client is for' });
+    const returnAddress = fieldFrom({ id: 'roots-client-return', label: 'Return address', placeholder: 'https://app.example/callback' });
+    const press = pressFrom({
+        id: 'roots-client',
+        title: "ROOT's client",
+        again: "mints ROOT's client for the node's MCP server",
+        creates: true,
+        does: async () => {
+            const named = label.input.value.trim();
+            if (!named) throw new AtField(label.input, 'no label');
+            const returning = returnAddress.input.value.trim();
+            if (!returning) throw new AtField(returnAddress.input, 'no return address');
+            const minted = await createToken(named, OAUTH, [], returning, true);
+            label.input.value = '';
+            openTokenElement(minted.id, minted.label, minted.token);
+        },
+    });
+    held.append(label.element, returnAddress.element, press.element);
+    return held;
+}
+
 /** What the element draws once the node said where its server is and which namespaces there are. */
 async function drawInto(content: HTMLElement): Promise<void> {
     try {

@@ -45,9 +45,9 @@ as the mock feels it (`ts/shake.ts`).
 The element in front gets its chat from below, 
 a drawn stand-in for the shell's snapshot already in the composer, 
 and the mock's agent answers at once naming the element and the picture (`mock/agents.ts`). 
-The agents and `/api/files` are the mock's only writes.
+The agents, `/api/files` and `/api/keys` are the mock's only writes.
 
-> the mock seems like a valid place to develop out our user stories as well
+[BDD.md](BDD.md)
 
 ### Running a branch against a deployed node
 

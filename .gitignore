@@ -13,6 +13,10 @@ design-system/dist/
 coverage/
 browser/test-results/
 browser/playwright-report/
+# What bun run stories writes
+.features-gen/
+test-results/
+playwright-report/
 # The gate answers every call from these, session.json among them (sess* above)
 !browser/fixtures/**
 

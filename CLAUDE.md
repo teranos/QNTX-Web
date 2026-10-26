@@ -10,7 +10,7 @@ All tray creation via `tray.add`; canvas via `canvasPlaced`. Register new types 
 
 "exclusively gherkin, gherkin owns stories"
 
-Stories live in `stories/*.feature`
+Stories live in `stories/*.feature`, walked as [BDD.md](BDD.md) says.
 
 "Stories are describing what is possible"
 

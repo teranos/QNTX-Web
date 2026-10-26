@@ -12,7 +12,7 @@ All tray creation via `tray.add`; canvas via `canvasPlaced`. Register new types 
 
 "stories should live in QNTX-Web,"
 
-A story is one `.feature` file in `stories/`, and nothing else holds it.
+Stories live in `stories/*.feature`
 
 "the ui should not offer this to people who arent priviliged, the inverse story should not exist"
 

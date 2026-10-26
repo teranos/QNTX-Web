@@ -184,6 +184,37 @@ async function filesAnswer(method: string, path: string, req: Request): Promise<
     return null;
 }
 
+// A namespace's keys, kept in memory. The mock's providers issued every key
+// ending in -issued, and answer 401 to any other.
+const PROVIDERS = ["anthropic", "openai", "openrouter"];
+const keptKeys = new Map<string, Map<string, { set_by: string; at: string; value: string }>>();
+
+function keysOf(namespace: string) {
+    const held = keptKeys.get(namespace) ?? new Map();
+    const keys = Array.from(held, ([name, key]) => {
+        const asked = PROVIDERS.includes(name);
+        const accepted = asked && key.value.endsWith("-issued");
+        return { name, set_by: key.set_by, at: key.at, asked, accepted, why: asked && !accepted ? `${name} answered 401: invalid x-api-key` : "" };
+    });
+    return { namespace, keys: keys.sort((a, b) => a.name.localeCompare(b.name)) };
+}
+
+async function keysAnswer(level: Level, method: string, path: string, req: Request): Promise<Response | null> {
+    if (!path.startsWith("/api/keys/")) return null;
+    const namespace = decodeURIComponent(path.slice("/api/keys/".length));
+    if (method === "GET") return json(keysOf(namespace));
+    if (method === "POST") {
+        const sent = (await req.json()) as Record<string, string>;
+        if (!sent.name || !sent.value) return json({ error: "name and value are required" }, 400);
+        const held = keptKeys.get(namespace) ?? new Map();
+        held.set(sent.name, { set_by: PEOPLE[level].user, at: new Date().toISOString(), value: sent.value });
+        keptKeys.set(namespace, held);
+        console.log(`${pink}${level} kept the ${sent.name} key of ${namespace}${reset}`);
+        return json(keysOf(namespace));
+    }
+    return null;
+}
+
 function refused(level: Level, path: string): Response {
     const line = tablet.line(path);
     const named = line ? line.levels.join(" ") : "nobody: the tablet has no line for it";
@@ -212,7 +243,8 @@ async function answer(req: Request, url: URL): Promise<Response> {
 
     const said = worldAnswer(level, method, path, url)
         ?? await agentAnswer(level, method, path, url, req)
-        ?? await filesAnswer(method, path, req);
+        ?? await filesAnswer(method, path, req)
+        ?? await keysAnswer(level, method, path, req);
     if (said) return said;
 
     if (method !== "GET" && method !== "HEAD") {

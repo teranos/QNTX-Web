@@ -536,6 +536,11 @@ async function init(): Promise<void> {
 
     // Listen for Tauri events (menu actions)
     if (typeof window.__TAURI__ !== 'undefined') {
+        // What waits on the human, on the Dynamic Island (QNTX-App, plugin island).
+        import('./island.ts')
+            .then(({ followOnIsland }) => followOnIsland())
+            .catch(err => log.warn(SEG.UI, '[Init] The island did not follow the approvals:', err));
+
         // Menu items always show (never toggle/hide)
         // Panel show events from menu bar (menu items always show, never toggle)
         listenOrSay('show-pulse-panel', () => {

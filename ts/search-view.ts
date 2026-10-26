@@ -30,7 +30,7 @@ export class SearchView {
     private serverResults: SearchMatch[] = [];
     private allResults: SearchMatch[] = [];
 
-    constructor(parent?: HTMLElement) {
+    constructor(parent?: HTMLElement, private onSelect?: (match: SearchMatch) => void) {
         this.createElements(parent);
     }
 
@@ -292,6 +292,10 @@ export class SearchView {
     }
 
     private handleResultClick(match: SearchMatch): void {
+        if (this.onSelect) {
+            this.onSelect(match);
+            return;
+        }
         import('./logger.ts')
             .then(({ log, SEG }) => log.debug(SEG.QUERY, 'Focusing on node:', match.node_id))
             .catch((err: unknown) => console.error('Logger failed to load:', err));

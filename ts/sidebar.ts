@@ -15,7 +15,7 @@
  * At the head, who is looking: the one .who block, taken from the header the
  * way the namespace page took it. At the foot, the door. On a desktop it is a
  * column beside the page, collapsible and remembered. On a phone it is a
- * drawer over the page, opened by the picture in the system bar or a swipe in
+ * drawer over the page, holding the system controls and opened by the picture or a swipe in
  * from the left edge, and dismissed by a swipe back, the scrim, or Escape
  * (Apple Human Interface Guidelines, Sidebars; Sheets: "Support swiping to
  * dismiss"). In Safari the left edge is the browser's own back gesture, so the
@@ -46,6 +46,7 @@ let scrim: HTMLElement | null = null;
 let latch: HTMLButtonElement | null = null;
 let phone: MediaQueryList | null = null;
 let open = false;
+let systemObserver: MutationObserver | null = null;
 
 // The elements resting here, by id: the one DOM element each is.
 const elements = new Map<string, HTMLElement>();
@@ -295,8 +296,43 @@ export function initSidebar(doc: Document = document): void {
         if (e.key === 'Escape' && open && onPhone()) show(false);
     });
 
+    // Move the live system bar, including its input, results and indicators.
+    // Keep its original slot for desktop and the full-screen sign-in door.
+    const system = doc.getElementById('system-drawer');
+    const slot = doc.createComment('system drawer desktop / door slot');
+    system?.before(slot);
+    const placeSystem = () => {
+        if (!system || !nav || !header) return;
+        const held = system.classList.contains('door-held');
+        if (onPhone() && !held) {
+            if (system.parentElement !== nav) nav.insertBefore(system, list);
+        } else if (system.previousSibling !== slot) {
+            slot.after(system);
+        }
+        // A tap alternative remains available where Safari owns the edge swipe.
+        if (latch) {
+            if (onPhone()) {
+                if (latch.parentElement !== doc.body) doc.body.appendChild(latch);
+                latch.hidden = held;
+            } else {
+                if (latch.parentElement !== header) header.prepend(latch);
+                latch.hidden = false;
+            }
+        }
+    };
+    if (system) {
+        systemObserver = new MutationObserver(placeSystem);
+        systemObserver.observe(system, { attributes: true, attributeFilter: ['class'] });
+    }
+    header?.addEventListener('click', (event) => {
+        if (onPhone() && (event.target as HTMLElement).closest('.status-indicator.clickable')) show(false);
+    });
     // Across the breakpoint the drawer is shut, the column is as remembered.
-    phone?.addEventListener?.('change', () => show(onPhone() ? false : remembered()));
+    phone?.addEventListener?.('change', () => {
+        placeSystem();
+        show(onPhone() ? false : remembered());
+    });
+    placeSystem();
     attachSwipe(doc);
 
     show(onPhone() ? false : remembered());
@@ -305,6 +341,8 @@ export function initSidebar(doc: Document = document): void {
 
 /** For tests: forget the sidebar, so the next init builds it again. */
 export function resetSidebar(): void {
+    systemObserver?.disconnect();
+    systemObserver = null;
     nav = null;
     list = null;
     scrim = null;

@@ -204,6 +204,64 @@ body:not(.sidebar-open) #sidebar {
         transform: translateX(0);
     }
 
+    #sidebar #system-drawer {
+        position: static;
+        flex: 0 1 auto;
+        flex-direction: column;
+        height: auto !important; /* Desktop's remembered height stays on the same node. */
+        min-height: 0;
+        max-height: 50%;
+        border-top: none;
+        transition: none;
+    }
+
+    #sidebar #system-drawer-header {
+        flex-wrap: wrap;
+        flex-shrink: 0;
+        gap: 8px;
+        cursor: default;
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    #sidebar #drawer-search-input {
+        flex-basis: 100%;
+        min-height: 44px;
+        box-sizing: border-box;
+    }
+
+    #sidebar .status-indicators {
+        flex-wrap: wrap;
+    }
+
+    #sidebar .status-indicator.clickable {
+        min-height: 44px;
+    }
+
+    #sidebar #search-results-container {
+        display: block;
+        flex: 0 1 auto;
+        min-height: 0;
+    }
+
+    #sidebar .drawer-grab-bar {
+        display: none;
+    }
+
+    /* The existing picture is the tap alternative to the left-edge swipe. */
+    body > .sidebar-latch {
+        position: fixed;
+        left: calc(env(safe-area-inset-left, 0px) + 8px);
+        top: calc(env(safe-area-inset-top, 0px) + 8px);
+        width: 44px;
+        height: 44px;
+        z-index: 100001;
+    }
+
+    body.sidebar-open > .sidebar-latch {
+        visibility: hidden;
+    }
+
     .sidebar-scrim {
         display: block;
         position: fixed;

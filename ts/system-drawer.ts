@@ -8,6 +8,7 @@ import type { SearchMatch, SearchResultsMessage } from './search-view.ts';
 import { spawnElementByCommand, getMatchingCommands, getCommandLabel } from './components/element/canvas/spawn-menu.ts';
 import { uiState } from './state/ui.ts';
 import { Subcanvas } from './sym';
+import { openSidebar, closeSidebar, sidebarOpen } from './sidebar.ts';
 
 const DRAWER_HEIGHT_KEY = 'system-drawer-height';
 const DRAWER_MIN = 6;     // Hidden: just the grab bar
@@ -36,6 +37,10 @@ function setDrawerHeight(panel: HTMLElement, height: number): void {
 /** Opens the drawer to where it was last open, when it is closed. */
 export function expandDrawer(): void {
     if (!drawerPanel) return;
+    if (drawerPanel.closest('#sidebar')) {
+        if (!sidebarOpen()) openSidebar();
+        return;
+    }
     // The height it was set to: offsetHeight carries the border, so a closed
     // drawer read as open and never opened.
     const current = drawerPanel.clientHeight;
@@ -48,6 +53,10 @@ export function expandDrawer(): void {
 
 function collapseDrawer(): void {
     if (!drawerPanel) return;
+    if (drawerPanel.closest('#sidebar')) {
+        closeSidebar();
+        return;
+    }
     const current = drawerPanel.clientHeight;
     if (current > DRAWER_HEADER) {
         lastExpandedHeight = current;
@@ -161,6 +170,11 @@ function actOnSelectedResult(match: SearchMatch): void {
 /** Focus the drawer search input and expand to full height */
 export function focusDrawerSearch(): void {
     if (!searchInput || !drawerPanel) return;
+    if (drawerPanel.closest('#sidebar')) {
+        openSidebar();
+        searchInput.focus();
+        return;
+    }
     // Always expand to full height — the user is requesting search
     setDrawerHeight(drawerPanel, DRAWER_MAX);
     setStorageItem(DRAWER_HEIGHT_KEY, String(DRAWER_MAX));
@@ -197,6 +211,7 @@ export function initSystemDrawer(): void {
         searchInput = document.createElement('input');
         searchInput.type = 'text';
         searchInput.id = 'drawer-search-input';
+        searchInput.setAttribute('aria-label', 'Search or command');
         searchInput.placeholder = 'Search or command...';
         searchInput.autocomplete = 'off';
 
@@ -277,7 +292,7 @@ export function initSystemDrawer(): void {
     // --- Search results view ---
     const resultsContainer = document.getElementById('search-results-container');
     if (resultsContainer) {
-        searchView = new SearchView(resultsContainer);
+        searchView = new SearchView(resultsContainer, actOnSelectedResult);
     }
 
     // --- Drag to resize ---
@@ -335,6 +350,7 @@ export function initSystemDrawer(): void {
     // --- Click header to toggle ---
     if (header) {
         header.addEventListener('click', function(e: Event) {
+            if (panel.closest('#sidebar')) return;
             if (didDrag) return;
             const target = e.target as HTMLElement;
             if (target.tagName === 'BUTTON' || target.tagName === 'SELECT' || target.tagName === 'INPUT') return;

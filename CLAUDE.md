@@ -10,11 +10,7 @@ All tray creation via `tray.add`; canvas via `canvasPlaced`. Register new types 
 
 "exclusively gherkin, gherkin owns stories"
 
-"stories should live in QNTX-Web,"
-
 Stories live in `stories/*.feature`
-
-"the ui should not offer this to people who arent priviliged, the inverse story should not exist"
 
 "Stories are describing what is possible"
 
@@ -28,7 +24,11 @@ A standing element (what the node offers: Users, Mail, GitHub, Pulse, ≡, ⍟�
 
 ## Tables
 
-**A table is @teranos/elements'.** "The elements package should own Tables" "TABLES BEING MAX 4 col". Build one with `createTable(name, heads, rows)`: one to four heads, every row as wide, or it does not compile. A cell may be the host's own `td`.
+**A table is @teranos/elements'.**
+
+"TABLES BEING MAX 4 col"
+
+Build one with `createTable(name, heads, rows)`: one to four heads, every row as wide, or it does not compile. A cell may be the host's own `td`.
 
 ## Controls
 

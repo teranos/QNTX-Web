@@ -1,6 +1,6 @@
 Feature: USER sets up the namespace agent
 
-  Agent setup is its own thing, skippable as part of namespace creation, but still something you probably want to setup
+  Agent setup is its own thing, skippable as part of namespace creation
 
   Scenario Outline: USER sets up the agent in <agent>
     Given I am at agent setup

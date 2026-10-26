@@ -4,8 +4,6 @@ Feature: USER goes on to the namespace agent
 
   "you completed the anthropickey, you CAN end up here"
 
-  "you dont choose, the system should know you camefrom either OpenAI, Google Agy, etc. etc..     the ystem computes what it cancompute"
-
   Scenario Outline: USER goes on to the namespace agent of <platform>
     Given I finished a story of <platform> in Connectors
     When I go on

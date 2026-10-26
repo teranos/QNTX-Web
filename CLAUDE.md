@@ -6,6 +6,16 @@ An element is exactly ONE DOM element for its entire lifetime (@teranos/elements
 
 All tray creation via `tray.add`; canvas via `canvasPlaced`. Register new types in `components/element/element-registry.ts`.
 
+## Stories
+
+"exclusively gherkin, gherkin owns stories"
+
+Stories live in `stories/*.feature`
+
+"Stories are describing what is possible"
+
+"i dont want to see stories about how there isn't a pink elephant on the moon."
+
 ## Sidebar and tray
 
 "they're still elements. But from now on we say that the tray is for things that are more temporal. Like individual chats, or an individual User. While Users, or Integrations, Vault, etc, etc will be leftside"
@@ -14,7 +24,11 @@ A standing element (what the node offers: Users, Mail, GitHub, Pulse, ≡, ⍟�
 
 ## Tables
 
-**A table is @teranos/elements'.** "The elements package should own Tables" "TABLES BEING MAX 4 col". Build one with `createTable(name, heads, rows)`: one to four heads, every row as wide, or it does not compile. A cell may be the host's own `td`.
+**A table is @teranos/elements'.**
+
+"TABLES BEING MAX 4 col"
+
+Build one with `createTable(name, heads, rows)`: one to four heads, every row as wide, or it does not compile. A cell may be the host's own `td`.
 
 ## Controls
 

@@ -7,7 +7,7 @@ Feature: USER connects Claude
     And I see the server MCP URL of the namespace I am standing in
     When I press Anthropic
     And I press add QNTX MCP to Claude
-    Then I type nothing, because Claude's callback is always https://claude.ai/api/mcp/auth_callback
+    Then the callback is set automatically to https://claude.ai/api/mcp/auth_callback
     And I get the client id and the client secret, 
     And secret is hidden by default, 
     And click -> clipboard -> 'Copied!'

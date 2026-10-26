@@ -8,13 +8,7 @@ All tray creation via `tray.add`; canvas via `canvasPlaced`. Register new types 
 
 ## Stories
 
-"exclusively gherkin, gherkin owns stories"
-
-Stories live in `stories/*.feature`, walked as [BDD.md](BDD.md) says.
-
-"Stories are describing what is possible"
-
-"i dont want to see stories about how there isn't a pink elephant on the moon."
+[BDD.md](BDD.md)
 
 ## Sidebar and tray
 

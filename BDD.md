@@ -1,6 +1,12 @@
 # BDD
 
+"exclusively gherkin, gherkin owns stories"
+
 Stories live in `stories/*.feature`, in Gherkin.
+
+"Stories are describing what is possible"
+
+"i dont want to see stories about how there isn't a pink elephant on the moon."
 
 `bun run stories` walks them in Chromium against the mock.
 

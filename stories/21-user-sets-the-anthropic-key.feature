@@ -1,9 +1,5 @@
 Feature: USER sets the Anthropic key
 
-  "the API keys, brings you to platform, that is where the free money is."
-
-  "why am i allowed to make a mistake in copying the key"
-
   Scenario: USER sets the Anthropic key
     Given I am in Connectors
     When I press Anthropic

@@ -25,6 +25,7 @@ import { createApprovalsElement, needs as approvalsNeeds } from './approvals-ele
 import { createGroundElement, needs as groundNeeds } from './ground-element.ts';
 import { createClaudeElement, needs as claudeNeeds } from './claude-element.ts';
 import { createPiElement, needs as piNeeds } from './pi-element.ts';
+import { createCodexElement, needs as codexNeeds } from './codex-element.ts';
 import { createAgentElement, needs as agentNeeds } from './agent-element.ts';
 import { createIElement, needs as iNeeds } from './i-element.ts';
 import { createAmElement, needs as amNeeds } from './am-element.ts';
@@ -75,6 +76,7 @@ export async function registerDefaultElements(hasCanvas: boolean = true): Promis
         // ✻ — the Node Agent: said to, and read as the session it continues (ADR-048)
         { needs: claudeNeeds, create: createClaudeElement },
         { needs: piNeeds, create: createPiElement },
+        { needs: codexNeeds, create: createCodexElement },
         // ✦ — the agent of the namespace this person stands in, on its own sign-in (ADR-048)
         { needs: agentNeeds, create: createAgentElement },
         // Pulse Panel Element — scheduled jobs dashboard

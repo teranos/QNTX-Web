@@ -35,6 +35,7 @@
     "mock/reach.ts",
     "mock/world.ts",
     "mock/agents.ts",
+    "mock/codex.ts",
     "ts/**/*.js",
     "types/**/*.ts",
     "types/**/*.d.ts"

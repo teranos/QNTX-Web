@@ -341,6 +341,17 @@
 .tr-error .tr-speaker { color: var(--sacred-error); }
 
 /* Claude element: the Node Agent's session, drawn as a transcript, over where something is said to it */
+/* Codex uses the same transcript and the package's composer/press primitives. */
+.content-area.codex { display: flex; flex-direction: column; min-height: 0; overflow: hidden; padding: 0; font-family: var(--font-mono, monospace); color: var(--text-on-dark); }
+.codex-talk { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.codex-talk[hidden], .codex-target[hidden] { display: none; }
+.codex-target { font: inherit; color: var(--text-on-dark); background: var(--bg-almost-black); border: 1px solid var(--border-on-dark); max-width: 100%; }
+.codex-who, .codex-status, .codex-failed { padding: 3px 6px; overflow-wrap: anywhere; flex-shrink: 0; }
+.codex-who { color: var(--text-on-dark-secondary); border-bottom: 1px solid var(--border-on-dark); }
+.codex-session { flex: 1; min-height: 0; }
+.codex-session .tr-head { display: none; }
+.codex-say { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 6px; border-top: 1px solid var(--border-on-dark); }
+.codex-says { flex: 1 1 100%; min-width: 0; resize: vertical; background: var(--bg-almost-black); color: var(--text-on-dark); border: 1px solid var(--border-on-dark); font: inherit; }
 .claude { display: flex; flex-direction: column; box-sizing: border-box; width: 520px; height: 640px; max-width: 100%; max-height: 100%; min-height: 0; padding: 0; text-align: left; font-family: var(--font-mono, monospace); font-size: var(--font-size-sm); color: var(--text-on-dark); }
 /* A content-area scrolls (window.css); Claude's does not: its transcript is its one scroller, declared to the package. */
 .content-area.claude { overflow: hidden; }

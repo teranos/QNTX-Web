@@ -1,7 +1,5 @@
 Feature: USER connects GitHub
 
-  "same for the github element, is also a connector thing"
-
   Scenario: USER connects GitHub during namespace setup
     Given I am at the GitHub step of namespace setup
     When I press Connect

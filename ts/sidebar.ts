@@ -60,7 +60,11 @@ function remembered(): boolean {
 
 /** The width the page gives way by: the column's on a desktop, nothing on a phone. */
 function pushPage(): void {
-    document.documentElement.style.setProperty('--sidebar-width', open && !onPhone() ? `${WIDTH}px` : '0px');
+    const beside = open && !onPhone();
+    document.documentElement.style.setProperty('--sidebar-width', beside ? `${WIDTH}px` : '0px');
+    // A window of @teranos/elements stands on the screen the column leaves (its safe area).
+    if (beside) document.documentElement.style.setProperty('--elements-safe-area-left', `${WIDTH}px`);
+    else document.documentElement.style.removeProperty('--elements-safe-area-left');
 }
 
 function show(next: boolean): void {

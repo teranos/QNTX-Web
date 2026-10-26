@@ -6,6 +6,14 @@ An element is exactly ONE DOM element for its entire lifetime (@teranos/elements
 
 All tray creation via `tray.add`; canvas via `canvasPlaced`. Register new types in `components/element/element-registry.ts`.
 
+## Stories
+
+"exclusively gherkin, gherkin owns stories"
+
+"stories should live in QNTX-Web,"
+
+A story is one `.feature` file in `stories/`, and nothing else holds it.
+
 ## Sidebar and tray
 
 "they're still elements. But from now on we say that the tray is for things that are more temporal. Like individual chats, or an individual User. While Users, or Integrations, Vault, etc, etc will be leftside"

@@ -14,6 +14,12 @@ All tray creation via `tray.add`; canvas via `canvasPlaced`. Register new types 
 
 A story is one `.feature` file in `stories/`, and nothing else holds it.
 
+"the ui should not offer this to people who arent priviliged, the inverse story should not exist"
+
+"Stories are describing what is possible"
+
+"i dont want to see stories about how there isn't a pink elephant on the moon."
+
 ## Sidebar and tray
 
 "they're still elements. But from now on we say that the tray is for things that are more temporal. Like individual chats, or an individual User. While Users, or Integrations, Vault, etc, etc will be leftside"

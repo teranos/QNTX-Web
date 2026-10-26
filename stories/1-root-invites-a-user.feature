@@ -14,7 +14,6 @@ Feature: ROOT invites a user
     Given my friend has the mail
     When my friend clicks the link
     Then my friend chooses one of the identity providers, like google
-    And my friend does not set a password
 
   Scenario: ROOT cancels the invitation
     Given I am ROOT

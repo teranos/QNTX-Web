@@ -19,6 +19,7 @@ test-results/
 playwright-report/
 # The gate answers every call from these, session.json among them (sess* above)
 !browser/fixtures/**
+!mock/fixtures/**
 
 *.log
 .DS_Store

@@ -65,6 +65,17 @@
           QNTX_SRC = "\${{ github.workspace }}/qntx";
         };
       }
+
+      # The stories, walked in Chromium against the mock (BDD.md).
+      {
+        name = "Install Chromium";
+        run = "bunx playwright install --with-deps chromium";
+      }
+
+      {
+        name = "Walk the stories";
+        run = "bun run stories";
+      }
     ];
   };
 }

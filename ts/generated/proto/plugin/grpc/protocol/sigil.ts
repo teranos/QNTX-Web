@@ -201,7 +201,11 @@ export interface NodeAgentSaid {
     | ClaudeSaid
     | undefined;
   /** What it answered in Pi. */
-  pi: PiSaid | undefined;
+  pi:
+    | PiSaid
+    | undefined;
+  /** What it answered in codex. */
+  codex: CodexSaid | undefined;
 }
 
 /**
@@ -214,7 +218,52 @@ export interface NodeAgentAm {
     | ClaudeAm
     | undefined;
   /** In Pi. */
-  pi: PiAm | undefined;
+  pi:
+    | PiAm
+    | undefined;
+  /** In codex. */
+  codex: CodexAm | undefined;
+}
+
+/** CodexSaid is what the Node Agent answered in codex. */
+export interface CodexSaid {
+  /** What it answered. */
+  answer: string;
+  /** The session it was said in: the node's, apart from codex's own thread. */
+  session: string;
+  /** The model that answered. */
+  model: string;
+  /** The codex that ran. */
+  codex_version: string;
+  /** What codex says the turn used, in tokens. */
+  input_tokens: number;
+  output_tokens: number;
+  /** How long the turn took. */
+  took_ms: number;
+  /** Why a row of the session was not written down, when one was not. */
+  unwritten: string;
+}
+
+/** CodexAm is who the Node Agent is in codex and how the node runs it. */
+export interface CodexAm {
+  /** Its own DID, which signs what it writes down. */
+  did: string;
+  /** The model am.toml names. */
+  model: string;
+  /** The plugin every model call it makes in codex goes through. */
+  gateway: string;
+  /** The sandbox codex runs it in. */
+  sandbox: string;
+  /** The session it continues in codex, or empty before anything was said to it there. */
+  session: string;
+  /** Whether it is in a turn in codex now. */
+  answering: boolean;
+  /** Where the codex it runs is, or empty when the node has none yet. */
+  codex: string;
+  /** The codex this build pins. */
+  codex_version: string;
+  /** Why it cannot be spoken to in codex, when it cannot. */
+  not_ready: string;
 }
 
 /**
@@ -236,6 +285,18 @@ export interface NamespaceKey {
   set_by: string;
   /** When it was set, RFC 3339. */
   at: string;
+  /**
+   * Whether the provider it is named after was asked about it as this was
+   * answered. A key named after no provider is asked of nobody.
+   */
+  asked: boolean;
+  /** Whether that provider accepts it: the light in Connectors. */
+  accepted: boolean;
+  /**
+   * What the provider answered when it did not accept it, or why it was not
+   * reached.
+   */
+  why: string;
 }
 
 /** PiAm is what pi am answers. */
@@ -273,7 +334,7 @@ export interface PiAm {
 
 /**
  * NamespaceAgentAm is what agents am and agents set answer: the namespace's
- * agent, who opted the namespace into it, and who it is in Claude Code or in Pi.
+ * agent, who opted the namespace into it, and who it is in a Coding Agent Harness.
  */
 export interface NamespaceAgentAm {
   /** The namespace it stands in. */

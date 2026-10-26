@@ -188,7 +188,34 @@ export interface NamespaceAgentSaid {
     | ClaudeSaid
     | undefined;
   /** What it answered in Pi. */
-  pi: PiSaid | undefined;
+  pi:
+    | PiSaid
+    | undefined;
+  /** What it answered in Claude Managed Agents. */
+  managed: ManagedSaid | undefined;
+}
+
+/**
+ * ManagedSaid is what a namespace's agent answered in Claude Managed Agents,
+ * run in Anthropic's environment on the namespace's anthropic key.
+ */
+export interface ManagedSaid {
+  /** What it answered. */
+  answer: string;
+  /** Whether the turn ended in error, in the answer's words. */
+  is_error: boolean;
+  /** Why the session went idle. */
+  stop: string;
+  /** The session it was said in, as the node writes it down. */
+  session: string;
+  /** The session it was said in, as Anthropic names it. */
+  managed_session: string;
+  /** The model that answered. */
+  model: string;
+  /** How long the turn took. */
+  took_ms: number;
+  /** Why a row of the session was not written down, when one was not. */
+  unwritten: string;
 }
 
 /**
@@ -287,7 +314,7 @@ export interface NamespaceKey {
   at: string;
   /**
    * Whether the provider it is named after was asked about it as this was
-   * answered. A key named after no provider is asked of nobody.
+   * answered.
    */
   asked: boolean;
   /** Whether that provider accepts it: the light in Connectors. */
@@ -346,7 +373,37 @@ export interface NamespaceAgentAm {
     | ClaudeAm
     | undefined;
   /** Who the agent is and how it runs, in Pi. */
-  pi: PiAm | undefined;
+  pi:
+    | PiAm
+    | undefined;
+  /** Who the agent is and how it runs, in Claude Managed Agents. */
+  managed: ManagedAm | undefined;
+}
+
+/**
+ * ManagedAm is a namespace's agent in Claude Managed Agents: the agent,
+ * environment and vault Anthropic holds for it, by Anthropic's ids.
+ */
+export interface ManagedAm {
+  /** Its own DID, which signs what it writes down. */
+  did: string;
+  /** The model it is. */
+  model: string;
+  /** The agent Anthropic holds, and its version. */
+  agent_id: string;
+  agent_version: number;
+  /** The environment its sessions run in. */
+  environment_id: string;
+  /** The vault holding the token it reaches the node's MCP with. */
+  vault_id: string;
+  /** The session it continues, as the node writes it down. */
+  session: string;
+  /** The session it continues, as Anthropic names it. */
+  managed_session: string;
+  /** Whether it is in a turn now. */
+  answering: boolean;
+  /** Why it cannot be spoken to, when it cannot. */
+  not_ready: string;
 }
 
 /**

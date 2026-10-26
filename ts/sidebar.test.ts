@@ -107,6 +107,17 @@ describe('Tim: the sidebar stands beside the page', () => {
         expect(document.documentElement.style.getPropertyValue('--elements-safe-area-left')).toBe('');
     });
 
+    test('a window already open steps aside as the column opens', () => {
+        initSidebar();
+        closeSidebar();
+        let told = 0;
+        const heard = () => { told++; };
+        window.addEventListener('resize', heard);
+        openSidebar();
+        window.removeEventListener('resize', heard);
+        expect(told).toBeGreaterThan(0);
+    });
+
     test('a press on the latch does not reach the system bar header', () => {
         initSidebar();
         let reached = 0;

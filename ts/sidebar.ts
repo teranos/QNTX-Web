@@ -65,6 +65,8 @@ function pushPage(): void {
     // A window of @teranos/elements stands on the screen the column leaves (its safe area).
     if (beside) document.documentElement.style.setProperty('--elements-safe-area-left', `${WIDTH}px`);
     else document.documentElement.style.removeProperty('--elements-safe-area-left');
+    // A window already open holds itself on its screen as the screen changes (holdOnScreen).
+    window.dispatchEvent(new Event('resize'));
 }
 
 function show(next: boolean): void {

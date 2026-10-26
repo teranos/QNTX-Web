@@ -6,7 +6,8 @@ Feature: USER connects OpenAI
     When I press OpenAI
     And I press ChatGPT
     Then I am told to go to https://chatgpt.com/plugins
-    And I am shown where to click there: Add, then Add custom MCP server
+    And I am shown a screenshot of ChatGPT's plugin UI, img/connectors/chatgpt-add-custom-mcp-server.png
+    And the screenshot shows where to click there: Add, then Add custom MCP server
     When I give the callback URL ChatGPT shows me, which ChatGPT makes per connector
     Then I get the client id, the client secret and the token endpoint auth method, right there
     When I set ChatGPT up with those, and say yes at my passkey

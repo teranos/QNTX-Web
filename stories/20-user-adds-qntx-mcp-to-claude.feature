@@ -12,7 +12,7 @@ Feature: USER connects Claude
     And secret is hidden by default, 
     And click -> clipboard -> 'Copied!'
     And and there is a link to: https://claude.ai/new?modal=add-custom-connector#customize/connectors/yours
-    And a screenshot showing what values go where.
+    And a screenshot showing what values go where, img/connectors/claude-add-custom-connector.png
     When I set Claude up with those, and say yes at my passkey
     And QNTX notifies that this connector is correctly set up
     Then Claude reaches the namespace I am standing in

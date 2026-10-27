@@ -37,7 +37,7 @@ function lightOff(of: string): HTMLElement {
 function shot(file: string, says: string): HTMLElement {
     const image = document.createElement('img');
     // Relative, so it is found under whatever path the page is served from.
-    image.src = new URL(`img/connectors/${file}`, document.baseURI).href;
+    image.setAttribute('src', `img/connectors/${file}`);
     image.alt = says;
     image.dataset.shot = file;
     image.style.cssText = 'max-width:100%;border:1px solid var(--border-on-dark);border-radius:var(--border-radius)';

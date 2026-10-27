@@ -176,6 +176,8 @@ export interface ClaudeAm {
   signed_in: boolean;
   /** How it is signed in, as Claude Code names it, or empty when it is not. */
   auth_method: string;
+  /** Every model a turn can be said to answer with. */
+  models: string[];
 }
 
 /**
@@ -296,6 +298,25 @@ export interface NodeAnthropic {
   issuer_id: string;
   /** The workspace the traded token is scoped to (wrkspc_), as the wizard's snippet names it. */
   workspace_id: string;
+  /** What ROOT's agents spend first: "session", the Claude subscription, or "console", the node's OIDC. */
+  first: string;
+  /** Whether the other follows once the first is exhausted. */
+  then: boolean;
+  /** The session's windows, as ug last read each. */
+  session: AnthropicWindow[];
+  /** What ROOT's agents last ran on: "session" or "console"; empty before any turn. */
+  in_use: string;
+}
+
+/** AnthropicWindow is one window of the Claude subscription, as ug's status line read it. */
+export interface AnthropicWindow {
+  /** five_hour or seven_day. */
+  window: string;
+  used_percentage: number;
+  /** When the window resets, in Unix seconds. */
+  resets_at: number;
+  /** When ug read it, as RFC 3339. */
+  at: string;
 }
 
 /**

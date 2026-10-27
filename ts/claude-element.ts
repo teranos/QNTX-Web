@@ -30,6 +30,8 @@ export interface ClaudeAm {
     // Whether Claude Code says it is signed in, by claude login, and how.
     signed_in: boolean;
     auth_method: string;
+    // Every model a turn can be said to answer with; a node from before it says none.
+    models?: string[];
 }
 
 // What it answered (claude say).
@@ -56,14 +58,15 @@ export interface Carried {
 // The node, as this element asks it.
 export interface NodeAgent {
     am(): Promise<ClaudeAm>;
-    say(says: string, mode: string, carried?: Carried): Promise<ClaudeSaid>;
+    say(says: string, mode: string, carried?: Carried, model?: string): Promise<ClaudeSaid>;
     read(): Promise<TranscriptRead | undefined>;
 }
 
 /** The say body: harness, words, the mode when one is chosen, and what is carried. */
-export function sayBody(says: string, mode: string, carried: Carried | undefined): string {
+export function sayBody(says: string, mode: string, carried: Carried | undefined, model = ''): string {
     const body: Record<string, string> = { harness: 'claude', says };
     if (mode) body.permission_mode = mode;
+    if (model) body.model = model;
     if (carried?.file_id) body.file_id = carried.file_id;
     return JSON.stringify(body);
 }
@@ -72,10 +75,10 @@ export function sayBody(says: string, mode: string, carried: Carried | undefined
 function agentAt(at: string): NodeAgent {
     return {
         am: () => apiJson<{ claude: ClaudeAm }>(`${at}?harness=claude`).then(is => is.claude),
-        say: (says, mode, carried) => apiJson<{ claude: ClaudeSaid }>(`${at}/say`, {
+        say: (says, mode, carried, model) => apiJson<{ claude: ClaudeSaid }>(`${at}/say`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: sayBody(says, mode, carried),
+            body: sayBody(says, mode, carried, model),
         }).then(said => said.claude),
         // Its one session, read whole wherever whoever reads it stands.
         read: () => apiJson<{ transcript: TranscriptRead }>(`${at}/session?harness=claude`)
@@ -130,6 +133,10 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
 
     const mode = part('select', 'claude-mode');
     mode.title = 'The permission mode Claude Code runs this turn in';
+    // "would like ability to pick model as well"
+    const model = part('select', 'claude-model');
+    model.title = 'The model that answers this turn';
+    model.hidden = true;
     const says = part('textarea', 'claude-says');
     says.rows = 2;
     says.placeholder = 'Say something to the Node Agent';
@@ -145,7 +152,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     attach.title = 'A picture said with the words';
     const attached = part('div', 'claude-attached');
     const form = part('div', 'claude-say');
-    form.append(mode, attach, pick, send, attached, says);
+    form.append(mode, model, attach, pick, send, attached, says);
     // "the inputfield take up the entire bottom of the screen for chat elements like claude or pi"
     declareSay(says);
     // What is typed and pressed here is not a drag of the element.
@@ -238,7 +245,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         denied.textContent = '';
         follow();
         carried()
-            .then(carries => node.say(words, mode.value, carries))
+            .then(carries => node.say(words, mode.value, carries, model.hidden ? '' : model.value))
             .then(answer => {
                 says.value = '';
                 carry(null);
@@ -272,6 +279,10 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             if (!ownMode && !mode.hidden) mode.appendChild(choice('', 'permission mode'));
             for (const name of offered) mode.appendChild(choice(name, name));
             mode.value = ownMode;
+            const models = is.models ?? [];
+            model.hidden = models.length === 0;
+            for (const name of models) model.appendChild(choice(name, name));
+            model.value = models.includes(is.model) ? is.model : (models[0] ?? '');
             reading = is.session;
             if (reading) void read();
             else session.textContent = 'Nothing has been said to it yet.';

@@ -81,12 +81,12 @@ describe('a right-clicked symbol', () => {
         expect(elementOfSymbol(title)).toBeNull();
     });
 
-    test('the shake chat itself is never what is shaken about', () => {
-        const el = placed(SHAKE_ID, 'panel', '1');
+    test('the shake chat itself, right-clicked, is shaken about', () => {
+        const el = placed(SHAKE_ID, 'window', '1');
         const symbol = document.createElement('span');
         symbol.className = 'symbol';
         el.append(symbol);
-        expect(elementOfSymbol(symbol)).toBeNull();
+        expect(elementOfSymbol(symbol)).toEqual({ id: SHAKE_ID, symbol: '' });
     });
 });
 

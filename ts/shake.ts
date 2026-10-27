@@ -23,6 +23,9 @@ import type { Person } from './self-person';
 
 export const SHAKE_ID = 'shake-element';
 
+/** A phone, as the page tells one (sidebar.ts). */
+const PHONE = '(max-width: 768px)';
+
 /** The DOM event a shake is, whoever felt it. The mock strip dispatches it; so may a test. */
 export const SHAKE_EVENT = 'qntx-shake';
 
@@ -138,7 +141,8 @@ function createShakeElement(): Element {
         id: SHAKE_ID,
         title: 'ROOT SHAKE',
         symbol: Shake,
-        opensAs: 'panel',
+        // From below on a phone; on a desktop a window, not the whole screen.
+        opensAs: window.matchMedia?.(PHONE).matches ? 'panel' : 'window',
         opensAt: 'end',
         renderContent: () => {
             body = part('div', 'content-area claude claude-brand shake-body');
@@ -164,8 +168,9 @@ export async function shaken(): Promise<void> {
 /** The element whose symbol was right-clicked, or null when the click was on no element's symbol. */
 export function elementOfSymbol(target: EventTarget | null): { id: string; symbol: string } | null {
     if (!(target instanceof HTMLElement) || !target.closest('.symbol')) return null;
+    // ROOT SHAKE's own symbol too: a right-click names the element, the shake chat as well.
     const element = target.closest<HTMLElement>('[data-element-id]');
-    if (!element || element.dataset.elementId === SHAKE_ID) return null;
+    if (!element) return null;
     return { id: element.dataset.elementId ?? '', symbol: element.dataset.symbol ?? '' };
 }
 

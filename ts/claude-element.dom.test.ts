@@ -100,6 +100,33 @@ describe('Claude - Tim', () => {
         stop();
     });
 
+    // "would like ability to pick model as well"
+    test('the models the node offers are picked from, its own chosen, and the one picked is what is said with', async () => {
+        const body = document.createElement('div');
+        const models: string[] = [];
+        const stop = drawClaude(body, node({
+            say: (_says, _mode, _carried, model) => { models.push(model ?? ''); return Promise.resolve(answered); },
+        }, { ...am, models: ['claude-opus-5-5', 'claude-sonnet-5-5'] }));
+        await settled();
+        const pick = body.querySelector<HTMLSelectElement>('.claude-model')!;
+        expect(pick.hidden).toBe(false);
+        expect(Array.from(pick.options).map(o => o.value)).toEqual(['claude-opus-5-5', 'claude-sonnet-5-5']);
+        expect(pick.value).toBe('claude-opus-5-5');
+        pick.value = 'claude-sonnet-5-5';
+        say(body, 'how long has the box been up?');
+        await settled();
+        expect(models).toEqual(['claude-sonnet-5-5']);
+        stop();
+    });
+
+    test('a node that offers no models shows no model to pick', async () => {
+        const body = document.createElement('div');
+        const stop = drawClaude(body, node());
+        await settled();
+        expect(body.querySelector<HTMLSelectElement>('.claude-model')!.hidden).toBe(true);
+        stop();
+    });
+
     // "I WANT THE CLAUDE ELEMENT TO FEEL MORE DISTINCTLY CLAUDE"
     test('the Claude element is headed by the Spark, and the Pi element is not', () => {
         const claude = createClaudeElement().renderContent!() as HTMLElement;

@@ -176,6 +176,8 @@ export interface ClaudeAm {
   signed_in: boolean;
   /** How it is signed in, as Claude Code names it, or empty when it is not. */
   auth_method: string;
+  /** Every model a turn can be said to answer with. */
+  models: string[];
 }
 
 /**

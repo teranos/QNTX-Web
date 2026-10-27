@@ -21,6 +21,7 @@ import type { StatusItem } from './brow.ts';
 import { a2aCardRow } from './a2a-card-element.ts';
 import { nodeMCPOf, rootsClientElement, type CardMCP } from './connector-element.ts';
 import { createNodeConnectorsElement } from './node-connectors-element.ts';
+import { createStoriesElement } from './stories-element.ts';
 import { buttonFrom } from '@teranos/elements';
 import { person } from './self-person.ts';
 import type { VersionMessage, SystemCapabilitiesMessage } from '../types/websocket';
@@ -200,6 +201,8 @@ async function loadRootsClient(): Promise<void> {
             amNodeConnectors = document.createElement('div');
             amNodeConnectors.className = 'element-section';
             amNodeConnectors.appendChild(buttonFrom(createNodeConnectorsElement(), { className: 'qntx-btn qntx-btn-ghost qntx-btn-small' }));
+            // "ROOT or developer oriented Stories Element should exist"
+            amNodeConnectors.appendChild(buttonFrom(createStoriesElement(), { className: 'qntx-btn qntx-btn-ghost qntx-btn-small' }));
         }
         const said = await apiJson<{ card: CardMCP }>('/am/node');
         const node = nodeMCPOf(said.card ?? {});

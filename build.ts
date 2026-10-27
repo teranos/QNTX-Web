@@ -176,6 +176,14 @@ try {
   await cp(join(sourceDir, "qntx.jpg"), join(outputDir, "qntx.jpg"));
   // The screenshots a story shows, where the page asks for them.
   await cp(join(sourceDir, "img"), join(outputDir, "img"), { recursive: true });
+  // "ROOT or developer oriented Stories Element should exist": what it lists, each story by its file and its Feature line.
+  const stories = [];
+  for (const file of (await readdir(join(sourceDir, "stories"))).filter((f) => f.endsWith(".feature")).sort((a, b) => parseInt(a) - parseInt(b))) {
+    const text = await Bun.file(join(sourceDir, "stories", file)).text();
+    const feature = text.split("\n").find((line) => line.startsWith("Feature:")) ?? file;
+    stories.push({ name: file.replace(/\.feature$/, ""), feature: feature.replace(/^Feature:\s*/, "") });
+  }
+  await Bun.write(join(outputDir, "stories.json"), JSON.stringify(stories));
 
   // Copy WASM files for browser IndexedDB storage
   // WASM binaries must be in /js/ alongside bundled JS (import.meta.url resolution)

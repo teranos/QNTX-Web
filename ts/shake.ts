@@ -174,6 +174,11 @@ export function elementOfSymbol(target: EventTarget | null): { id: string; symbo
     return { id: element.dataset.elementId ?? '', symbol: element.dataset.symbol ?? '' };
 }
 
+/** ROOT SHAKE about the agent named, whatever is on screen: a story's, from the Stories element. */
+export function shakeAbout(id: string, symbol: string): Promise<void> {
+    return shake({ id, symbol });
+}
+
 async function shake(on: { id: string; symbol: string }): Promise<void> {
     let image: Blob | null = null;
     try {

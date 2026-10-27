@@ -156,6 +156,20 @@ export async function shaken(): Promise<void> {
         log.info(SEG.ELEMENT, '[Shake] nothing is on screen to talk to');
         return;
     }
+    await shake(on);
+}
+
+// > right click symbol -> ROOT SHAKE
+
+/** The element whose symbol was right-clicked, or null when the click was on no element's symbol. */
+export function elementOfSymbol(target: EventTarget | null): { id: string; symbol: string } | null {
+    if (!(target instanceof HTMLElement) || !target.closest('.symbol')) return null;
+    const element = target.closest<HTMLElement>('[data-element-id]');
+    if (!element || element.dataset.elementId === SHAKE_ID) return null;
+    return { id: element.dataset.elementId ?? '', symbol: element.dataset.symbol ?? '' };
+}
+
+async function shake(on: { id: string; symbol: string }): Promise<void> {
     let image: Blob | null = null;
     try {
         image = await snapshot();
@@ -174,6 +188,12 @@ export async function shaken(): Promise<void> {
 export function rootShake(who: Person | null): boolean {
     if (who?.level !== 'ROOT') return false;
     window.addEventListener(SHAKE_EVENT, () => { void shaken(); });
+    document.addEventListener('contextmenu', (event) => {
+        const on = elementOfSymbol(event.target);
+        if (!on) return;
+        event.preventDefault();
+        void shake(on);
+    });
     if (window.__TAURI__) {
         listen(SHELL_EVENT, () => { void shaken(); }).catch((err: unknown) => {
             log.error(SEG.UI, `[Shake] the shell's shake was not listened to: ${err instanceof Error ? err.message : String(err)}`);

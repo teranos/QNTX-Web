@@ -19,8 +19,9 @@ import { log, SEG } from './logger.ts';
 import { formatBuildTime } from './components/tooltip.ts';
 import type { StatusItem } from './brow.ts';
 import { a2aCardRow } from './a2a-card-element.ts';
-import { nodeMCPOf, pressable, rootsClient, type CardMCP } from './connector-element.ts';
-import { openNodeConnectors } from './node-connectors-element.ts';
+import { nodeMCPOf, rootsClientElement, type CardMCP } from './connector-element.ts';
+import { createNodeConnectorsElement } from './node-connectors-element.ts';
+import { buttonFrom } from '@teranos/elements';
 import { person } from './self-person.ts';
 import type { VersionMessage, SystemCapabilitiesMessage } from '../types/websocket';
 
@@ -194,18 +195,24 @@ async function loadRootsClient(): Promise<void> {
         const who = await person();
         if (who.level !== 'ROOT') return;
         // "you may open Node Connectors from am if you are root"
-        const opens = document.createElement('div');
-        opens.dataset.opens = 'node-connectors-element';
-        opens.className = 'element-row';
-        opens.textContent = 'Node Connectors';
-        amNodeConnectors = pressable(opens, openNodeConnectors);
+        // A button, as A2A is: made once, so a redraw of am keeps the one element.
+        if (!amNodeConnectors) {
+            amNodeConnectors = document.createElement('div');
+            amNodeConnectors.className = 'element-section';
+            amNodeConnectors.appendChild(buttonFrom(createNodeConnectorsElement(), { className: 'qntx-btn qntx-btn-ghost qntx-btn-small' }));
+        }
         const said = await apiJson<{ card: CardMCP }>('/am/node');
         const node = nodeMCPOf(said.card ?? {});
         if (!node) {
             log.warn(SEG.SELF, '[am] the node card names no MCP server');
             return;
         }
-        amRootsClient = rootsClient(node);
+        // A button, as A2A is, not a fold: made once, so a redraw of am keeps the one element.
+        if (!amRootsClient) {
+            amRootsClient = document.createElement('div');
+            amRootsClient.className = 'element-section';
+            amRootsClient.appendChild(buttonFrom(rootsClientElement(node), { className: 'qntx-btn qntx-btn-ghost qntx-btn-small' }));
+        }
         if (amElement) renderAm();
     } catch (error: unknown) {
         log.warn(SEG.SELF, `[am] ROOT's client: ${error instanceof Error ? error.message : String(error)}`);

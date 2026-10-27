@@ -3,12 +3,13 @@
 // "you may open Node Connectors from am if you are root"
 
 import type { Element } from '@teranos/elements';
-import { tray } from '@teranos/elements';
+import { AtField, fieldFrom, MEANS, pressFrom, tray } from '@teranos/elements';
 import { apiJson } from './client/http';
 import { log, SEG } from './logger';
 import { ANTHROPIC, markOf } from './brand-marks';
 import { copied, goTo, note, pressable, valueRow } from './connector-element';
 import { CONNECTOR } from './sym';
+import type { NodeAnthropic } from './generated/proto/plugin/grpc/protocol/sigil';
 
 export const ELEMENT_ID = 'node-connectors-element';
 
@@ -33,6 +34,14 @@ function lightOff(of: string): HTMLElement {
     return light;
 }
 
+/** The Anthropic row's light, as the node's answer lights it: off before any ids, green when Anthropic accepts, red with why when not. */
+function showLight(light: HTMLElement, said: HTMLElement, am: NodeAnthropic): void {
+    light.dataset.on = String(am.asked);
+    light.dataset.accepted = String(am.accepted);
+    light.style.backgroundColor = !am.asked ? '' : am.accepted ? MEANS.yes : MEANS.no;
+    said.textContent = !am.asked ? '' : am.accepted ? 'Anthropic accepts the node.' : am.why;
+}
+
 /** A Console screenshot, with what to press marked. */
 function shot(file: string, says: string): HTMLElement {
     const image = document.createElement('img');
@@ -54,7 +63,7 @@ function fields(rows: [string, string | HTMLElement][]): HTMLElement {
 }
 
 /** Each step of registering the node at Anthropic, as story 27 walks it. */
-function anthropicSteps(panel: HTMLElement, node: NodeIdentity): void {
+function anthropicSteps(panel: HTMLElement, node: NodeIdentity, lit: (am: NodeAnthropic) => void): void {
     panel.append(
         valueRow("The node's issuer", copied(node.issuer)),
         goTo('Go to', CONSOLE_FEDERATION),
@@ -106,7 +115,35 @@ function anthropicSteps(panel: HTMLElement, node: NodeIdentity): void {
         note('Press Create rule.'),
         goTo('The organization id is at', CONSOLE_ORGANIZATION),
         shot('anthropic-organization.png', 'Where the organization id is'),
+        ...giveTheRule(lit),
     );
+}
+
+/** The three ids ROOT made at Anthropic, given to the node, which asks Anthropic and answers with the light. */
+function giveTheRule(lit: (am: NodeAnthropic) => void): HTMLElement[] {
+    const organization = fieldFrom({ id: 'anthropic-organization-id', label: 'Organization id', placeholder: 'from the Organization page' });
+    const rule = fieldFrom({ id: 'anthropic-rule-id', label: 'Rule id', placeholder: 'fdrl_…' });
+    const account = fieldFrom({ id: 'anthropic-service-account-id', label: 'Service account id', placeholder: 'svac_…' });
+    const press = pressFrom({
+        id: 'give-anthropic-rule',
+        title: 'Give the node its rule',
+        again: 'gives the node the rule its identity is traded at',
+        creates: true,
+        does: async () => {
+            const given: Record<string, string> = {};
+            for (const [name, field] of [['organization_id', organization], ['federation_rule_id', rule], ['service_account_id', account]] as const) {
+                const value = field.input.value.trim();
+                if (!value) throw new AtField(field.input, 'not given');
+                given[name] = value;
+            }
+            lit(await apiJson<NodeAnthropic>('/api/anthropic', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(given),
+            }));
+        },
+    });
+    return [organization.element, rule.element, account.element, press.element];
 }
 
 /** The Anthropic row: its light, each namespace's OIDC, and the steps it opens into. */
@@ -120,7 +157,16 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
     const name = document.createElement('span');
     name.textContent = 'Anthropic';
     name.style.flex = '1';
-    head.append(markOf(ANTHROPIC), name, lightOff('anthropic-oidc'));
+    const light = lightOff('anthropic-oidc');
+    head.append(markOf(ANTHROPIC), name, light);
+    const said = document.createElement('div');
+    said.className = 'element-note';
+    said.style.padding = '0 8px';
+    const lit = (am: NodeAnthropic) => showLight(light, said, am);
+    // The light as the node says it now, on opening.
+    apiJson<NodeAnthropic>('/api/anthropic').then(lit).catch((err: unknown) => {
+        log.warn(SEG.SELF, `[node connectors] the node's light at Anthropic was not read: ${err instanceof Error ? err.message : String(err)}`);
+    });
     // Whether each namespace's OIDC is set up: none is yet, so no light is on.
     const namespaces = document.createElement('div');
     namespaces.dataset.namespacesOidc = '';
@@ -138,8 +184,8 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
     row.append(pressable(head, () => {
         body.hidden = !body.hidden;
         if (body.hidden || body.childElementCount > 0) return;
-        anthropicSteps(body, node);
-    }), namespaces, body);
+        anthropicSteps(body, node, lit);
+    }), said, namespaces, body);
     return row;
 }
 
@@ -167,6 +213,8 @@ export function createNodeConnectorsElement(): Element {
         id: ELEMENT_ID,
         title: 'Node Connectors',
         symbol: CONNECTOR,
+        // The Console's screenshots and the forms beside them are read at this width on a desktop.
+        width: 760,
         renderContent: () => {
             const content = document.createElement('div');
             nodeIdentity().then((node) => renderNodeConnectors(content, node)).catch((err: unknown) => {

@@ -64,6 +64,7 @@ export function goTo(words: string, href: string): HTMLElement {
     out.rel = 'noopener noreferrer';
     out.textContent = href;
     out.style.wordBreak = 'break-all';
+    out.style.color = 'var(--accent-on-dark)';
     line.append(' ', out);
     return line;
 }
@@ -339,13 +340,14 @@ export function renderConnectors(container: HTMLElement, at: ConnectorsAt | Prom
 }
 
 /** ROOT's client for the node's MCP server, set up on am (stories/10, ADR-038): folded until ROOT opens it. */
+/** ROOT's client for the node's MCP server as an element of its own, which am holds as a button, as it holds A2A. */
+export function rootsClientElement(node: string): Element {
+    return { id: 'roots-client-element', title: "ROOT's client for the node's MCP server", renderContent: () => rootsClient(node) };
+}
+
 export function rootsClient(node: string): HTMLElement {
-    const held = document.createElement('details');
-    held.className = 'element-section';
-    const summary = document.createElement('summary');
-    summary.textContent = "ROOT's client for the node's MCP server";
-    summary.style.cursor = 'pointer';
-    held.appendChild(summary);
+    const held = document.createElement('div');
+    held.className = 'element-content';
     const label = fieldFrom({ id: 'roots-client-label', label: "ROOT's client", placeholder: 'what this client is for' });
     const returnAddress = fieldFrom({ id: 'roots-client-return', label: 'Return address', placeholder: 'the callback URL the app shows' });
     const result = document.createElement('div');

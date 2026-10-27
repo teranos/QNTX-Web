@@ -228,17 +228,18 @@ function setUpFlow(node: NodeIdentity, light: Light, done: (am: NodeAnthropic) =
     return flowFrom({ id: 'anthropic-setup', steps, onDone: () => { if (last) done(last); } });
 }
 
-/** The node set up at Anthropic: its ids, and a way to set it up again. */
-function setUp(am: NodeAnthropic, again: () => void): HTMLElement {
+/** The node set up at Anthropic: its ids. */
+function setUp(am: NodeAnthropic): HTMLElement {
     const held = document.createElement('div');
     held.dataset.setUp = '';
-    held.style.cssText = 'display:flex;flex-direction:column;gap:8px';
-    const anew = pressFrom({ id: 'anthropic-set-up-again', title: 'Set up again', does: again });
-    held.append(foundOf(keptOf(am)), anew.element);
+    held.append(foundOf(keptOf(am)));
     return held;
 }
 
 const SOURCE_CALLED: Record<string, string> = { session: 'Session', console: 'Console' };
+
+/** At or under this much left, the session's light says it is running out. */
+const SESSION_LOW = 10;
 
 /** What is left of the session: the window with the least left, as ug last read it. */
 function sessionLeft(am: NodeAnthropic): number | undefined {
@@ -252,7 +253,7 @@ function sessionLeft(am: NodeAnthropic): number | undefined {
  * What ROOT's agents spend, in the order they spend it: the first, then the second.
  * The one in use is marked; the second's box says whether it follows, and the two swap.
  */
-function spendRows(am: NodeAnthropic, console_: Light, ordered: (first: string, then: boolean) => void): HTMLElement {
+function spendRows(am: NodeAnthropic, console_: Light, ordered: (first: string, then: boolean) => void, again: (() => void) | null): HTMLElement {
     const rows = document.createElement('div');
     rows.dataset.spend = '';
     rows.style.cssText = 'display:flex;flex-direction:column;gap:6px';
@@ -263,7 +264,9 @@ function spendRows(am: NodeAnthropic, console_: Light, ordered: (first: string, 
     const session = lightFrom('anthropic-session');
     const left = sessionLeft(am);
     if (left === undefined) session.show('off', 'Session');
-    else session.show(left <= 0 ? 'refused' : 'on', `Session ${Math.max(0, Math.round(left))}% left`);
+    // "4% left should feel more alarming ui communications wise"
+    else if (left <= 0) session.show('refused', 'Session exhausted');
+    else session.show(left <= SESSION_LOW ? 'low' : 'on', `Session ${Math.round(left)}% left`);
     const lights: Record<string, Light> = { session, console: console_ };
 
     order.forEach((source, n) => {
@@ -278,6 +281,10 @@ function spendRows(am: NodeAnthropic, console_: Light, ordered: (first: string, 
         const line = document.createElement('div');
         line.style.cssText = 'display:flex;align-items:center;gap:10px;flex-wrap:wrap';
         line.append(number, lit_, marked);
+        // "set up again, has to do with the oidc setup": on the Console's line, once it is set up.
+        if (source === 'console' && again) {
+            line.append(pressFrom({ id: 'anthropic-set-up-again', title: 'Set up again', does: again }).element);
+        }
         if (n === 1) {
             line.append(
                 pressFrom({ id: 'anthropic-then', title: `${am.then ? '☑' : '☐'} then`, does: () => ordered(first, !am.then) }).element,
@@ -314,6 +321,8 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
     row.append(head, spend, namespaces, body);
 
     // The lights drawn from what the node answered; an order given is answered anew.
+    // Set up again is there once the Console is set up, and gone while it is being set up.
+    let setting = false;
     const drawSpend = (am: NodeAnthropic) => {
         lit(light, am);
         spend.replaceChildren(spendRows(am, light, (first, then) => {
@@ -324,20 +333,27 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
             }).then(drawSpend).catch((err: unknown) => {
                 spend.appendChild(errorOf(err instanceof Error ? err.message : String(err)));
             });
-        }));
+        }, am.accepted && !setting ? () => flow(am) : null));
     };
 
     // Seen through to the end, as Anthropic's own wizard is.
-    const flow = () => {
-        const setting = setUpFlow(node, light, (am) => body.replaceChildren(setUp(am, flow)));
-        body.replaceChildren(setting.element);
-        if (row.isConnected) setting.captive();
-        else requestAnimationFrame(() => { if (row.isConnected) setting.captive(); });
+    const flow = (am: NodeAnthropic) => {
+        setting = true;
+        drawSpend(am);
+        const flowing = setUpFlow(node, light, (done) => {
+            setting = false;
+            drawSpend(done);
+            body.replaceChildren(setUp(done));
+        });
+        body.replaceChildren(flowing.element);
+        if (row.isConnected) flowing.captive();
+        else requestAnimationFrame(() => { if (row.isConnected) flowing.captive(); });
     };
     apiJson<NodeAnthropic>('/api/anthropic').then((am) => {
-        drawSpend(am);
-        if (am.accepted) body.replaceChildren(setUp(am, flow));
-        else flow();
+        if (am.accepted) {
+            drawSpend(am);
+            body.replaceChildren(setUp(am));
+        } else flow(am);
     }).catch((err: unknown) => {
         log.warn(SEG.SELF, `[node connectors] the node's light at Anthropic was not read: ${err instanceof Error ? err.message : String(err)}`);
         body.replaceChildren(errorOf(err instanceof Error ? err.message : String(err)));

@@ -245,6 +245,20 @@
     box-shadow: 0 0 4px rgba(46, 204, 113, 0.5);
 }
 
+/* Running out: the words say it too, not the dot alone. */
+.light[data-state="low"] {
+    color: #ffa502;
+}
+
+.light[data-state="low"] .status-dot {
+    background: #ffa502;
+    box-shadow: 0 0 6px rgba(255, 165, 2, 0.8);
+}
+
+.light[data-state="refused"] {
+    color: #ff6b6b;
+}
+
 .light[data-state="refused"] .status-dot {
     background: #ff6b6b;
     box-shadow: 0 0 4px rgba(255, 107, 107, 0.5);

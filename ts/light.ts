@@ -1,8 +1,8 @@
 // A light: the status line's dot, glowing, with a word beside it, as Connected is. One for every light the page shows.
 // "there is a light indicator, reuse it, or get it into its own component."
 
-/** Off: nothing set up yet. On: it works. Refused: it was asked and said no. Waiting: it is being asked. */
-export type LightState = 'off' | 'on' | 'refused' | 'waiting';
+/** Off: nothing set up yet. On: it works. Low: it works, and is running out. Refused: it was asked and said no. Waiting: it is being asked. */
+export type LightState = 'off' | 'on' | 'low' | 'refused' | 'waiting';
 
 export interface Light {
     element: HTMLElement;

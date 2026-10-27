@@ -217,6 +217,16 @@ describe('Tim: ROOT orders what its agents spend (stories/29)', () => {
         expect(spendRows(held)).toEqual(['console', 'session']);
     });
 
+    // "4% left should feel more alarming ui communications wise"
+    test('a session running out says so in amber, its words as well as its dot', async () => {
+        atAnthropic = { ...atAnthropic, asked: true, accepted: true, first: 'console', then: true,
+            session: [{ window: 'seven_day', used_percentage: 96, resets_at: 0, at: '' }] };
+        const held = await drawn();
+        const session = held.querySelector('[data-light="anthropic-session"]') as HTMLElement;
+        expect(session.dataset.state).toBe('low');
+        expect(session.textContent).toBe('Session 4% left');
+    });
+
     test('a session with nothing left is red, and the mark moves to what ROOT\'s agents run on', async () => {
         atAnthropic = { ...atAnthropic, asked: true, accepted: true, first: 'session', then: true, in_use: 'console',
             session: [{ window: 'five_hour', used_percentage: 100, resets_at: 0, at: '' }] };

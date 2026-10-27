@@ -205,6 +205,13 @@ function keysOf(namespace: string) {
 // The node at Anthropic (server/node_anthropic.go), kept in memory. The mock's
 // Anthropic accepts the node at any fdrl_ rule but fdrl_refused.
 const atAnthropic: Record<string, string> = {};
+// What ROOT's agents spend first, and whether the other follows (server/anthropic_spend.go).
+const spending = { first: "session", then: false };
+// The session's windows, as ug's status line reads them.
+const SESSION_WINDOWS = [
+    { window: "five_hour", used_percentage: 88, resets_at: 1900000000, at: "2026-10-27T17:00:00Z" },
+    { window: "seven_day", used_percentage: 41, resets_at: 1900400000, at: "2026-10-27T17:00:00Z" },
+];
 const ANTHROPIC_KINDS: [string, string][] = [["fdis_", "issuer_id"], ["svac_", "service_account_id"], ["fdrl_", "federation_rule_id"], ["wrkspc_", "workspace_id"]];
 
 function anthropicKindOf(word: string): string | undefined {
@@ -218,12 +225,19 @@ function anthropicAm() {
     const accepted = ready && atAnthropic.federation_rule_id !== "fdrl_refused";
     return {
         issuer: "https://l.example", subject: "did:key:z6MkmockNode", ...atAnthropic,
-        asked: ready, accepted,
+        asked: ready, accepted, first: spending.first, then: spending.then, session: SESSION_WINDOWS, in_use: "",
         why: ready && !accepted ? `Anthropic at https://api.anthropic.com did not accept the identity of did:key:z6MkmockNode at rule ${atAnthropic.federation_rule_id}: oauth token request failed (status 401); {"error":{"message":"Authentication failed","type":"authentication_error"}}` : "",
     };
 }
 
 async function anthropicAnswer(method: string, path: string, req: Request): Promise<Response | null> {
+    if (path === "/api/anthropic/order" && method === "POST") {
+        const { first = "", then = "false" } = (await req.json()) as { first?: string; then?: string };
+        if (first !== "session" && first !== "console") return json({ error: `first is session or console, not ${first}` }, 400);
+        spending.first = first;
+        spending.then = then === "true";
+        return json(anthropicAm());
+    }
     if (path !== "/api/anthropic") return null;
     if (method === "POST") {
         const { given = "" } = (await req.json()) as { given?: string };

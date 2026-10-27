@@ -130,8 +130,8 @@ function foundOf(ids: Partial<Record<Kind, string>>): HTMLElement {
 
 /** The light as the node answered it. */
 function lit(light: Light, am: NodeAnthropic): void {
-    if (!am.asked) light.show('off', 'Not set up');
-    else light.show(am.accepted ? 'on' : 'refused', am.accepted ? 'Accepted' : 'Refused');
+    if (!am.asked) light.show('off', 'Console not set up');
+    else light.show(am.accepted ? 'on' : 'refused', am.accepted ? 'Console accepted' : 'Console refused');
 }
 
 const STILL_NEEDED = "Paste the wizard's snippet, and Anthropic accepts the node.";
@@ -238,7 +238,58 @@ function setUp(am: NodeAnthropic, again: () => void): HTMLElement {
     return held;
 }
 
-/** The Anthropic row: its light, each namespace's OIDC, and the set-up flow or what was set up. */
+const SOURCE_CALLED: Record<string, string> = { session: 'Session', console: 'Console' };
+
+/** What is left of the session: the window with the least left, as ug last read it. */
+function sessionLeft(am: NodeAnthropic): number | undefined {
+    // An empty list is left off the wire.
+    const windows = am.session ?? [];
+    if (windows.length === 0) return undefined;
+    return Math.min(...windows.map((w) => 100 - w.used_percentage));
+}
+
+/**
+ * What ROOT's agents spend, in the order they spend it: the first, then the second.
+ * The one in use is marked; the second's box says whether it follows, and the two swap.
+ */
+function spendRows(am: NodeAnthropic, console_: Light, ordered: (first: string, then: boolean) => void): HTMLElement {
+    const rows = document.createElement('div');
+    rows.dataset.spend = '';
+    rows.style.cssText = 'display:flex;flex-direction:column;gap:6px';
+    const first = am.first || 'session';
+    const order = [first, first === 'session' ? 'console' : 'session'];
+    const using = am.in_use || first;
+
+    const session = lightFrom('anthropic-session');
+    const left = sessionLeft(am);
+    if (left === undefined) session.show('off', 'Session');
+    else session.show(left <= 0 ? 'refused' : 'on', `Session ${Math.max(0, Math.round(left))}% left`);
+    const lights: Record<string, Light> = { session, console: console_ };
+
+    order.forEach((source, n) => {
+        const number = document.createElement('span');
+        number.textContent = String(n + 1);
+        const marked = document.createElement('span');
+        marked.dataset.inUse = source === using ? 'true' : 'false';
+        marked.textContent = source === using ? '◀' : '';
+        marked.title = source === using ? `ROOT's agents run on the ${SOURCE_CALLED[source]}` : '';
+        const lit_ = lights[source]!.element;
+        lit_.dataset.source = source;
+        const line = document.createElement('div');
+        line.style.cssText = 'display:flex;align-items:center;gap:10px;flex-wrap:wrap';
+        line.append(number, lit_, marked);
+        if (n === 1) {
+            line.append(
+                pressFrom({ id: 'anthropic-then', title: `${am.then ? '☑' : '☐'} then`, does: () => ordered(first, !am.then) }).element,
+                pressFrom({ id: 'anthropic-swap', title: '⇅ swap', does: () => ordered(order[1]!, am.then) }).element,
+            );
+        }
+        rows.append(line);
+    });
+    return rows;
+}
+
+/** The Anthropic row: what ROOT's agents spend, each namespace's OIDC, and the set-up flow or what was set up. */
 function anthropicRow(node: NodeIdentity): HTMLElement {
     const row = document.createElement('div');
     row.dataset.platform = 'Anthropic';
@@ -249,8 +300,9 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
     const title = document.createElement('span');
     title.textContent = 'Anthropic';
     title.style.flex = '1';
-    const light = lightFrom('anthropic-oidc', 'Not set up');
-    head.append(markOf(ANTHROPIC), title, light.element);
+    const light = lightFrom('anthropic-oidc', 'Console not set up');
+    head.append(markOf(ANTHROPIC), title);
+    const spend = document.createElement('div');
 
     // Whether each namespace's OIDC is set up: none is yet, so no light is on.
     const namespaces = document.createElement('div');
@@ -259,7 +311,21 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
     for (const each of node.namespaces) namespaces.appendChild(lightFrom(`oidc-${each}`, each).element);
 
     const body = document.createElement('div');
-    row.append(head, namespaces, body);
+    row.append(head, spend, namespaces, body);
+
+    // The lights drawn from what the node answered; an order given is answered anew.
+    const drawSpend = (am: NodeAnthropic) => {
+        lit(light, am);
+        spend.replaceChildren(spendRows(am, light, (first, then) => {
+            apiJson<NodeAnthropic>('/api/anthropic/order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ first, then: String(then) }),
+            }).then(drawSpend).catch((err: unknown) => {
+                spend.appendChild(errorOf(err instanceof Error ? err.message : String(err)));
+            });
+        }));
+    };
 
     // Seen through to the end, as Anthropic's own wizard is.
     const flow = () => {
@@ -269,7 +335,7 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
         else requestAnimationFrame(() => { if (row.isConnected) setting.captive(); });
     };
     apiJson<NodeAnthropic>('/api/anthropic').then((am) => {
-        lit(light, am);
+        drawSpend(am);
         if (am.accepted) body.replaceChildren(setUp(am, flow));
         else flow();
     }).catch((err: unknown) => {

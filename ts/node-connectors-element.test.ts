@@ -39,7 +39,9 @@ beforeEach(() => {
         const method = init?.method ?? 'GET';
         const body = init?.body ? JSON.parse(String(init.body)) : {};
         asked.push({ url: String(url), method, body });
-        if (method === 'POST') {
+        if (method === 'POST' && String(url).endsWith('/api/anthropic/order')) {
+            atAnthropic = { ...atAnthropic, first: body.first, then: body.then === 'true' };
+        } else if (method === 'POST') {
             // Anthropic accepts the node at any rule but fdrl_refused.
             const ids = idsIn(body.given);
             const accepted = ids.federation_rule_id !== 'fdrl_refused';
@@ -178,5 +180,48 @@ describe('Spike: what was pasted, as people paste it', () => {
     test("the node's name as the wizard takes a name: lowercase letters, numbers and hyphens", () => {
         expect(wizardName('QNTX')).toBe('qntx');
         expect(wizardName('My Node_1')).toBe('my-node-1');
+    });
+});
+
+const spendRows = (held: HTMLElement) => Array.from(held.querySelectorAll('[data-spend] [data-source]')).map((l) => (l as HTMLElement).dataset.source);
+const inUse = (held: HTMLElement) => held.querySelector('[data-spend] [data-in-use="true"]')?.previousElementSibling as HTMLElement | null;
+
+// "the Anthropic Node Connector needs to show two light indicators,"
+// "the one that already exists, and the session"
+// "and it needs to be clear which one we are using."
+// "as a ROOT user, i expect to see balance."
+// "we use session first until exhaustion"
+// "Optionally declare that iodc Console balance will be utilised when session is exhausted"
+// "we use iodc Console balance until exhaustion"
+// "Optionally declare that we will use session when API balance is exhausted"
+describe('Tim: ROOT orders what its agents spend (stories/29)', () => {
+    test('the session and the Console, in the order they are spent, the one in use marked, with what is left of the session', async () => {
+        atAnthropic = { ...atAnthropic, asked: true, accepted: true, first: 'session', then: false, in_use: 'session',
+            session: [{ window: 'five_hour', used_percentage: 88, resets_at: 0, at: '' }, { window: 'seven_day', used_percentage: 41, resets_at: 0, at: '' }] };
+        const held = await drawn();
+        expect(spendRows(held)).toEqual(['session', 'console']);
+        expect(inUse(held)?.dataset.source).toBe('session');
+        expect(held.querySelector('[data-light="anthropic-session"]')!.textContent).toBe('Session 12% left');
+        expect(light(held).textContent).toBe('Console accepted');
+    });
+
+    test('ticking the second says it follows; swapping makes the Console first', async () => {
+        atAnthropic = { ...atAnthropic, asked: true, accepted: true, first: 'session', then: false };
+        const held = await drawn();
+        await press(held, 'anthropic-then');
+        expect(asked.at(-1)!.url).toEndWith('/api/anthropic/order');
+        expect(asked.at(-1)!.body).toEqual({ first: 'session', then: 'true' });
+        expect(held.querySelector('[data-press="anthropic-then"]')!.textContent).toContain('☑');
+        await press(held, 'anthropic-swap');
+        expect(asked.at(-1)!.body).toEqual({ first: 'console', then: 'true' });
+        expect(spendRows(held)).toEqual(['console', 'session']);
+    });
+
+    test('a session with nothing left is red, and the mark moves to what ROOT\'s agents run on', async () => {
+        atAnthropic = { ...atAnthropic, asked: true, accepted: true, first: 'session', then: true, in_use: 'console',
+            session: [{ window: 'five_hour', used_percentage: 100, resets_at: 0, at: '' }] };
+        const held = await drawn();
+        expect((held.querySelector('[data-light="anthropic-session"]') as HTMLElement).dataset.state).toBe('refused');
+        expect(inUse(held)?.dataset.source).toBe('console');
     });
 });

@@ -6,11 +6,12 @@
 // "AS A USER I EXPECT TO SEE THE CONNECTORS ELEMENT"
 
 import type { Element } from '@teranos/elements';
-import { AtField, fieldFrom, MEANS, pressFrom, tray } from '@teranos/elements';
+import { AtField, fieldFrom, pressFrom, tray } from '@teranos/elements';
 import { apiJson } from './client/http';
 import { log, SEG } from './logger';
 import { ANTHROPIC, GITHUB, OBSIDIAN, OPENAI, OPENROUTER, markOf, type BrandMark } from './brand-marks';
 import { copyable } from './copyable';
+import { lightFrom } from './light';
 import { createGitHubElement } from './github-element';
 import { createObsidianElement } from './obsidian-element';
 import { person } from './self-person';
@@ -167,23 +168,15 @@ function chatgptStory(panel: HTMLElement, at: ConnectorsAt): void {
 
 /** The light of a key: green when its platform accepts it, red with what the platform said when not. */
 function lightOf(provider: string, title: string): { element: HTMLElement; show: (kept: NamespaceKeys) => void } {
-    const element = document.createElement('div');
-    element.style.cssText = 'display:flex;align-items:center;gap:8px';
-    const light = document.createElement('span');
-    light.dataset.light = provider;
-    light.style.cssText = 'display:inline-block;width:10px;height:10px;border-radius:50%;flex:0 0 auto';
-    const said = document.createElement('span');
-    element.append(light, said);
-    element.hidden = true;
+    const light = lightFrom(provider);
+    light.element.hidden = true;
     const show = (kept: NamespaceKeys) => {
         const key = kept.keys.find((k) => k.name === provider);
-        if (!key) { element.hidden = true; return; }
-        element.hidden = false;
-        light.dataset.accepted = String(key.accepted);
-        light.style.backgroundColor = key.accepted ? MEANS.yes : MEANS.no;
-        said.textContent = key.accepted ? `${title} accepts this key.` : key.why;
+        if (!key) { light.element.hidden = true; return; }
+        light.element.hidden = false;
+        light.show(key.accepted ? 'on' : 'refused', key.accepted ? `${title} accepts this key.` : key.why);
     };
-    return { element, show };
+    return { element: light.element, show };
 }
 
 /** stories/21-user-sets-the-anthropic-key.feature and stories/14-user-sets-an-openrouter-key.feature: a platform's key, kept sealed by the namespace stood in under the platform's name (ADR-051). */

@@ -9,6 +9,7 @@ import { log, SEG } from './logger';
 import { ANTHROPIC, markOf } from './brand-marks';
 import { copied, goTo, note, valueRow } from './connector-element';
 import { copyable } from './copyable';
+import { lightFrom } from './light';
 import { CONNECTOR } from './sym';
 import type { NodeAnthropic } from './generated/proto/plugin/grpc/protocol/sigil';
 
@@ -74,15 +75,6 @@ export function wizardName(name: string): string {
     let out = '';
     for (const c of name.toLowerCase()) out += 'abcdefghijklmnopqrstuvwxyz0123456789-'.includes(c) ? c : '-';
     return out;
-}
-
-/** A light: off before anything is set up, green when it is, red when it is refused. */
-function lightOf(of: string): HTMLElement {
-    const light = document.createElement('span');
-    light.dataset.light = of;
-    light.dataset.on = 'false';
-    light.style.cssText = 'display:inline-block;width:10px;height:10px;border-radius:50%;flex:0 0 auto;border:1px solid var(--border-on-dark)';
-    return light;
 }
 
 /** A Console screenshot, with what to press marked. Relative, so it is found under whatever path the page is served from. */
@@ -164,8 +156,8 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
     const title = document.createElement('span');
     title.textContent = 'Anthropic';
     title.style.flex = '1';
-    const light = lightOf('anthropic-oidc');
-    head.append(markOf(ANTHROPIC), title, light);
+    const light = lightFrom('anthropic-oidc', 'Not set up');
+    head.append(markOf(ANTHROPIC), title, light.element);
 
     // Whether each namespace's OIDC is set up: none is yet, so no light is on.
     const namespaces = document.createElement('div');
@@ -175,7 +167,7 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
         const line = document.createElement('span');
         line.dataset.namespace = each;
         line.style.cssText = 'display:inline-flex;align-items:center;gap:6px';
-        line.append(lightOf(`oidc-${each}`), Object.assign(document.createElement('span'), { textContent: each }));
+        line.append(lightFrom(`oidc-${each}`, each).element);
         namespaces.appendChild(line);
     }
 
@@ -215,9 +207,8 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
 
     /** What the node answered: its light, and right under the box whether Anthropic accepts it. */
     const answered = (am: NodeAnthropic, toPaste = false) => {
-        light.dataset.on = String(am.asked);
-        light.dataset.accepted = String(am.accepted);
-        light.style.backgroundColor = !am.asked ? '' : am.accepted ? MEANS.yes : MEANS.no;
+        if (!am.asked) light.show('off', 'Not set up');
+        else light.show(am.accepted ? 'on' : 'refused', am.accepted ? 'Accepted' : 'Refused');
         kept = keptOf(am);
         showFound({ ...kept, ...pasted });
         outcome.replaceChildren();
@@ -237,6 +228,7 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
         outcome.replaceChildren();
         // Nothing is asked of Anthropic until all the node needs is there.
         if (NEEDED.some((kind) => !ids[kind])) return;
+        light.show('waiting', 'Asking Anthropic');
         outcome.appendChild(note('Asking Anthropic…'));
         outcome.scrollIntoView?.({ block: 'nearest' });
         apiJson<NodeAnthropic>('/api/anthropic', {

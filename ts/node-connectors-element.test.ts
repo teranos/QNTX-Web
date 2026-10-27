@@ -78,7 +78,7 @@ const light = (held: HTMLElement) => held.querySelector('[data-light="anthropic-
 describe('Tim: ROOT connects the node at Anthropic with the Connect workload wizard (stories/27)', () => {
     test("the Anthropic row's light is not on, and each namespace's OIDC is shown", () => {
         const held = drawn();
-        expect(light(held).dataset.on).toBe('false');
+        expect(light(held).dataset.state).toBe('off');
         for (const each of NODE.namespaces) expect(held.querySelector(`[data-light="oidc-${each}"]`)).not.toBeNull();
     });
 
@@ -104,7 +104,7 @@ describe('Tim: ROOT connects the node at Anthropic with the Connect workload wiz
         const posted = asked.find((a) => a.method === 'POST')!;
         expect(posted.url).toEndWith('/api/anthropic');
         expect(posted.body).toEqual({ given: SNIPPET });
-        expect(light(held).dataset.accepted).toBe('true');
+        expect(light(held).dataset.state).toBe('on');
         expect(held.querySelector('[data-paste="snippet"]')!.nextElementSibling?.textContent).toBe('Anthropic accepts the node.');
     });
 });
@@ -121,7 +121,7 @@ describe('Spike: what was pasted, as people paste it', () => {
     test('a rule Anthropic refuses: red, with what Anthropic said, as an error that copies, right under the box', async () => {
         const held = drawn();
         await paste(held, SNIPPET.replace('fdrl_01Kp4mjUuvKYj3yGjMwYfi81', 'fdrl_refused'));
-        expect(light(held).dataset.accepted).toBe('false');
+        expect(light(held).dataset.state).toBe('refused');
         const said = held.querySelector('[data-paste="snippet"]')!.nextElementSibling!.firstElementChild as HTMLElement;
         expect(said.dataset.error).toBe('');
         expect(said.hasAttribute('data-copyable')).toBe(true);

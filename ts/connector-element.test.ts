@@ -121,10 +121,11 @@ describe('Tim: USER sees one row per platform (stories/9)', () => {
     });
 });
 
-describe('Tim: Anthropic leads to three stories (stories/12)', () => {
-    test('add QNTX MCP to Claude, Claude Code, and the Anthropic API key', () => {
+describe('Tim: Anthropic leads to two stories (stories/12)', () => {
+    test('add QNTX MCP to Claude, and Claude Code', () => {
         const anthropic = choose(drawn('Clean'), 'Anthropic');
-        for (const name of ['add QNTX MCP to Claude', 'Claude Code', 'Anthropic API key']) {
+        expect(anthropic.querySelector('[data-part="Anthropic API key"]')).toBeNull();
+        for (const name of ['add QNTX MCP to Claude', 'Claude Code']) {
             expect(anthropic.querySelector(`[data-part="${name}"]`), name).not.toBeNull();
         }
     });
@@ -146,54 +147,6 @@ describe('Tim: Anthropic leads to three stories (stories/12)', () => {
         const opened: string[] = [];
         part(choose(drawn('Clean', opened), 'Anthropic'), 'Claude Code');
         expect(opened).toEqual(['agent-element']);
-    });
-});
-
-describe('Tim: USER sets the Anthropic key (stories/21)', () => {
-    test("I am sent to the platform's keys, and the key is kept by the namespace stood in, never said back", async () => {
-        const held = drawn('Clean');
-        part(choose(held, 'Anthropic'), 'Anthropic API key');
-        const out = held.querySelector<HTMLAnchorElement>('a[href="https://platform.claude.com/settings/keys"]');
-        expect(out?.target).toBe('_blank');
-        const key = row(held, 'Anthropic').querySelector('input') as HTMLInputElement;
-        expect(key.type).toBe('password');
-        key.value = 'sk-ant-issued';
-        await pressTwice(held, 'connect-anthropic');
-
-        const set = asked.find((a) => a.url.endsWith('/api/keys/Clean') && a.method === 'POST')!;
-        expect(set.body).toEqual({ name: 'anthropic', value: 'sk-ant-issued' });
-        expect(held.textContent).not.toContain('sk-ant-issued');
-    });
-
-    test('a key Anthropic issued lights green at once', async () => {
-        const held = drawn('Clean');
-        part(choose(held, 'Anthropic'), 'Anthropic API key');
-        (row(held, 'Anthropic').querySelector('input') as HTMLInputElement).value = 'sk-ant-issued';
-        await pressTwice(held, 'connect-anthropic');
-
-        const light = held.querySelector('[data-light="anthropic"]') as HTMLElement;
-        expect(light.dataset.accepted).toBe('true');
-        expect(light.style.backgroundColor).toBe(hex(MEANS.yes));
-    });
-
-    test('a key Anthropic did not issue is kept, with a red light and what Anthropic said', async () => {
-        const held = drawn('Clean');
-        part(choose(held, 'Anthropic'), 'Anthropic API key');
-        (row(held, 'Anthropic').querySelector('input') as HTMLInputElement).value = 'sk-ant-mistyped';
-        await pressTwice(held, 'connect-anthropic');
-
-        const light = held.querySelector('[data-light="anthropic"]') as HTMLElement;
-        expect(light.dataset.accepted).toBe('false');
-        expect(light.style.backgroundColor).toBe(hex(MEANS.no));
-        expect(row(held, 'Anthropic').textContent).toContain('anthropic answered 401');
-    });
-
-    test('the light of a key kept before is there on opening', async () => {
-        keys = [{ name: 'anthropic', set_by: 'me', at: '', asked: true, accepted: true, why: '' }];
-        const held = drawn('Clean');
-        part(choose(held, 'Anthropic'), 'Anthropic API key');
-        await settle();
-        expect((held.querySelector('[data-light="anthropic"]') as HTMLElement).dataset.accepted).toBe('true');
     });
 });
 

@@ -6,7 +6,7 @@ Feature: USER connects Anthropic
 
   "AND THE API KEY"
 
-  Scenario Outline: Anthropic leads to three stories
+  Scenario Outline: Anthropic leads to two stories
     Given I am in Connectors
     When I press Anthropic
     And I press <part>
@@ -16,4 +16,3 @@ Feature: USER connects Anthropic
       | part              | story                                                     |
       | add QNTX MCP to Claude | 20-user-adds-qntx-mcp-to-claude.feature              |
       | Claude Code       | 22-user-signs-claude-code-in.feature                      |
-      | Anthropic API key | 21-user-sets-the-anthropic-key.feature                    |

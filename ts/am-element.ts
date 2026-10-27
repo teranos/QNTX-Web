@@ -19,7 +19,8 @@ import { log, SEG } from './logger.ts';
 import { formatBuildTime } from './components/tooltip.ts';
 import type { StatusItem } from './brow.ts';
 import { a2aCardRow } from './a2a-card-element.ts';
-import { nodeMCPOf, rootsClient, type CardMCP } from './connector-element.ts';
+import { nodeMCPOf, pressable, rootsClient, type CardMCP } from './connector-element.ts';
+import { openNodeConnectors } from './node-connectors-element.ts';
 import { person } from './self-person.ts';
 import type { VersionMessage, SystemCapabilitiesMessage } from '../types/websocket';
 
@@ -33,6 +34,8 @@ let amStatusRow: StatusItem[] = [];
 // ROOT's client for the node's MCP server, held so a redraw keeps what was typed.
 // Null for anybody but ROOT.
 let amRootsClient: HTMLElement | null = null;
+// Where ROOT opens Node Connectors. Null for anybody but ROOT.
+let amNodeConnectors: HTMLElement | null = null;
 
 /** The build, pushed on the connect frame. */
 export function updateAmVersion(data: VersionMessage): void {
@@ -181,6 +184,7 @@ function renderAm(): void {
     amElement.firstElementChild?.appendChild(a2aCardRow());
     // "for root it can be in i of the root or on am"
     if (amRootsClient) amElement.firstElementChild?.appendChild(amRootsClient);
+    if (amNodeConnectors) amElement.firstElementChild?.appendChild(amNodeConnectors);
 }
 
 // Whether the viewer is ROOT, which ROOT's client is drawn for, and where the
@@ -189,6 +193,12 @@ async function loadRootsClient(): Promise<void> {
     try {
         const who = await person();
         if (who.level !== 'ROOT') return;
+        // "you may open Node Connectors from am if you are root"
+        const opens = document.createElement('div');
+        opens.dataset.opens = 'node-connectors-element';
+        opens.className = 'element-row';
+        opens.textContent = 'Node Connectors';
+        amNodeConnectors = pressable(opens, openNodeConnectors);
         const said = await apiJson<{ card: CardMCP }>('/am/node');
         const node = nodeMCPOf(said.card ?? {});
         if (!node) {

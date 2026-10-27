@@ -48,7 +48,7 @@ function mcpOf(at: ConnectorsAt): string {
     return `${at.node}/${encodeURIComponent(at.standing)}`;
 }
 
-function note(text: string): HTMLElement {
+export function note(text: string): HTMLElement {
     const said = document.createElement('div');
     said.className = 'element-note';
     said.textContent = text;
@@ -56,7 +56,7 @@ function note(text: string): HTMLElement {
 }
 
 /** A line saying where to go, its address a link out. */
-function goTo(words: string, href: string): HTMLElement {
+export function goTo(words: string, href: string): HTMLElement {
     const line = note(words);
     const out = document.createElement('a');
     out.href = href;
@@ -69,7 +69,7 @@ function goTo(words: string, href: string): HTMLElement {
 }
 
 /** One named value, copied by a click. */
-function valueRow(name: string, value: HTMLElement): HTMLElement {
+export function valueRow(name: string, value: HTMLElement): HTMLElement {
     const row = document.createElement('div');
     row.className = 'element-row';
     const label = document.createElement('span');
@@ -81,7 +81,7 @@ function valueRow(name: string, value: HTMLElement): HTMLElement {
     return row;
 }
 
-function copied(text: string): HTMLElement {
+export function copied(text: string): HTMLElement {
     const shown = document.createElement('span');
     shown.textContent = text;
     return copyable(shown);
@@ -241,7 +241,6 @@ const PLATFORMS: Platform[] = [
         brand: ANTHROPIC, name: 'Anthropic', parts: [
             { name: 'add QNTX MCP to Claude', draw: claudeStory },
             { name: 'Claude Code', opens: 'agent-element' },
-            { name: 'Anthropic API key', draw: keyStory('anthropic', 'Anthropic', 'sk-ant-…', 'https://platform.claude.com/settings/keys') },
         ],
     },
     {
@@ -254,7 +253,7 @@ const PLATFORMS: Platform[] = [
 ];
 
 /** Something pressed that is not a button: a row is as wide as its element, which a button inside one is not. */
-function pressable(element: HTMLElement, does: () => void): HTMLElement {
+export function pressable(element: HTMLElement, does: () => void): HTMLElement {
     element.setAttribute('role', 'button');
     element.tabIndex = 0;
     element.style.cursor = 'pointer';

@@ -14,7 +14,6 @@ const STILL_BY_HAND = [
     'ts/door.ts',
     'ts/github-element.ts',
     'ts/market-element.ts',
-    'ts/node-connectors-element.ts',
     'ts/obsidian-element.ts',
     'ts/parity-element.ts',
     'ts/system-drawer.ts',

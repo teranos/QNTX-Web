@@ -3,13 +3,13 @@
 // "you may open Node Connectors from am if you are root"
 
 import type { Element } from '@teranos/elements';
-import { MEANS, tray } from '@teranos/elements';
+import { fieldFrom, flowFrom, pressFrom, tray, type FlowHandle, type FlowStep } from '@teranos/elements';
 import { apiJson } from './client/http';
 import { log, SEG } from './logger';
 import { ANTHROPIC, markOf } from './brand-marks';
 import { copied, goTo, note, valueRow } from './connector-element';
 import { copyable } from './copyable';
-import { lightFrom } from './light';
+import { lightFrom, type Light } from './light';
 import { CONNECTOR } from './sym';
 import type { NodeAnthropic } from './generated/proto/plugin/grpc/protocol/sigil';
 
@@ -92,47 +92,9 @@ export function errorOf(said: string): HTMLElement {
     const shown = document.createElement('div');
     shown.dataset.error = '';
     shown.textContent = said;
-    // Red as the light that says it is refused.
-    shown.style.cssText = `white-space:pre-wrap;word-break:break-word;font-family:var(--font-mono);padding:6px 8px;border-left:3px solid currentColor;background:var(--bg-almost-black);color:${MEANS.no}`;
+    // As every element says an error: the error ground, the error text.
+    shown.style.cssText = 'white-space:pre-wrap;word-break:break-word;font-family:var(--font-mono);padding:6px 8px;border-left:3px solid currentColor;background:var(--element-status-error-bg);color:var(--element-status-error-text)';
     return copyable(shown);
-}
-
-/** A screen of the wizard: what it is called, the screenshot of it, and what to give there. */
-function screen(title: string, image: HTMLElement, ...gives: HTMLElement[]): HTMLElement {
-    const held = document.createElement('div');
-    held.dataset.screen = title;
-    held.style.cssText = 'display:flex;flex-direction:column;gap:6px';
-    const named = document.createElement('div');
-    named.textContent = title;
-    named.style.fontWeight = 'bold';
-    held.append(named, image, ...gives);
-    return held;
-}
-
-/** The wizard's screens, each with what the node gives there. */
-function wizard(node: NodeIdentity): HTMLElement {
-    const held = document.createElement('div');
-    held.style.cssText = 'display:flex;flex-direction:column;gap:12px';
-    const name = wizardName(node.name);
-    held.append(
-        goTo('Go to', CONSOLE_FEDERATION),
-        note('Press Connect workload, then Custom OIDC.'),
-        shot('anthropic-connect-workload.png', 'Connect workload, marked'),
-        screen('Issuer', shot('anthropic-wizard-issuer.png', "The wizard's Issuer screen"),
-            note("Connect a new provider, with the node's issuer as its URL. If the node's issuer is listed under Use a registered issuer, pick it."),
-            valueRow('Issuer URL', copied(node.issuer))),
-        screen('Federation rule', shot('anthropic-wizard-rule.png', "The wizard's Federation rule screen"),
-            valueRow('Rule name', copied(name)),
-            valueRow('Subject (sub) claim', copied(node.did)),
-            note('Leave the rest as it is.')),
-        screen('Target', shot('anthropic-wizard-target.png', "The wizard's Target screen"),
-            note('Create a new one.'),
-            valueRow('Service account name', copied(name)),
-            note('Leave the rest as it is, and press Apply and continue.')),
-        screen('Test', shot('anthropic-wizard-test.png', "The wizard's snippet, its copy button marked"),
-            note("Press the snippet's copy button, and paste it below.")),
-    );
-    return held;
 }
 
 /** The ids the node keeps, by kind. */
@@ -145,7 +107,138 @@ function keptOf(am: NodeAnthropic): Partial<Record<Kind, string>> {
     };
 }
 
-/** The Anthropic row: its light, each namespace's OIDC, the wizard, and the box its snippet is pasted into. */
+/** Each id the node needs, ✓ with its value when it is there, named as still needed when not. */
+function foundOf(ids: Partial<Record<Kind, string>>): HTMLElement {
+    const found = document.createElement('div');
+    found.dataset.found = '';
+    found.style.cssText = 'display:flex;flex-direction:column;gap:2px';
+    for (const kind of NEEDED) {
+        const line = document.createElement('div');
+        line.dataset.id = kind;
+        line.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap';
+        const id = ids[kind];
+        if (id) {
+            line.dataset.given = '';
+            line.append(Object.assign(document.createElement('span'), { className: 'status-well', textContent: `✓ ${CALLED[kind]}` }), copied(id));
+        } else {
+            line.append(Object.assign(document.createElement('span'), { className: 'status-unwell', textContent: `${CALLED[kind]} is still needed` }));
+        }
+        found.appendChild(line);
+    }
+    return found;
+}
+
+/** The light as the node answered it. */
+function lit(light: Light, am: NodeAnthropic): void {
+    if (!am.asked) light.show('off', 'Not set up');
+    else light.show(am.accepted ? 'on' : 'refused', am.accepted ? 'Accepted' : 'Refused');
+}
+
+const STILL_NEEDED = "Paste the wizard's snippet, and Anthropic accepts the node.";
+
+/** The wizard's steps, as Anthropic's Connect workload names them, each with what the node gives there. */
+function setUpFlow(node: NodeIdentity, light: Light, done: (am: NodeAnthropic) => void): FlowHandle {
+    const name = wizardName(node.name);
+    let last: NodeAnthropic | null = null;
+    const steps: FlowStep[] = [
+        {
+            title: 'Connect workload',
+            says: 'Open the wizard',
+            draw: (panel, resolved) => {
+                panel.append(goTo('Go to', CONSOLE_FEDERATION), note('Press Connect workload, then Custom OIDC.'), shot('anthropic-connect-workload.png', 'Connect workload, marked'));
+                resolved(null);
+            },
+        },
+        {
+            title: 'Issuer',
+            says: 'Select or register the provider',
+            draw: (panel, resolved) => {
+                panel.append(note("Connect a new provider, with the node's issuer as its URL. If the node's issuer is listed under Use a registered issuer, pick it."),
+                    valueRow('Issuer URL', copied(node.issuer)), shot('anthropic-wizard-issuer.png', "The wizard's Issuer screen"));
+                resolved(null);
+            },
+        },
+        {
+            title: 'Federation rule',
+            says: 'Match conditions and workspaces',
+            draw: (panel, resolved) => {
+                panel.append(valueRow('Rule name', copied(name)), valueRow('Subject (sub) claim', copied(node.did)), note('Leave the rest as it is.'),
+                    shot('anthropic-wizard-rule.png', "The wizard's Federation rule screen"));
+                resolved(null);
+            },
+        },
+        {
+            title: 'Target',
+            says: 'Pick a service account',
+            draw: (panel, resolved) => {
+                panel.append(note('Create a new one.'), valueRow('Service account name', copied(name)), note('Leave the rest as it is, and press Apply and continue.'),
+                    shot('anthropic-wizard-target.png', "The wizard's Target screen"));
+                resolved(null);
+            },
+        },
+        {
+            title: 'Test',
+            says: 'Verify end-to-end',
+            draw: (panel, resolved) => {
+                const field = fieldFrom({ id: 'anthropic-snippet', label: "The wizard's snippet", placeholder: "Press the snippet's copy button, and paste it here", lines: 8 });
+                field.input.dataset.paste = 'snippet';
+                const outcome = document.createElement('div');
+                outcome.dataset.outcome = '';
+                let found = foundOf(last ? keptOf(last) : {});
+                let pasted: Partial<Record<Kind, string>> = {};
+                const answered = (am: NodeAnthropic) => {
+                    last = am;
+                    lit(light, am);
+                    const shown = foundOf({ ...keptOf(am), ...pasted });
+                    found.replaceWith(shown);
+                    found = shown;
+                    outcome.replaceChildren();
+                    if (am.asked) {
+                        outcome.appendChild(am.accepted
+                            ? Object.assign(document.createElement('div'), { className: 'status-well', textContent: 'Anthropic accepts the node.' })
+                            : errorOf(am.why));
+                    }
+                    resolved(am.accepted ? null : STILL_NEEDED);
+                };
+                field.input.addEventListener('input', () => {
+                    const given = field.input.value;
+                    pasted = idsIn(given);
+                    const ids = { ...(last ? keptOf(last) : {}), ...pasted };
+                    const shown = foundOf(ids);
+                    found.replaceWith(shown);
+                    found = shown;
+                    outcome.replaceChildren();
+                    // Nothing is asked of Anthropic until all the node needs is there.
+                    if (NEEDED.some((kind) => !ids[kind])) return;
+                    light.show('waiting', 'Asking Anthropic');
+                    outcome.appendChild(note('Asking Anthropic…'));
+                    apiJson<NodeAnthropic>('/api/anthropic', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ given }),
+                    }).then(answered).catch((err: unknown) => {
+                        outcome.replaceChildren(errorOf(err instanceof Error ? err.message : String(err)));
+                    });
+                });
+                panel.append(field.element, outcome, found, shot('anthropic-wizard-test.png', "The wizard's snippet, its copy button marked"));
+                resolved(last?.accepted ? null : STILL_NEEDED);
+            },
+        },
+    ];
+    return flowFrom({ id: 'anthropic-setup', steps, onDone: () => { if (last) done(last); } });
+}
+
+/** The node set up at Anthropic: its ids, and a way to set it up again. */
+function setUp(am: NodeAnthropic, again: () => void): HTMLElement {
+    const held = document.createElement('div');
+    held.dataset.setUp = '';
+    held.style.cssText = 'display:flex;flex-direction:column;gap:8px';
+    const anew = pressFrom({ id: 'anthropic-set-up-again', title: 'Set up again', does: again });
+    held.append(foundOf(keptOf(am)), anew.element);
+    return held;
+}
+
+/** The Anthropic row: its light, each namespace's OIDC, and the set-up flow or what was set up. */
 function anthropicRow(node: NodeIdentity): HTMLElement {
     const row = document.createElement('div');
     row.dataset.platform = 'Anthropic';
@@ -163,90 +256,25 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
     const namespaces = document.createElement('div');
     namespaces.dataset.namespacesOidc = '';
     namespaces.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px 12px';
-    for (const each of node.namespaces) {
-        const line = document.createElement('span');
-        line.dataset.namespace = each;
-        line.style.cssText = 'display:inline-flex;align-items:center;gap:6px';
-        line.append(lightFrom(`oidc-${each}`, each).element);
-        namespaces.appendChild(line);
-    }
+    for (const each of node.namespaces) namespaces.appendChild(lightFrom(`oidc-${each}`, each).element);
 
-    // The box the wizard's snippet is pasted into, and right under it what was found and what Anthropic said.
-    const box = document.createElement('textarea');
-    box.dataset.paste = 'snippet';
-    box.rows = 4;
-    box.placeholder = "Paste the wizard's snippet here";
-    box.style.cssText = 'width:100%;font-family:var(--font-mono)';
-    const found = document.createElement('div');
-    found.dataset.found = '';
-    found.style.cssText = 'display:flex;flex-direction:column;gap:2px';
-    const outcome = document.createElement('div');
-    outcome.dataset.outcome = '';
+    const body = document.createElement('div');
+    row.append(head, namespaces, body);
 
-    // What was pasted, and what the node keeps: an answer arriving after a paste never takes the paste back.
-    let pasted: Partial<Record<Kind, string>> = {};
-    let kept: Partial<Record<Kind, string>> = {};
-
-    /** Each id the node needs, ✓ with its value when it is there, named as still needed when not. */
-    const showFound = (ids: Partial<Record<Kind, string>>) => {
-        found.replaceChildren();
-        for (const kind of NEEDED) {
-            const line = document.createElement('div');
-            line.dataset.id = kind;
-            line.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap';
-            const id = ids[kind];
-            if (id) {
-                line.dataset.given = '';
-                line.append(Object.assign(document.createElement('span'), { className: 'status-well', textContent: `✓ ${CALLED[kind]}` }), copied(id));
-            } else {
-                line.append(Object.assign(document.createElement('span'), { className: 'status-unwell', textContent: `${CALLED[kind]} is still needed` }));
-            }
-            found.appendChild(line);
-        }
+    // Seen through to the end, as Anthropic's own wizard is.
+    const flow = () => {
+        const setting = setUpFlow(node, light, (am) => body.replaceChildren(setUp(am, flow)));
+        body.replaceChildren(setting.element);
+        if (row.isConnected) setting.captive();
+        else requestAnimationFrame(() => { if (row.isConnected) setting.captive(); });
     };
-
-    /** What the node answered: its light, and right under the box whether Anthropic accepts it. */
-    const answered = (am: NodeAnthropic, toPaste = false) => {
-        if (!am.asked) light.show('off', 'Not set up');
-        else light.show(am.accepted ? 'on' : 'refused', am.accepted ? 'Accepted' : 'Refused');
-        kept = keptOf(am);
-        showFound({ ...kept, ...pasted });
-        outcome.replaceChildren();
-        if (!am.asked) return;
-        outcome.appendChild(am.accepted
-            ? Object.assign(document.createElement('div'), { className: 'status-well', textContent: 'Anthropic accepts the node.' })
-            : errorOf(am.why));
-        // Only an answer to a paste is brought into view: on opening, the first step is what is seen.
-        if (toPaste) outcome.scrollIntoView?.({ block: 'nearest' });
-    };
-
-    box.addEventListener('input', () => {
-        const given = box.value;
-        pasted = idsIn(given);
-        const ids = { ...kept, ...pasted };
-        showFound(ids);
-        outcome.replaceChildren();
-        // Nothing is asked of Anthropic until all the node needs is there.
-        if (NEEDED.some((kind) => !ids[kind])) return;
-        light.show('waiting', 'Asking Anthropic');
-        outcome.appendChild(note('Asking Anthropic…'));
-        outcome.scrollIntoView?.({ block: 'nearest' });
-        apiJson<NodeAnthropic>('/api/anthropic', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ given }),
-        }).then((am) => answered(am, true)).catch((err: unknown) => {
-            outcome.replaceChildren(errorOf(err instanceof Error ? err.message : String(err)));
-        });
-    });
-
-    const steps = wizard(node);
-    row.append(head, namespaces, steps, box, outcome, found);
-    showFound({});
-    // What the node already keeps, and its light, on opening.
-    apiJson<NodeAnthropic>('/api/anthropic').then((am) => answered(am)).catch((err: unknown) => {
+    apiJson<NodeAnthropic>('/api/anthropic').then((am) => {
+        lit(light, am);
+        if (am.accepted) body.replaceChildren(setUp(am, flow));
+        else flow();
+    }).catch((err: unknown) => {
         log.warn(SEG.SELF, `[node connectors] the node's light at Anthropic was not read: ${err instanceof Error ? err.message : String(err)}`);
-        outcome.replaceChildren(errorOf(err instanceof Error ? err.message : String(err)));
+        body.replaceChildren(errorOf(err instanceof Error ? err.message : String(err)));
     });
     return row;
 }

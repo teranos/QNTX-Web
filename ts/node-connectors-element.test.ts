@@ -1,6 +1,6 @@
 // Node Connectors, as stories/27-root-registers-the-node-with-anthropic.feature walks it.
-// Tim: the wizard's screens, the snippet pasted whole, Anthropic's answer under it.
-// Spike: part of what the node needs, a refused rule, what the Console puts around an ID.
+// Tim: the wizard's steps one at a time, the snippet pasted whole, Done once Anthropic accepts the node.
+// Spike: part of what the node needs, a refused rule, Done pressed too soon, what the Console puts around an ID.
 
 import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
 import { idsIn, renderNodeConnectors, wizardName, type NodeIdentity } from './node-connectors-element';
@@ -12,11 +12,7 @@ let asked: { url: string; method: string; body: Record<string, string> }[] = [];
 let atAnthropic: Record<string, unknown> = {};
 
 /** The Connect workload wizard's snippet, as its copy button gives it. */
-const SNIPPET = `# However your platform exposes its OIDC identity token
-JWT="$YOUR_PLATFORM_OIDC_TOKEN"
-
-curl -sS https://api.anthropic.com/v1/oauth/token \\
-  -H "content-type: application/json" \\
+const SNIPPET = `curl -sS https://api.anthropic.com/v1/oauth/token \\
   --data @- <<JSON
 {
   "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
@@ -58,10 +54,23 @@ async function settle(): Promise<void> {
     for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 1));
 }
 
-function drawn(): HTMLElement {
+async function drawn(): Promise<HTMLElement> {
     const held = document.createElement('div');
     document.body.appendChild(held);
     renderNodeConnectors(held, NODE);
+    await settle();
+    return held;
+}
+
+async function press(held: HTMLElement, id: string): Promise<void> {
+    (held.querySelector(`[data-press="${id}"]`) as HTMLButtonElement).click();
+    await settle();
+}
+
+/** On to the wizard's Test step, through the four before it. */
+async function atTest(): Promise<HTMLElement> {
+    const held = await drawn();
+    for (let i = 0; i < 4; i++) await press(held, 'anthropic-setup-continue');
     return held;
 }
 
@@ -72,60 +81,92 @@ async function paste(held: HTMLElement, given: string): Promise<void> {
     await settle();
 }
 
-const copyables = (held: HTMLElement) => Array.from(held.querySelectorAll('[data-copyable]')).map((c) => c.textContent);
+const panel = (held: HTMLElement) => held.querySelector('[data-flow-panel]') as HTMLElement;
+const copyables = (held: HTMLElement) => Array.from(panel(held).querySelectorAll('[data-copyable]')).map((c) => c.textContent);
 const light = (held: HTMLElement) => held.querySelector('[data-light="anthropic-oidc"]') as HTMLElement;
 
 describe('Tim: ROOT connects the node at Anthropic with the Connect workload wizard (stories/27)', () => {
-    test("the Anthropic row's light is not on, and each namespace's OIDC is shown", () => {
-        const held = drawn();
+    test("the light is not on, each namespace's OIDC is shown, and the steps are the wizard's", async () => {
+        const held = await drawn();
         expect(light(held).dataset.state).toBe('off');
         for (const each of NODE.namespaces) expect(held.querySelector(`[data-light="oidc-${each}"]`)).not.toBeNull();
+        const steps = Array.from(held.querySelectorAll('[data-flow-step]')).map((s) => s.textContent);
+        expect(steps).toEqual([
+            '1Connect workloadOpen the wizard',
+            '2IssuerSelect or register the provider',
+            '3Federation ruleMatch conditions and workspaces',
+            '4TargetPick a service account',
+            '5TestVerify end-to-end',
+        ]);
     });
 
-    test('it links the Workload identity page, with Connect workload marked, then each screen of the wizard', () => {
-        const held = drawn();
-        expect(held.querySelector('a[href="https://platform.claude.com/settings/workload-identity-federation"]')).not.toBeNull();
-        expect(held.textContent).toContain('Press Connect workload, then Custom OIDC.');
-        const shots = Array.from(held.querySelectorAll<HTMLImageElement>('img[data-shot]')).map((i) => i.dataset.shot);
-        expect(shots).toEqual(['anthropic-connect-workload.png', 'anthropic-wizard-issuer.png', 'anthropic-wizard-rule.png', 'anthropic-wizard-target.png', 'anthropic-wizard-test.png']);
+    test('the first step links the Workload identity page, with Connect workload marked', async () => {
+        const held = await drawn();
+        expect(panel(held).querySelector('a[href="https://platform.claude.com/settings/workload-identity-federation"]')).not.toBeNull();
+        expect(panel(held).textContent).toContain('Press Connect workload, then Custom OIDC.');
+        expect(panel(held).querySelector<HTMLImageElement>('img[data-shot]')!.dataset.shot).toBe('anthropic-connect-workload.png');
     });
 
-    test("it gives what each screen asks for, copyable: the node's issuer, its name as the wizard takes names, its DID", () => {
-        const given = copyables(drawn());
-        expect(given).toContain(NODE.issuer);
-        expect(given).toContain(NODE.did);
-        expect(given.filter((c) => c === 'qntx')).toHaveLength(2);
+    test('each step gives what that screen of the wizard asks for, copyable', async () => {
+        const held = await drawn();
+        await press(held, 'anthropic-setup-continue');
+        expect(copyables(held)).toEqual([NODE.issuer]);
+        await press(held, 'anthropic-setup-continue');
+        expect(copyables(held)).toEqual([wizardName(NODE.name), NODE.did]);
+        await press(held, 'anthropic-setup-continue');
+        expect(copyables(held)).toEqual([wizardName(NODE.name)]);
     });
 
-    test("the wizard's snippet pasted whole: each ID found, the node asked without a press, Anthropic's answer right under the box", async () => {
-        const held = drawn();
+    test("the wizard's snippet pasted whole: each ID found, the node asked without a press, Anthropic's answer under the field, and Done ends it", async () => {
+        const held = await atTest();
         await paste(held, SNIPPET);
-        expect(held.querySelectorAll('[data-found] [data-given]')).toHaveLength(4);
+        expect(panel(held).querySelectorAll('[data-found] [data-given]')).toHaveLength(4);
         const posted = asked.find((a) => a.method === 'POST')!;
         expect(posted.url).toEndWith('/api/anthropic');
         expect(posted.body).toEqual({ given: SNIPPET });
         expect(light(held).dataset.state).toBe('on');
-        expect(held.querySelector('[data-paste="snippet"]')!.nextElementSibling?.textContent).toBe('Anthropic accepts the node.');
+        expect(panel(held).querySelector('[data-outcome]')!.textContent).toBe('Anthropic accepts the node.');
+        await press(held, 'anthropic-setup-done');
+        expect(held.querySelector('[data-flow]')).toBeNull();
+        expect(held.querySelectorAll('[data-set-up] [data-given]')).toHaveLength(4);
+        expect(held.querySelector('[data-press="anthropic-set-up-again"]')).not.toBeNull();
+    });
+
+    test('a node Anthropic already accepts opens on what was set up, and setting it up again is the flow', async () => {
+        atAnthropic = { ...atAnthropic, asked: true, accepted: true, federation_rule_id: 'fdrl_x', organization_id: '377885f2-bf73-4758-9338-dcfe26b37568', service_account_id: 'svac_x', workspace_id: 'wrkspc_x' };
+        const held = await drawn();
+        expect(held.querySelector('[data-flow]')).toBeNull();
+        expect(light(held).dataset.state).toBe('on');
+        await press(held, 'anthropic-set-up-again');
+        expect(held.querySelector('[data-flow]')).not.toBeNull();
     });
 });
 
 describe('Spike: what was pasted, as people paste it', () => {
     test("the rule's ID alone: found, the other three named as still needed, nothing asked of Anthropic", async () => {
-        const held = drawn();
+        const held = await atTest();
         await paste(held, '"federation_rule_id": "fdrl_01Kp4mjUuvKYj3yGjMwYfi81",');
-        expect(held.querySelectorAll('[data-found] [data-given]')).toHaveLength(1);
-        expect(held.querySelector('[data-found]')!.textContent).toContain("The organization's ID is still needed");
+        expect(panel(held).querySelectorAll('[data-found] [data-given]')).toHaveLength(1);
+        expect(panel(held).querySelector('[data-found]')!.textContent).toContain("The organization's ID is still needed");
         expect(asked.some((a) => a.method === 'POST')).toBe(false);
     });
 
-    test('a rule Anthropic refuses: red, with what Anthropic said, as an error that copies, right under the box', async () => {
-        const held = drawn();
+    test('Done pressed before Anthropic accepts the node says what is still needed, and stays', async () => {
+        const held = await atTest();
+        await press(held, 'anthropic-setup-done');
+        expect(held.querySelector('[data-flow]')).not.toBeNull();
+        expect(held.textContent).toContain("Paste the wizard's snippet, and Anthropic accepts the node.");
+    });
+
+    test('a rule Anthropic refuses: red, with what Anthropic said, as an error that copies, and Done still held', async () => {
+        const held = await atTest();
         await paste(held, SNIPPET.replace('fdrl_01Kp4mjUuvKYj3yGjMwYfi81', 'fdrl_refused'));
         expect(light(held).dataset.state).toBe('refused');
-        const said = held.querySelector('[data-paste="snippet"]')!.nextElementSibling!.firstElementChild as HTMLElement;
-        expect(said.dataset.error).toBe('');
+        const said = panel(held).querySelector('[data-outcome] [data-error]') as HTMLElement;
         expect(said.hasAttribute('data-copyable')).toBe(true);
         expect(said.textContent).toContain('Authentication failed');
+        await press(held, 'anthropic-setup-done');
+        expect(held.querySelector('[data-flow]')).not.toBeNull();
     });
 
     test('an ID as the Console shows it, label and quotes and all, is the ID', () => {

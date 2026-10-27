@@ -185,7 +185,7 @@ function keyStory(provider: string, title: string, placeholder: string, keysAt: 
         const at_ = `/api/keys/${encodeURIComponent(at.standing)}`;
         const light = lightOf(provider, title);
         const key = fieldFrom({ id: `${provider}-key`, label: `${title} API key`, placeholder });
-        key.input.type = 'password';
+        (key.input as HTMLInputElement).type = 'password';
         const press = pressFrom({
             id: `connect-${provider}`,
             title: 'Keep the key',

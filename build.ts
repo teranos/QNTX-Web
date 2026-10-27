@@ -174,6 +174,8 @@ try {
   // Copy static assets
   console.log(`${darkPeach}Copying static assets...${reset}`);
   await cp(join(sourceDir, "qntx.jpg"), join(outputDir, "qntx.jpg"));
+  // The screenshots a story shows, where the page asks for them.
+  await cp(join(sourceDir, "img"), join(outputDir, "img"), { recursive: true });
 
   // Copy WASM files for browser IndexedDB storage
   // WASM binaries must be in /js/ alongside bundled JS (import.meta.url resolution)

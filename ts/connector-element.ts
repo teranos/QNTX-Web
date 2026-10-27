@@ -6,11 +6,12 @@
 // "AS A USER I EXPECT TO SEE THE CONNECTORS ELEMENT"
 
 import type { Element } from '@teranos/elements';
-import { AtField, fieldFrom, MEANS, pressFrom, tray } from '@teranos/elements';
+import { AtField, fieldFrom, pressFrom, tray } from '@teranos/elements';
 import { apiJson } from './client/http';
 import { log, SEG } from './logger';
 import { ANTHROPIC, GITHUB, OBSIDIAN, OPENAI, OPENROUTER, markOf, type BrandMark } from './brand-marks';
 import { copyable } from './copyable';
+import { lightFrom } from './light';
 import { createGitHubElement } from './github-element';
 import { createObsidianElement } from './obsidian-element';
 import { person } from './self-person';
@@ -48,7 +49,7 @@ function mcpOf(at: ConnectorsAt): string {
     return `${at.node}/${encodeURIComponent(at.standing)}`;
 }
 
-function note(text: string): HTMLElement {
+export function note(text: string): HTMLElement {
     const said = document.createElement('div');
     said.className = 'element-note';
     said.textContent = text;
@@ -56,7 +57,7 @@ function note(text: string): HTMLElement {
 }
 
 /** A line saying where to go, its address a link out. */
-function goTo(words: string, href: string): HTMLElement {
+export function goTo(words: string, href: string): HTMLElement {
     const line = note(words);
     const out = document.createElement('a');
     out.href = href;
@@ -64,12 +65,13 @@ function goTo(words: string, href: string): HTMLElement {
     out.rel = 'noopener noreferrer';
     out.textContent = href;
     out.style.wordBreak = 'break-all';
+    out.style.color = 'var(--accent-on-dark)';
     line.append(' ', out);
     return line;
 }
 
 /** One named value, copied by a click. */
-function valueRow(name: string, value: HTMLElement): HTMLElement {
+export function valueRow(name: string, value: HTMLElement): HTMLElement {
     const row = document.createElement('div');
     row.className = 'element-row';
     const label = document.createElement('span');
@@ -81,7 +83,7 @@ function valueRow(name: string, value: HTMLElement): HTMLElement {
     return row;
 }
 
-function copied(text: string): HTMLElement {
+export function copied(text: string): HTMLElement {
     const shown = document.createElement('span');
     shown.textContent = text;
     return copyable(shown);
@@ -166,23 +168,15 @@ function chatgptStory(panel: HTMLElement, at: ConnectorsAt): void {
 
 /** The light of a key: green when its platform accepts it, red with what the platform said when not. */
 function lightOf(provider: string, title: string): { element: HTMLElement; show: (kept: NamespaceKeys) => void } {
-    const element = document.createElement('div');
-    element.style.cssText = 'display:flex;align-items:center;gap:8px';
-    const light = document.createElement('span');
-    light.dataset.light = provider;
-    light.style.cssText = 'display:inline-block;width:10px;height:10px;border-radius:50%;flex:0 0 auto';
-    const said = document.createElement('span');
-    element.append(light, said);
-    element.hidden = true;
+    const light = lightFrom(provider);
+    light.element.hidden = true;
     const show = (kept: NamespaceKeys) => {
         const key = kept.keys.find((k) => k.name === provider);
-        if (!key) { element.hidden = true; return; }
-        element.hidden = false;
-        light.dataset.accepted = String(key.accepted);
-        light.style.backgroundColor = key.accepted ? MEANS.yes : MEANS.no;
-        said.textContent = key.accepted ? `${title} accepts this key.` : key.why;
+        if (!key) { light.element.hidden = true; return; }
+        light.element.hidden = false;
+        light.show(key.accepted ? 'on' : 'refused', key.accepted ? `${title} accepts this key.` : key.why);
     };
-    return { element, show };
+    return { element: light.element, show };
 }
 
 /** stories/21-user-sets-the-anthropic-key.feature and stories/14-user-sets-an-openrouter-key.feature: a platform's key, kept sealed by the namespace stood in under the platform's name (ADR-051). */
@@ -191,7 +185,7 @@ function keyStory(provider: string, title: string, placeholder: string, keysAt: 
         const at_ = `/api/keys/${encodeURIComponent(at.standing)}`;
         const light = lightOf(provider, title);
         const key = fieldFrom({ id: `${provider}-key`, label: `${title} API key`, placeholder });
-        key.input.type = 'password';
+        (key.input as HTMLInputElement).type = 'password';
         const press = pressFrom({
             id: `connect-${provider}`,
             title: 'Keep the key',
@@ -241,7 +235,6 @@ const PLATFORMS: Platform[] = [
         brand: ANTHROPIC, name: 'Anthropic', parts: [
             { name: 'add QNTX MCP to Claude', draw: claudeStory },
             { name: 'Claude Code', opens: 'agent-element' },
-            { name: 'Anthropic API key', draw: keyStory('anthropic', 'Anthropic', 'sk-ant-…', 'https://platform.claude.com/settings/keys') },
         ],
     },
     {
@@ -254,7 +247,7 @@ const PLATFORMS: Platform[] = [
 ];
 
 /** Something pressed that is not a button: a row is as wide as its element, which a button inside one is not. */
-function pressable(element: HTMLElement, does: () => void): HTMLElement {
+export function pressable(element: HTMLElement, does: () => void): HTMLElement {
     element.setAttribute('role', 'button');
     element.tabIndex = 0;
     element.style.cursor = 'pointer';
@@ -340,13 +333,14 @@ export function renderConnectors(container: HTMLElement, at: ConnectorsAt | Prom
 }
 
 /** ROOT's client for the node's MCP server, set up on am (stories/10, ADR-038): folded until ROOT opens it. */
+/** ROOT's client for the node's MCP server as an element of its own, which am holds as a button, as it holds A2A. */
+export function rootsClientElement(node: string): Element {
+    return { id: 'roots-client-element', title: "ROOT's client for the node's MCP server", renderContent: () => rootsClient(node) };
+}
+
 export function rootsClient(node: string): HTMLElement {
-    const held = document.createElement('details');
-    held.className = 'element-section';
-    const summary = document.createElement('summary');
-    summary.textContent = "ROOT's client for the node's MCP server";
-    summary.style.cursor = 'pointer';
-    held.appendChild(summary);
+    const held = document.createElement('div');
+    held.className = 'element-content';
     const label = fieldFrom({ id: 'roots-client-label', label: "ROOT's client", placeholder: 'what this client is for' });
     const returnAddress = fieldFrom({ id: 'roots-client-return', label: 'Return address', placeholder: 'the callback URL the app shows' });
     const result = document.createElement('div');

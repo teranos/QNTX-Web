@@ -19,7 +19,9 @@ import { log, SEG } from './logger.ts';
 import { formatBuildTime } from './components/tooltip.ts';
 import type { StatusItem } from './brow.ts';
 import { a2aCardRow } from './a2a-card-element.ts';
-import { nodeMCPOf, rootsClient, type CardMCP } from './connector-element.ts';
+import { nodeMCPOf, rootsClientElement, type CardMCP } from './connector-element.ts';
+import { createNodeConnectorsElement } from './node-connectors-element.ts';
+import { buttonFrom } from '@teranos/elements';
 import { person } from './self-person.ts';
 import type { VersionMessage, SystemCapabilitiesMessage } from '../types/websocket';
 
@@ -33,6 +35,8 @@ let amStatusRow: StatusItem[] = [];
 // ROOT's client for the node's MCP server, held so a redraw keeps what was typed.
 // Null for anybody but ROOT.
 let amRootsClient: HTMLElement | null = null;
+// Where ROOT opens Node Connectors. Null for anybody but ROOT.
+let amNodeConnectors: HTMLElement | null = null;
 
 /** The build, pushed on the connect frame. */
 export function updateAmVersion(data: VersionMessage): void {
@@ -181,6 +185,7 @@ function renderAm(): void {
     amElement.firstElementChild?.appendChild(a2aCardRow());
     // "for root it can be in i of the root or on am"
     if (amRootsClient) amElement.firstElementChild?.appendChild(amRootsClient);
+    if (amNodeConnectors) amElement.firstElementChild?.appendChild(amNodeConnectors);
 }
 
 // Whether the viewer is ROOT, which ROOT's client is drawn for, and where the
@@ -189,13 +194,25 @@ async function loadRootsClient(): Promise<void> {
     try {
         const who = await person();
         if (who.level !== 'ROOT') return;
+        // "you may open Node Connectors from am if you are root"
+        // A button, as A2A is: made once, so a redraw of am keeps the one element.
+        if (!amNodeConnectors) {
+            amNodeConnectors = document.createElement('div');
+            amNodeConnectors.className = 'element-section';
+            amNodeConnectors.appendChild(buttonFrom(createNodeConnectorsElement(), { className: 'qntx-btn qntx-btn-ghost qntx-btn-small' }));
+        }
         const said = await apiJson<{ card: CardMCP }>('/am/node');
         const node = nodeMCPOf(said.card ?? {});
         if (!node) {
             log.warn(SEG.SELF, '[am] the node card names no MCP server');
             return;
         }
-        amRootsClient = rootsClient(node);
+        // A button, as A2A is, not a fold: made once, so a redraw of am keeps the one element.
+        if (!amRootsClient) {
+            amRootsClient = document.createElement('div');
+            amRootsClient.className = 'element-section';
+            amRootsClient.appendChild(buttonFrom(rootsClientElement(node), { className: 'qntx-btn qntx-btn-ghost qntx-btn-small' }));
+        }
         if (amElement) renderAm();
     } catch (error: unknown) {
         log.warn(SEG.SELF, `[am] ROOT's client: ${error instanceof Error ? error.message : String(error)}`);

@@ -267,6 +267,38 @@ export interface CodexAm {
 }
 
 /**
+ * NodeAnthropic is what anthropic am and anthropic set answer: the node's
+ * issuer and subject that ROOT registers at Anthropic, the ids of the rule its
+ * identity token is traded at, and whether Anthropic accepted it.
+ */
+export interface NodeAnthropic {
+  /** The node's OIDC issuer, the iss of every identity token it signs. */
+  issuer: string;
+  /** The node's DID, the sub of the node's own identity token. */
+  subject: string;
+  /** The Anthropic organization the rule is in. */
+  organization_id: string;
+  /** The federation rule the node's identity token is traded at. */
+  federation_rule_id: string;
+  /** The service account the traded token acts as. */
+  service_account_id: string;
+  /** Who gave the ids; empty before anybody did. */
+  set_by: string;
+  /** When the ids were given, as RFC 3339. */
+  at: string;
+  /** Whether Anthropic was asked: false before any ids were given. */
+  asked: boolean;
+  /** Whether Anthropic accepted the node's identity at the rule. */
+  accepted: boolean;
+  /** What Anthropic answered when it did not accept it, or why it was not reached. */
+  why: string;
+  /** The node's issuer as Anthropic registered it (fdis_). */
+  issuer_id: string;
+  /** The workspace the traded token is scoped to (wrkspc_), as the wizard's snippet names it. */
+  workspace_id: string;
+}
+
+/**
  * NamespaceKeys is what keys list, set and drop answer: the names of a
  * namespace's keys, never their values (ADR-051).
  */
@@ -287,7 +319,7 @@ export interface NamespaceKey {
   at: string;
   /**
    * Whether the provider it is named after was asked about it as this was
-   * answered. A key named after no provider is asked of nobody.
+   * answered.
    */
   asked: boolean;
   /** Whether that provider accepts it: the light in Connectors. */

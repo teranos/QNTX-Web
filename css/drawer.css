@@ -226,6 +226,31 @@
     box-shadow: 0 0 4px rgba(46, 204, 113, 0.5);
 }
 
+/* A light (ts/light.ts): the same dot, lit by its state. */
+.light {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gap);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary, #999);
+}
+
+.light[data-state="on"] .status-dot {
+    background: #2ecc71;
+    box-shadow: 0 0 4px rgba(46, 204, 113, 0.5);
+}
+
+.light[data-state="refused"] .status-dot {
+    background: #ff6b6b;
+    box-shadow: 0 0 4px rgba(255, 107, 107, 0.5);
+}
+
+.light[data-state="waiting"] .status-dot {
+    background: #ffa502;
+    box-shadow: 0 0 4px rgba(255, 165, 2, 0.5);
+    animation: fadeLoop 1.5s ease-in-out infinite;
+}
+
 /* Disconnected state — mute non-connection indicators (stale data) */
 body.disconnected #pulse-status,
 body.disconnected #database-status,

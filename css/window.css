@@ -182,6 +182,8 @@
     gap: 8px;
     padding: 0 8px;
     font-size: var(--font-size-sm);
+    /* It wraps to the width its element has, and never sets that width: a long line made am the screen wide. */
+    contain: inline-size;
 }
 
 .element-note {

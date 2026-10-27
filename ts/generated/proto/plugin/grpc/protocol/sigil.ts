@@ -292,6 +292,10 @@ export interface NodeAnthropic {
   accepted: boolean;
   /** What Anthropic answered when it did not accept it, or why it was not reached. */
   why: string;
+  /** The node's issuer as Anthropic registered it (fdis_). */
+  issuer_id: string;
+  /** The workspace the traded token is scoped to (wrkspc_), as the wizard's snippet names it. */
+  workspace_id: string;
 }
 
 /**

@@ -2,57 +2,32 @@ Feature: ROOT sets up OIDC for the node
 
   "oidc for the node"
 
-  Scenario: ROOT registers the node's issuer at Anthropic
+  "a real user would do the wizard"
+
+  Scenario: ROOT connects the node at Anthropic with the Connect workload wizard
     Given I am ROOT
     And I am in am
     When I open Node Connectors from am
     Then Node Connectors has an Anthropic row, and its light shows whether Anthropic trusts the node's issuer
     And it also shows whether each namespace's OIDC is set up
     When I press the Anthropic row
-    Then it shows the node's issuer, copyable
-    And it shows the link to https://platform.claude.com/settings/workload-identity-federation
-    And it shows the Console's Workload identity page, with Register issuer marked, img/connectors/anthropic-workload-identity.png
-    And it shows what to give each field of the Register issuer form, img/connectors/anthropic-register-issuer.png:
-      | field                     | what to give                  |
-      | Name                      | the node's name, copyable     |
-      | Issuer URL (iss claim)    | the node's issuer, copyable   |
-      | JWKS source               | OIDC discovery                |
-      | Discovery base URL        | blank                         |
-      | CA certificate            | blank                         |
-      | Enforce single-use tokens | on                            |
-      | Maximum token lifetime    | 1                             |
-    When I press Register
-    Then the Console lists the node's issuer, img/connectors/anthropic-issuer-registered.png
-    And it shows the link to https://platform.claude.com/settings/service-accounts
-    And it says "Create a service account with the developer role, in the workspace that pays."
-    And it shows the Console's Service accounts page, with Create service account marked, img/connectors/anthropic-service-accounts.png
-    And it shows what to give each field of the Create service account form, img/connectors/anthropic-create-service-account.png:
-      | field             | what to give                  |
-      | Name              | the node's name, copyable     |
-      | Description       | blank                         |
-      | Organization role | Developer                     |
-      | Workspaces        | Default                       |
-    When I press Create service account
-    Then the Console lists the node's service account, img/connectors/anthropic-service-account-created.png
-    And it shows the link to https://platform.claude.com/settings/workload-identity-federation
-    And it says "Rules, next to Issuers", img/connectors/anthropic-rules-next-to-issuers.png
-    And it shows the Console's Rules tab, with New rule marked, img/connectors/anthropic-rules.png
-    When I press New rule
-    Then it shows what to give each field of the Create federation rule form, img/connectors/anthropic-create-rule.png, img/connectors/anthropic-create-rule-target.png:
-      | field                       | what to give                  |
-      | Rule name                   | the node's name, copyable     |
-      | Description                 | blank                         |
-      | Issuer                      | the node's issuer             |
-      | Match configuration         | Pattern match                 |
-      | Subject pattern             | the node's DID, copyable      |
-      | Additional claim conditions | none                          |
-      | Expected audience           | blank                         |
-      | Service account             | the node's service account    |
-      | Enable in all workspaces    | off                           |
-      | Workspaces                  | Default                       |
-      | OAuth scope                 | workspace:developer           |
-      | Token lifetime              | 10 minutes (default)          |
-    When I press Create rule
-    Then the Console lists the node's rule, img/connectors/anthropic-rule-created.png
-    And it shows the link to https://platform.claude.com/settings/organization, for the organization id, img/connectors/anthropic-organization.png
-    When I give the organization id, the rule id and the service account id
+    Then it shows the link to https://platform.claude.com/settings/workload-identity-federation, with Connect workload marked
+    And it says "Press Connect workload, then Custom OIDC."
+    And at each screen of the wizard it shows what to give there, each copyable:
+      | screen          | what to give                                                     |
+      | Issuer          | Connect a new provider, with the node's issuer as its URL        |
+      | Federation rule | the node's name as the rule's name, the node's DID as its sub     |
+      | Target          | Create a new one, with the node's name as the service account's  |
+    When the wizard's Test screen shows its snippet, I press the snippet's copy button
+    And I paste the snippet into Node Connectors
+    Then it shows each ID it found in it: the organization's, the rule's, the service account's and the workspace's
+    And the node asks Anthropic for a token on its own identity, without my pressing anything
+    And the wizard's Test connection sees the node's exchange
+    And right where I pasted, I see whether Anthropic accepts the node: green, or red with what Anthropic said, copyable
+
+  Scenario: What was pasted holds only part of what the node needs
+    Given I am at the node's identity
+    When I paste the rule's ID alone
+    Then it shows the rule's ID as found
+    And it names the organization's, the service account's and the workspace's IDs as still needed
+    And nothing is asked of Anthropic until they are there

@@ -3,19 +3,18 @@
 // "you may open Node Connectors from am if you are root"
 
 import type { Element } from '@teranos/elements';
-import { AtField, fieldFrom, MEANS, pressFrom, tray } from '@teranos/elements';
+import { MEANS, tray } from '@teranos/elements';
 import { apiJson } from './client/http';
 import { log, SEG } from './logger';
 import { ANTHROPIC, markOf } from './brand-marks';
-import { copied, goTo, note, pressable, valueRow } from './connector-element';
+import { copied, goTo, note, valueRow } from './connector-element';
+import { copyable } from './copyable';
 import { CONNECTOR } from './sym';
 import type { NodeAnthropic } from './generated/proto/plugin/grpc/protocol/sigil';
 
 export const ELEMENT_ID = 'node-connectors-element';
 
 const CONSOLE_FEDERATION = 'https://platform.claude.com/settings/workload-identity-federation';
-const CONSOLE_SERVICE_ACCOUNTS = 'https://platform.claude.com/settings/service-accounts';
-const CONSOLE_ORGANIZATION = 'https://platform.claude.com/settings/organization';
 
 /** What the node says of itself that ROOT gives Anthropic. */
 export interface NodeIdentity {
@@ -25,8 +24,60 @@ export interface NodeIdentity {
     namespaces: string[];
 }
 
-/** A light that is not on: nothing is set up for it yet. */
-function lightOff(of: string): HTMLElement {
+/** An id of Anthropic's, by the name the node keeps it under. */
+type Kind = 'organization_id' | 'federation_rule_id' | 'service_account_id' | 'workspace_id';
+
+/** What the node needs from the wizard's snippet, in the order the snippet says them. */
+const NEEDED: Kind[] = ['federation_rule_id', 'organization_id', 'service_account_id', 'workspace_id'];
+
+const CALLED: Record<Kind, string> = {
+    organization_id: "The organization's ID",
+    federation_rule_id: "The rule's ID",
+    service_account_id: "The service account's ID",
+    workspace_id: "The workspace's ID",
+};
+
+/** Whether word is a UUID, as Anthropic shows an organization's id. */
+function isUUID(word: string): boolean {
+    if (word.length !== 36) return false;
+    for (let at = 0; at < word.length; at++) {
+        const c = word[at]!;
+        if (at === 8 || at === 13 || at === 18 || at === 23) { if (c !== '-') return false; continue; }
+        if (!'0123456789abcdefABCDEF'.includes(c)) return false;
+    }
+    return true;
+}
+
+/** The id a word is, by its prefix or for the organization by being a UUID, as the node places it (server/node_anthropic.go). */
+export function kindOf(word: string): Kind | undefined {
+    if (word.startsWith('fdrl_') && word.length > 5) return 'federation_rule_id';
+    if (word.startsWith('svac_') && word.length > 5) return 'service_account_id';
+    if (word.startsWith('wrkspc_') && word.length > 7) return 'workspace_id';
+    if (isUUID(word)) return 'organization_id';
+    return undefined;
+}
+
+/** Every id of Anthropic's in what was pasted: the wizard's whole snippet, or one id with whatever the Console put around it. */
+export function idsIn(pasted: string): Partial<Record<Kind, string>> {
+    const found: Partial<Record<Kind, string>> = {};
+    let word = '';
+    const close = () => { const kind = kindOf(word); if (kind) found[kind] = word; word = ''; };
+    for (const c of pasted) {
+        if (' \t\n\r"\'`,:;{}'.includes(c)) close(); else word += c;
+    }
+    close();
+    return found;
+}
+
+/** The node's name as the wizard takes a name: lowercase letters, numbers and hyphens. */
+export function wizardName(name: string): string {
+    let out = '';
+    for (const c of name.toLowerCase()) out += 'abcdefghijklmnopqrstuvwxyz0123456789-'.includes(c) ? c : '-';
+    return out;
+}
+
+/** A light: off before anything is set up, green when it is, red when it is refused. */
+function lightOf(of: string): HTMLElement {
     const light = document.createElement('span');
     light.dataset.light = of;
     light.dataset.on = 'false';
@@ -34,18 +85,9 @@ function lightOff(of: string): HTMLElement {
     return light;
 }
 
-/** The Anthropic row's light, as the node's answer lights it: off before any ids, green when Anthropic accepts, red with why when not. */
-function showLight(light: HTMLElement, said: HTMLElement, am: NodeAnthropic): void {
-    light.dataset.on = String(am.asked);
-    light.dataset.accepted = String(am.accepted);
-    light.style.backgroundColor = !am.asked ? '' : am.accepted ? MEANS.yes : MEANS.no;
-    said.textContent = !am.asked ? '' : am.accepted ? 'Anthropic accepts the node.' : am.why;
-}
-
-/** A Console screenshot, with what to press marked. */
+/** A Console screenshot, with what to press marked. Relative, so it is found under whatever path the page is served from. */
 function shot(file: string, says: string): HTMLElement {
     const image = document.createElement('img');
-    // Relative, so it is found under whatever path the page is served from.
     image.setAttribute('src', `img/connectors/${file}`);
     image.alt = says;
     image.dataset.shot = file;
@@ -53,145 +95,172 @@ function shot(file: string, says: string): HTMLElement {
     return image;
 }
 
-/** What to give each field of a Console form. */
-function fields(rows: [string, string | HTMLElement][]): HTMLElement {
+/** What went wrong, as an error: red, readable, and copied by a click. */
+export function errorOf(said: string): HTMLElement {
+    const shown = document.createElement('div');
+    shown.dataset.error = '';
+    shown.textContent = said;
+    // Red as the light that says it is refused.
+    shown.style.cssText = `white-space:pre-wrap;word-break:break-word;font-family:var(--font-mono);padding:6px 8px;border-left:3px solid currentColor;background:var(--bg-almost-black);color:${MEANS.no}`;
+    return copyable(shown);
+}
+
+/** A screen of the wizard: what it is called, the screenshot of it, and what to give there. */
+function screen(title: string, image: HTMLElement, ...gives: HTMLElement[]): HTMLElement {
     const held = document.createElement('div');
-    for (const [name, give] of rows) {
-        held.appendChild(valueRow(name, typeof give === 'string' ? Object.assign(document.createElement('span'), { textContent: give }) : give));
-    }
+    held.dataset.screen = title;
+    held.style.cssText = 'display:flex;flex-direction:column;gap:6px';
+    const named = document.createElement('div');
+    named.textContent = title;
+    named.style.fontWeight = 'bold';
+    held.append(named, image, ...gives);
     return held;
 }
 
-/** Each step of registering the node at Anthropic, as story 27 walks it. */
-function anthropicSteps(panel: HTMLElement, node: NodeIdentity, lit: (am: NodeAnthropic) => void): void {
-    panel.append(
-        valueRow("The node's issuer", copied(node.issuer)),
+/** The wizard's screens, each with what the node gives there. */
+function wizard(node: NodeIdentity): HTMLElement {
+    const held = document.createElement('div');
+    held.style.cssText = 'display:flex;flex-direction:column;gap:12px';
+    const name = wizardName(node.name);
+    held.append(
         goTo('Go to', CONSOLE_FEDERATION),
-        shot('anthropic-workload-identity.png', 'Register issuer, marked'),
-        note('Press Register issuer, and give:'),
-        shot('anthropic-register-issuer.png', 'The Register issuer form'),
-        fields([
-            ['Name', copied(node.name)],
-            ['Issuer URL (iss claim)', copied(node.issuer)],
-            ['JWKS source', 'OIDC discovery'],
-            ['Discovery base URL', 'blank'],
-            ['CA certificate', 'blank'],
-            ['Enforce single-use tokens', 'on'],
-            ['Maximum token lifetime', '1'],
-        ]),
-        note('Press Register.'),
-        goTo('Go to', CONSOLE_SERVICE_ACCOUNTS),
-        note('Create a service account with the developer role, in the workspace that pays.'),
-        shot('anthropic-service-accounts.png', 'Create service account, marked'),
-        shot('anthropic-create-service-account.png', 'The Create service account form'),
-        fields([
-            ['Name', copied(node.name)],
-            ['Description', 'blank'],
-            ['Organization role', 'Developer'],
-            ['Workspaces', 'Default'],
-        ]),
-        note('Press Create service account.'),
-        goTo('Go to', CONSOLE_FEDERATION),
-        note('Rules, next to Issuers.'),
-        shot('anthropic-rules-next-to-issuers.png', 'Rules, marked'),
-        shot('anthropic-rules.png', 'New rule, marked'),
-        note('Press New rule, and give:'),
-        shot('anthropic-create-rule.png', 'The Create federation rule form'),
-        shot('anthropic-create-rule-target.png', 'Its target and authorization'),
-        fields([
-            ['Rule name', copied(node.name)],
-            ['Description', 'blank'],
-            ['Issuer', "the node's issuer"],
-            ['Match configuration', 'Pattern match'],
-            ['Subject pattern', copied(node.did)],
-            ['Additional claim conditions', 'none'],
-            ['Expected audience', 'blank'],
-            ['Service account', "the node's service account"],
-            ['Enable in all workspaces', 'off'],
-            ['Workspaces', 'Default'],
-            ['OAuth scope', 'workspace:developer'],
-            ['Token lifetime', '10 minutes (default)'],
-        ]),
-        note('Press Create rule.'),
-        goTo('The organization id is at', CONSOLE_ORGANIZATION),
-        shot('anthropic-organization.png', 'Where the organization id is'),
-        ...giveTheRule(lit),
+        note('Press Connect workload, then Custom OIDC.'),
+        shot('anthropic-connect-workload.png', 'Connect workload, marked'),
+        screen('Issuer', shot('anthropic-wizard-issuer.png', "The wizard's Issuer screen"),
+            note("Connect a new provider, with the node's issuer as its URL. If the node's issuer is listed under Use a registered issuer, pick it."),
+            valueRow('Issuer URL', copied(node.issuer))),
+        screen('Federation rule', shot('anthropic-wizard-rule.png', "The wizard's Federation rule screen"),
+            valueRow('Rule name', copied(name)),
+            valueRow('Subject (sub) claim', copied(node.did)),
+            note('Leave the rest as it is.')),
+        screen('Target', shot('anthropic-wizard-target.png', "The wizard's Target screen"),
+            note('Create a new one.'),
+            valueRow('Service account name', copied(name)),
+            note('Leave the rest as it is, and press Apply and continue.')),
+        screen('Test', shot('anthropic-wizard-test.png', "The wizard's snippet, its copy button marked"),
+            note("Press the snippet's copy button, and paste it below.")),
     );
+    return held;
 }
 
-/** The three ids ROOT made at Anthropic, given to the node, which asks Anthropic and answers with the light. */
-function giveTheRule(lit: (am: NodeAnthropic) => void): HTMLElement[] {
-    const organization = fieldFrom({ id: 'anthropic-organization-id', label: 'Organization id', placeholder: 'from the Organization page' });
-    const rule = fieldFrom({ id: 'anthropic-rule-id', label: 'Rule id', placeholder: 'fdrl_…' });
-    const account = fieldFrom({ id: 'anthropic-service-account-id', label: 'Service account id', placeholder: 'svac_…' });
-    const press = pressFrom({
-        id: 'give-anthropic-rule',
-        title: 'Give the node its rule',
-        again: 'gives the node the rule its identity is traded at',
-        creates: true,
-        does: async () => {
-            const given: Record<string, string> = {};
-            for (const [name, field] of [['organization_id', organization], ['federation_rule_id', rule], ['service_account_id', account]] as const) {
-                const value = field.input.value.trim();
-                if (!value) throw new AtField(field.input, 'not given');
-                given[name] = value;
-            }
-            lit(await apiJson<NodeAnthropic>('/api/anthropic', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(given),
-            }));
-        },
-    });
-    return [organization.element, rule.element, account.element, press.element];
+/** The ids the node keeps, by kind. */
+function keptOf(am: NodeAnthropic): Partial<Record<Kind, string>> {
+    return {
+        organization_id: am.organization_id || undefined,
+        federation_rule_id: am.federation_rule_id || undefined,
+        service_account_id: am.service_account_id || undefined,
+        workspace_id: am.workspace_id || undefined,
+    };
 }
 
-/** The Anthropic row: its light, each namespace's OIDC, and the steps it opens into. */
+/** The Anthropic row: its light, each namespace's OIDC, the wizard, and the box its snippet is pasted into. */
 function anthropicRow(node: NodeIdentity): HTMLElement {
     const row = document.createElement('div');
     row.dataset.platform = 'Anthropic';
-    row.style.cssText = 'display:flex;flex-direction:column;border:1px solid var(--border-on-dark);border-radius:var(--border-radius);background:var(--bg-dark-light);color:var(--text-on-dark)';
+    row.style.cssText = 'display:flex;flex-direction:column;gap:10px;padding:8px;border:1px solid var(--border-on-dark);border-radius:var(--border-radius);background:var(--bg-dark-light);color:var(--text-on-dark)';
     const head = document.createElement('div');
     head.dataset.connect = 'Anthropic';
-    head.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px';
-    const name = document.createElement('span');
-    name.textContent = 'Anthropic';
-    name.style.flex = '1';
-    const light = lightOff('anthropic-oidc');
-    head.append(markOf(ANTHROPIC), name, light);
-    const said = document.createElement('div');
-    said.className = 'element-note';
-    said.style.padding = '0 8px';
-    const lit = (am: NodeAnthropic) => showLight(light, said, am);
-    // The light as the node says it now, on opening.
-    apiJson<NodeAnthropic>('/api/anthropic').then(lit).catch((err: unknown) => {
-        log.warn(SEG.SELF, `[node connectors] the node's light at Anthropic was not read: ${err instanceof Error ? err.message : String(err)}`);
-    });
+    head.style.cssText = 'display:flex;align-items:center;gap:8px';
+    const title = document.createElement('span');
+    title.textContent = 'Anthropic';
+    title.style.flex = '1';
+    const light = lightOf('anthropic-oidc');
+    head.append(markOf(ANTHROPIC), title, light);
+
     // Whether each namespace's OIDC is set up: none is yet, so no light is on.
     const namespaces = document.createElement('div');
     namespaces.dataset.namespacesOidc = '';
-    namespaces.style.cssText = 'display:flex;flex-direction:column;gap:4px;padding:0 8px 6px';
+    namespaces.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px 12px';
     for (const each of node.namespaces) {
-        const line = document.createElement('div');
+        const line = document.createElement('span');
         line.dataset.namespace = each;
-        line.style.cssText = 'display:flex;align-items:center;gap:8px';
-        line.append(lightOff(`oidc-${each}`), Object.assign(document.createElement('span'), { textContent: each }));
+        line.style.cssText = 'display:inline-flex;align-items:center;gap:6px';
+        line.append(lightOf(`oidc-${each}`), Object.assign(document.createElement('span'), { textContent: each }));
         namespaces.appendChild(line);
     }
-    const body = document.createElement('div');
-    body.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:0 8px 8px';
-    body.hidden = true;
-    row.append(pressable(head, () => {
-        body.hidden = !body.hidden;
-        if (body.hidden || body.childElementCount > 0) return;
-        anthropicSteps(body, node, lit);
-    }), said, namespaces, body);
+
+    // The box the wizard's snippet is pasted into, and right under it what was found and what Anthropic said.
+    const box = document.createElement('textarea');
+    box.dataset.paste = 'snippet';
+    box.rows = 4;
+    box.placeholder = "Paste the wizard's snippet here";
+    box.style.cssText = 'width:100%;font-family:var(--font-mono)';
+    const found = document.createElement('div');
+    found.dataset.found = '';
+    found.style.cssText = 'display:flex;flex-direction:column;gap:2px';
+    const outcome = document.createElement('div');
+    outcome.dataset.outcome = '';
+
+    // What was pasted, and what the node keeps: an answer arriving after a paste never takes the paste back.
+    let pasted: Partial<Record<Kind, string>> = {};
+    let kept: Partial<Record<Kind, string>> = {};
+
+    /** Each id the node needs, ✓ with its value when it is there, named as still needed when not. */
+    const showFound = (ids: Partial<Record<Kind, string>>) => {
+        found.replaceChildren();
+        for (const kind of NEEDED) {
+            const line = document.createElement('div');
+            line.dataset.id = kind;
+            line.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap';
+            const id = ids[kind];
+            if (id) {
+                line.dataset.given = '';
+                line.append(Object.assign(document.createElement('span'), { className: 'status-well', textContent: `✓ ${CALLED[kind]}` }), copied(id));
+            } else {
+                line.append(Object.assign(document.createElement('span'), { className: 'status-unwell', textContent: `${CALLED[kind]} is still needed` }));
+            }
+            found.appendChild(line);
+        }
+    };
+
+    /** What the node answered: its light, and right under the box whether Anthropic accepts it. */
+    const answered = (am: NodeAnthropic, toPaste = false) => {
+        light.dataset.on = String(am.asked);
+        light.dataset.accepted = String(am.accepted);
+        light.style.backgroundColor = !am.asked ? '' : am.accepted ? MEANS.yes : MEANS.no;
+        kept = keptOf(am);
+        showFound({ ...kept, ...pasted });
+        outcome.replaceChildren();
+        if (!am.asked) return;
+        outcome.appendChild(am.accepted
+            ? Object.assign(document.createElement('div'), { className: 'status-well', textContent: 'Anthropic accepts the node.' })
+            : errorOf(am.why));
+        // Only an answer to a paste is brought into view: on opening, the first step is what is seen.
+        if (toPaste) outcome.scrollIntoView?.({ block: 'nearest' });
+    };
+
+    box.addEventListener('input', () => {
+        const given = box.value;
+        pasted = idsIn(given);
+        const ids = { ...kept, ...pasted };
+        showFound(ids);
+        outcome.replaceChildren();
+        // Nothing is asked of Anthropic until all the node needs is there.
+        if (NEEDED.some((kind) => !ids[kind])) return;
+        outcome.appendChild(note('Asking Anthropic…'));
+        outcome.scrollIntoView?.({ block: 'nearest' });
+        apiJson<NodeAnthropic>('/api/anthropic', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ given }),
+        }).then((am) => answered(am, true)).catch((err: unknown) => {
+            outcome.replaceChildren(errorOf(err instanceof Error ? err.message : String(err)));
+        });
+    });
+
+    const steps = wizard(node);
+    row.append(head, namespaces, steps, box, outcome, found);
+    showFound({});
+    // What the node already keeps, and its light, on opening.
+    apiJson<NodeAnthropic>('/api/anthropic').then((am) => answered(am)).catch((err: unknown) => {
+        log.warn(SEG.SELF, `[node connectors] the node's light at Anthropic was not read: ${err instanceof Error ? err.message : String(err)}`);
+        outcome.replaceChildren(errorOf(err instanceof Error ? err.message : String(err)));
+    });
     return row;
 }
 
 /** Exported for tests: the node's connectors, drawn from what the node says of itself. */
 export function renderNodeConnectors(container: HTMLElement, node: NodeIdentity): void {
-    container.style.cssText = 'display:flex;flex-direction:column;gap:8px';
     container.appendChild(anthropicRow(node));
 }
 
@@ -213,17 +282,17 @@ export function createNodeConnectorsElement(): Element {
         id: ELEMENT_ID,
         title: 'Node Connectors',
         symbol: CONNECTOR,
-        // The Console's screenshots and the forms beside them are read at this width on a desktop.
-        width: 760,
+        // Opened just below the top, beside the sidebar: never past the bottom of the screen.
+        defaultX: 260,
+        defaultY: 40,
         renderContent: () => {
+            // As wide as the wizard's screenshots read, from the moment it is measured: what arrives later does not resize it.
             const content = document.createElement('div');
+            content.style.cssText = 'display:flex;flex-direction:column;gap:8px;width:720px';
             nodeIdentity().then((node) => renderNodeConnectors(content, node)).catch((err: unknown) => {
                 const said = err instanceof Error ? err.message : String(err);
                 log.warn(SEG.SELF, `[node connectors] ${said}`);
-                const why = document.createElement('div');
-                why.className = 'status-unwell';
-                why.textContent = said;
-                content.appendChild(why);
+                content.appendChild(errorOf(said));
             });
             return content;
         },

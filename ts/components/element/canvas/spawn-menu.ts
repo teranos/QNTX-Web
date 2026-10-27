@@ -459,10 +459,9 @@ function persistElement(
     entry: ElementTypeEntry,
     canvasId: string
 ): void {
-    // Its own box, not its drawn one: persisted while the morph scales it down to the cursor's 44px,
-    // a drawn rect is the cursor's, and that was kept as its size.
-    const width = elementElement.offsetWidth;
-    const height = elementElement.offsetHeight;
+    const rect = elementElement.getBoundingClientRect();
+    const width = Math.round(rect.width);
+    const height = Math.round(rect.height);
 
     uiState.addCanvasElement({
         id: item.id,

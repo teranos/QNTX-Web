@@ -82,7 +82,7 @@ export interface Turn {
   text: string;
   /** The attestation it was read from. */
   of: string;
-  /** What the turn an assistant's answer ends cost, in USD, as Claude Code says; 0 when it says none. */
+  /** What the turn an assistant's answer ends cost, in USD: what Claude Code says the session cost when it ended, less what it said at the answer before; 0 when it says none. */
   cost_usd: number;
 }
 

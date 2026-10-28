@@ -25,7 +25,7 @@ export interface Turn {
     speaker: string;
     text: string;
     of: string;
-    // What the turn an assistant's answer ends cost, in USD; 0 or absent when the node says none.
+    // What the turn an assistant's answer ends cost, in USD, not what its session cost so far; 0 or absent when the node says none.
     cost_usd?: number;
 }
 

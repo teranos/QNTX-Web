@@ -9,7 +9,7 @@
         "@codemirror/lang-python": "6.2.1",
         "@codemirror/lang-yaml": "6.1.2",
         "@sentry/browser": "10.73.0",
-        "@teranos/elements": "npm:@jsr/teranos__elements@1.30.1",
+        "@teranos/elements": "npm:@jsr/teranos__elements@1.31.0",
         "ats-wasm": "https://github.com/teranos/QNTX/releases/download/v0.44.0/ats-wasm-0.4.0.tgz",
         "d3": "7.9.0",
         "laye-p2p": "https://github.com/teranos/QNTX/releases/download/v0.44.0/laye-p2p-0.0.0.tgz",
@@ -191,7 +191,7 @@
 
     "@teppeis/multimaps": ["@teppeis/multimaps@3.0.0", "", {}, "sha512-ID7fosbc50TbT0MK0EG12O+gAP3W3Aa/Pz4DaTtQtEvlc9Odaqi0de+xuZ7Li2GtK4HzEX7IuRWS/JmZLksR3Q=="],
 
-    "@teranos/elements": ["@jsr/teranos__elements@1.30.1", "https://npm.jsr.io/~/11/@jsr/teranos__elements/1.30.1.tgz", {}, "sha512-hl5XrERP2t/cKEdCHuuZVt9pRg11tl8SGYFXX2ZPP0PCFQm8omTSi5BwXDnbTvSGdDhls/Kxm6RPQfR/5/MbxQ=="],
+    "@teranos/elements": ["@jsr/teranos__elements@1.31.0", "https://npm.jsr.io/~/11/@jsr/teranos__elements/1.31.0.tgz", {}, "sha512-ZQZqzYvMbR4RPNAoKhmI0SPvBlAWPAMxgcfqFf2aM2xxkC7lBH3uTQ5tP5985OTSGz44w0InedeJotaEqmH0VQ=="],
 
     "@types/d3": ["@types/d3@7.4.3", "", { "dependencies": { "@types/d3-array": "*", "@types/d3-axis": "*", "@types/d3-brush": "*", "@types/d3-chord": "*", "@types/d3-color": "*", "@types/d3-contour": "*", "@types/d3-delaunay": "*", "@types/d3-dispatch": "*", "@types/d3-drag": "*", "@types/d3-dsv": "*", "@types/d3-ease": "*", "@types/d3-fetch": "*", "@types/d3-force": "*", "@types/d3-format": "*", "@types/d3-geo": "*", "@types/d3-hierarchy": "*", "@types/d3-interpolate": "*", "@types/d3-path": "*", "@types/d3-polygon": "*", "@types/d3-quadtree": "*", "@types/d3-random": "*", "@types/d3-scale": "*", "@types/d3-scale-chromatic": "*", "@types/d3-selection": "*", "@types/d3-shape": "*", "@types/d3-time": "*", "@types/d3-time-format": "*", "@types/d3-timer": "*", "@types/d3-transition": "*", "@types/d3-zoom": "*" } }, "sha512-lZXZ9ckh5R8uiFVt8ogUNf+pIrK4EsWrx2Np75WvF/eTpJ0FMHNhjXk8CKEx/+gpHbNQyJWehbFaTvqmHWB3ww=="],
 

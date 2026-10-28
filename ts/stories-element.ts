@@ -44,9 +44,11 @@ export function createStoriesElement(): Element {
         defaultX: 260,
         defaultY: 40,
         renderContent: () => {
+            // No size and no scroller of its own: whether the stories open as a window or a panel,
+            // and where they scroll, is @teranos/elements' (README: a window that holds more than a
+            // window may is a panel; an element scrolls in one place, the body it gives).
+            // "You didn't see how the list doesn't use the screenspace available? This suggests miscompliance with elements"
             const content = document.createElement('div');
-            // One height that scrolls: every story at once is taller than a window may be, and would make it a panel.
-            content.style.cssText = 'width:440px;height:480px;overflow-y:auto';
             content.textContent = 'Reading the stories…';
             // Relative, so it is found under whatever path the page is served from.
             fetch('stories.json')

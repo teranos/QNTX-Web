@@ -472,8 +472,11 @@ async function init(): Promise<void> {
     // Restore minimized elements from persisted state
     const minimizedIds = hasCanvas ? uiState.getMinimizedWindows() : [];
     if (minimizedIds.length > 0) {
+        const { restoreToTray } = await import('./tray-restore.ts');
         for (const id of minimizedIds) {
             if (tray.has(id)) continue;
+            // A window that is no canvas element: a Transcript, a User…
+            if (restoreToTray(id)) continue;
 
             const item = uiState.getCanvasElement(id);
             if (!item || !item.content) {

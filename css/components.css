@@ -313,6 +313,8 @@
 .tr-text { font-size: var(--font-size-sm); line-height: 1.3; white-space: pre-wrap; }
 .tr-sp-human .tr-speaker { color: var(--accent-on-dark); }
 .tr-sp-assistant .tr-speaker { color: var(--element-status-running-text); }
+/* What a turn cost, said under the answer that ends it */
+.tr-cost { display: block; text-align: right; color: var(--text-on-dark-secondary); font-size: var(--font-size-xs); }
 .tr-small { background: var(--bg-almost-black); border-left: 2px solid var(--element-status-running-text); margin: 1px 6px; padding-left: 4px; }
 .tr-small .tr-speaker { color: var(--element-status-running-text); }
 .tr-small .tr-text { color: var(--text-on-dark-secondary); font-size: var(--font-size-xs); }
@@ -356,6 +358,8 @@
 .claude-brand { --claude-clay: #D97757; --claude-ivory: #FAF9F5; --claude-slate: #151514; background: var(--claude-slate); color: var(--claude-ivory); }
 .claude-head { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border-bottom: 1px solid var(--claude-clay); flex-shrink: 0; }
 .claude-head .claude-who { padding: 0; border-bottom: none; flex: 1; min-width: 0; }
+.claude-effort { flex: none; background: var(--bg-almost-black); color: var(--text-on-dark-secondary); border: 1px solid var(--border-on-dark); font: inherit; font-size: var(--font-size-xs); }
+.claude-brand .claude-effort { border-color: var(--claude-clay); color: var(--claude-ivory); }
 .claude-spark { width: 16px; height: 16px; flex: none; color: var(--claude-clay); }
 .claude-brand:has(.claude-status:not(:empty)) .claude-spark { animation: claude-spark-turn 2.4s linear infinite; }
 @keyframes claude-spark-turn { to { transform: rotate(360deg); } }

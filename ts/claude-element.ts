@@ -32,6 +32,8 @@ export interface ClaudeAm {
     auth_method: string;
     // Every model a turn can be said to answer with; a node from before it says none.
     models?: string[];
+    // Every effort a turn can be said to run at; a node from before it says none.
+    efforts?: string[];
 }
 
 // What it answered (claude say).
@@ -58,15 +60,16 @@ export interface Carried {
 // The node, as this element asks it.
 export interface NodeAgent {
     am(): Promise<ClaudeAm>;
-    say(says: string, mode: string, carried?: Carried, model?: string): Promise<ClaudeSaid>;
+    say(says: string, mode: string, carried?: Carried, model?: string, effort?: string): Promise<ClaudeSaid>;
     read(): Promise<TranscriptRead | undefined>;
 }
 
-/** The say body: harness, words, the mode when one is chosen, and what is carried. */
-export function sayBody(says: string, mode: string, carried: Carried | undefined, model = ''): string {
+/** The say body: harness, words, the mode, model and effort when one is chosen, and what is carried. */
+export function sayBody(says: string, mode: string, carried: Carried | undefined, model = '', effort = ''): string {
     const body: Record<string, string> = { harness: 'claude', says };
     if (mode) body.permission_mode = mode;
     if (model) body.model = model;
+    if (effort) body.effort = effort;
     if (carried?.file_id) body.file_id = carried.file_id;
     return JSON.stringify(body);
 }
@@ -75,10 +78,10 @@ export function sayBody(says: string, mode: string, carried: Carried | undefined
 function agentAt(at: string): NodeAgent {
     return {
         am: () => apiJson<{ claude: ClaudeAm }>(`${at}?harness=claude`).then(is => is.claude),
-        say: (says, mode, carried, model) => apiJson<{ claude: ClaudeSaid }>(`${at}/say`, {
+        say: (says, mode, carried, model, effort) => apiJson<{ claude: ClaudeSaid }>(`${at}/say`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: sayBody(says, mode, carried, model),
+            body: sayBody(says, mode, carried, model, effort),
         }).then(said => said.claude),
         // Its one session, read whole wherever whoever reads it stands.
         read: () => apiJson<{ transcript: TranscriptRead }>(`${at}/session?harness=claude`)
@@ -137,6 +140,10 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     const model = part('select', 'claude-model');
     model.title = 'The model that answers this turn';
     model.hidden = true;
+    // "The effort chooser should be top of the screen."
+    const effort = part('select', 'claude-effort');
+    effort.title = 'The effort this turn runs at';
+    effort.hidden = true;
     const says = part('textarea', 'claude-says');
     says.rows = 2;
     says.placeholder = 'Say something to the Node Agent';
@@ -159,7 +166,9 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     preventDrag(form);
     preventDrag(session);
 
-    body.replaceChildren(who, session, status, denied, failed, form);
+    preventDrag(effort);
+
+    body.replaceChildren(who, effort, session, status, denied, failed, form);
 
     let reading = '';
     let sending = false;
@@ -245,7 +254,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         denied.textContent = '';
         follow();
         carried()
-            .then(carries => node.say(words, mode.value, carries, model.hidden ? '' : model.value))
+            .then(carries => node.say(words, mode.value, carries, model.hidden ? '' : model.value, effort.hidden ? '' : effort.value))
             .then(answer => {
                 says.value = '';
                 carry(null);
@@ -266,7 +275,9 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     node.am()
         .then(is => {
             // "No need to show did key to user"
-            who.textContent = [is.model, is.effort, is.not_ready].filter(Boolean).join('  ');
+            const efforts = is.efforts ?? [];
+            // The effort is said by its chooser when the node offers one, and in words when it does not.
+            who.textContent = [is.model, efforts.length === 0 ? is.effort : '', is.not_ready].filter(Boolean).join('  ');
             who.title = is.allow.length > 0 ? `Allowed without being asked: ${is.allow.join(', ')}` : 'Nothing is allowed without being asked';
             // A harness with no permission modes, Pi, has nothing to choose here.
             mode.hidden = is.permission_modes.length === 0;
@@ -283,6 +294,9 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             model.hidden = models.length === 0;
             for (const name of models) model.appendChild(choice(name, name));
             model.value = models.includes(is.model) ? is.model : (models[0] ?? '');
+            effort.hidden = efforts.length === 0;
+            for (const name of efforts) effort.appendChild(choice(name, name));
+            effort.value = efforts.includes(is.effort) ? is.effort : (efforts[0] ?? '');
             reading = is.session;
             if (reading) void read();
             else session.textContent = 'Nothing has been said to it yet.';
@@ -311,10 +325,12 @@ export function createClaudeElement(): Element {
             const body = part('div', 'content-area claude claude-brand');
             drawClaude(body);
             // The Spark heads who answers, and turns while it answers.
+            // The effort is chosen there too, at the top of the screen.
             const who = body.querySelector<HTMLElement>('.claude-who')!;
+            const effort = body.querySelector<HTMLElement>('.claude-effort')!;
             const head = part('div', 'claude-head');
             who.replaceWith(head);
-            head.append(spark(), who);
+            head.append(spark(), who, effort);
             return body;
         },
     };

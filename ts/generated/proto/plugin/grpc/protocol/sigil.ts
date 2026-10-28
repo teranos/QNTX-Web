@@ -82,6 +82,8 @@ export interface Turn {
   text: string;
   /** The attestation it was read from. */
   of: string;
+  /** What the turn an assistant's answer ends cost, in USD, as Claude Code says; 0 when it says none. */
+  cost_usd: number;
 }
 
 /** Transcripts is what transcripts read answers. */
@@ -178,6 +180,8 @@ export interface ClaudeAm {
   auth_method: string;
   /** Every model a turn can be said to answer with. */
   models: string[];
+  /** Every effort a turn can be said to run at. */
+  efforts: string[];
 }
 
 /**

@@ -127,6 +127,46 @@ describe('Claude - Tim', () => {
         stop();
     });
 
+    // "The effort chooser should be top of the screen."
+    test('the efforts the node offers are chosen from at the top, its own chosen, and the one chosen is what is said with', async () => {
+        const body = document.createElement('div');
+        const efforts: string[] = [];
+        const stop = drawClaude(body, node({
+            say: (_says, _mode, _carried, _model, effort) => { efforts.push(effort ?? ''); return Promise.resolve(answered); },
+        }, { ...am, efforts: ['low', 'medium', 'high', 'xhigh', 'max'] }));
+        await settled();
+        const pick = body.querySelector<HTMLSelectElement>('.claude-effort')!;
+        expect(pick.hidden).toBe(false);
+        expect(pick.value).toBe('low');
+        // Above the session, not down by the field.
+        expect(body.querySelector('.claude-say')!.contains(pick)).toBe(false);
+        const order = Array.from(body.children);
+        expect(order.indexOf(pick)).toBeLessThan(order.indexOf(body.querySelector('.claude-session')!));
+        // Its chooser says the effort; the words do not say it twice.
+        expect(body.querySelector('.claude-who')!.textContent).not.toContain('low');
+        pick.value = 'max';
+        say(body, 'think hard');
+        await settled();
+        expect(efforts).toEqual(['max']);
+        stop();
+    });
+
+    test('the Claude element chooses its effort in its head', () => {
+        const claude = createClaudeElement().renderContent!() as HTMLElement;
+        expect(claude.querySelector('.claude-head .claude-effort')).not.toBeNull();
+    });
+
+    // "I don't see the cost of an utterance"
+    test('what an answer cost is said with it', async () => {
+        const body = document.createElement('div');
+        const costly: TranscriptRead = { ...session, turns: session.turns.map(t => t.speaker === 'assistant' ? { ...t, cost_usd: 0.4213 } : t) };
+        const stop = drawClaude(body, node({ read: () => Promise.resolve(costly) }, { ...am, session: SESSION }));
+        await settled();
+        const costs = Array.from(body.querySelectorAll('.tr-cost')).map(c => c.textContent);
+        expect(costs).toEqual(['$0.42']);
+        stop();
+    });
+
     // "I WANT THE CLAUDE ELEMENT TO FEEL MORE DISTINCTLY CLAUDE"
     test('the Claude element is headed by the Spark, and the Pi element is not', () => {
         const claude = createClaudeElement().renderContent!() as HTMLElement;

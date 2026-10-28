@@ -25,6 +25,8 @@ export interface Turn {
     speaker: string;
     text: string;
     of: string;
+    // What the turn an assistant's answer ends cost, in USD; 0 or absent when the node says none.
+    cost_usd?: number;
 }
 
 // One session as transcripts read answers it (protocol.Transcript).
@@ -132,8 +134,21 @@ function turnRow(turn: Turn, selection: Selection): HTMLElement {
     if (turn.speaker === 'assistant') text.innerHTML = renderAssistant(turn.text);
     else text.textContent = turn.text;
     row.append(speaker, text);
+    // "I don't see the cost of an utterance"
+    const cost = costOf(turn);
+    if (cost) row.appendChild(cost);
     selection.pressable(row, [turn]);
     return row;
+}
+
+/** What a turn cost, said after it, or null when the node says none. */
+export function costOf(turn: Turn): HTMLElement | null {
+    if (!turn.cost_usd || turn.cost_usd <= 0) return null;
+    const cost = document.createElement('span');
+    cost.className = 'tr-cost';
+    cost.textContent = `$${turn.cost_usd < 0.01 ? turn.cost_usd.toFixed(4) : turn.cost_usd.toFixed(2)}`;
+    cost.title = `What this turn cost: $${turn.cost_usd}`;
+    return cost;
 }
 
 // ─── Chips ────────────────────────────────────────────────────

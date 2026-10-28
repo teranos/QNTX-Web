@@ -48,10 +48,10 @@ export function agentOf(namespace: string): NamespaceAgent {
     const at = `/api/agents/${encodeURIComponent(namespace)}`;
     return {
         am: () => apiJson<AgentAm>(`${at}?harness=claude`).then(is => is.agent),
-        say: (says, mode, carried) => apiJson<{ claude: ClaudeSaid }>(`${at}/say`, {
+        say: (says, mode, carried, model, effort) => apiJson<{ claude: ClaudeSaid }>(`${at}/say`, {
             method: 'POST',
             headers: JSON_HEADERS,
-            body: sayBody(says, mode, carried),
+            body: sayBody(says, mode, carried, model, effort),
         }).then(said => said.claude),
         // Its one session in Claude Code, shared by everyone who has reach on the namespace.
         read: () => apiJson<{ transcript: TranscriptRead }>(`${at}/session?harness=claude`)

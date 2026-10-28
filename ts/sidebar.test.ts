@@ -8,7 +8,7 @@
  *   refused, an id it does not hold is the tray's, resting twice is once
  */
 
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
 
 // The door is not walked through in a test of the sidebar.
 mock.module('./signin', () => ({ standAtTheDoor: () => {}, signedIn: async () => true, openDoor: async () => {} }));
@@ -19,6 +19,12 @@ import { tray, type Element } from '@teranos/elements';
 const standing = (id: string, title: string, symbol: string): Element => ({
     id, title, symbol,
     renderContent: () => document.createElement('div'),
+});
+
+const originalMatchMedia = window.matchMedia;
+afterEach(() => {
+    resetSidebar();
+    window.matchMedia = originalMatchMedia;
 });
 
 beforeEach(() => {
@@ -163,5 +169,58 @@ describe('Spike: what the sidebar refuses', () => {
         document.body.innerHTML = '';
         initSidebar();
         expect(document.getElementById('sidebar')).toBeNull();
+    });
+});
+
+describe('phone system controls', () => {
+    function phoneViewport() {
+        const listeners: Array<() => void> = [];
+        const media = {
+            matches: true,
+            addEventListener: (_: string, listener: () => void) => listeners.push(listener),
+        };
+        window.matchMedia = (() => media) as unknown as typeof window.matchMedia;
+        return (matches: boolean) => {
+            media.matches = matches;
+            listeners.forEach(listener => listener());
+        };
+    }
+
+    test('moves the same live controls into the swipe drawer and back on desktop', () => {
+        const resize = phoneViewport();
+        const system = document.getElementById('system-drawer')!;
+        const input = document.createElement('input');
+        input.value = 'retained query';
+        system.append(input);
+        let clicks = 0;
+        input.addEventListener('click', () => clicks++);
+        initSidebar();
+        expect(system.parentElement?.id).toBe('sidebar');
+        expect(sidebarOpen()).toBe(false);
+        expect(document.getElementById('sidebar-latch')?.parentElement).toBe(document.body);
+        openSidebar();
+        input.click();
+        expect(clicks).toBe(1);
+        resize(false);
+        expect(system.parentElement).toBe(document.body);
+        expect(input.value).toBe('retained query');
+        expect(document.querySelector('#system-drawer-header #sidebar-latch')).not.toBeNull();
+        resize(true);
+        expect(system.parentElement?.id).toBe('sidebar');
+        expect(sidebarOpen()).toBe(false);
+    });
+
+    test('sign-in can take over the full-screen drawer, then return the controls', async () => {
+        phoneViewport();
+        initSidebar();
+        const system = document.getElementById('system-drawer')!;
+        system.classList.add('door-held');
+        await new Promise(resolve => setTimeout(resolve, 0));
+        expect(system.parentElement).toBe(document.body);
+        expect(document.getElementById('sidebar-latch')!.hidden).toBe(true);
+        system.classList.remove('door-held');
+        await new Promise(resolve => setTimeout(resolve, 0));
+        expect(system.parentElement?.id).toBe('sidebar');
+        expect(document.getElementById('sidebar-latch')!.hidden).toBe(false);
     });
 });

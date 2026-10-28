@@ -394,14 +394,21 @@ export function createTranscriptElement(item: Element): HTMLElement {
 
 /** Opens one session as a Transcript window, which can be placed onto the canvas. Called from Ground. */
 export function openTranscriptElement(session: string): void {
+    const itemId = restTranscriptElement(session);
+    if (itemId) tray.open(itemId);
+}
+
+/**
+ * Puts one session's Transcript window in the tray without opening it, and
+ * gives its id; null when it is already open on the page. A restart rests it
+ * there again from its id (tray-restore.ts).
+ */
+export function restTranscriptElement(session: string): string | null {
     const itemId = `transcript-${session}`;
-    if (tray.has(itemId)) {
-        tray.open(itemId);
-        return;
-    }
+    if (tray.has(itemId)) return itemId;
     if (document.querySelector(`[data-element-id="${itemId}"]`)) {
         log.debug(SEG.ELEMENT, `[Transcript] session ${session} is already open as ${itemId}`);
-        return;
+        return null;
     }
 
     tray.add({
@@ -417,8 +424,7 @@ export function openTranscriptElement(session: string): void {
             return body;
         },
     } satisfies Element);
-
-    tray.open(itemId);
+    return itemId;
 }
 
 function windowTitleBar(session: string, itemId: string): HTMLElement {

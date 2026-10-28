@@ -14,3 +14,19 @@ describe('Tim: ROOT sees the stories, each one an agent', () => {
         expect(row.title).toBe('Talk to story-27-root-registers-the-node-with-anthropic');
     });
 });
+
+describe('Tim: the stories use the room the element gives them', () => {
+    // "You didn't see how the list doesn't use the screenspace available? This suggests miscompliance with elements"
+    test('the content sets no size and no scroller of its own, so the package sizes and scrolls it', async () => {
+        const { createStoriesElement } = await import('./stories-element');
+        const { expectScroll } = await import('@teranos/elements');
+        const element = document.createElement('div');
+        element.dataset.elementId = 'stories-element';
+        const content = createStoriesElement().renderContent!() as HTMLElement;
+        element.appendChild(content);
+        drawStories(content, [{ name: '3-user-sets-up-a-new-namespace', feature: 'USER sets up a new namespace' }]);
+        expect(content.style.height).toBe('');
+        expect(content.style.width).toBe('');
+        expect(() => expectScroll(element)).not.toThrow();
+    });
+});

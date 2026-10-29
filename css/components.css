@@ -347,6 +347,8 @@
 .claude-who { padding: 3px 6px; border-bottom: 1px solid var(--border-on-dark); color: var(--text-on-dark-secondary); font-size: var(--font-size-xs); white-space: normal; overflow-wrap: break-word; word-break: break-word; flex-shrink: 0; }
 .claude-session { flex: 1; color: var(--text-on-dark-tertiary); }
 .claude-session .tr-head { display: none; }
+.claude-live { padding: 0 6px; max-height: 40%; overflow-y: auto; flex-shrink: 0; border-top: 1px dashed var(--border-on-dark); }
+.claude-live:empty { display: none; }
 .claude-status { padding: 0 6px; color: var(--element-status-running-text); font-size: var(--font-size-xs); flex-shrink: 0; }
 .claude-denied { padding: 0 6px; color: var(--color-warning); font-size: var(--font-size-xs); flex-shrink: 0; }
 .claude-failed { padding: 0 6px; flex-shrink: 0; }
@@ -354,11 +356,6 @@
 .claude-mode { background: var(--bg-almost-black); color: var(--text-on-dark-secondary); border: 1px solid var(--border-on-dark); font: inherit; font-size: var(--font-size-xs); }
 /* The Claude element in Claude's own colours: Clay, Ivory and Slate, from Anthropic's media resources */
 .claude-brand { --claude-clay: #D97757; --claude-ivory: #FAF9F5; --claude-slate: #151514; background: var(--claude-slate); color: var(--claude-ivory); }
-.claude-head { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border-bottom: 1px solid var(--claude-clay); flex-shrink: 0; }
-.claude-head .claude-who { padding: 0; border-bottom: none; flex: 1; min-width: 0; }
-.claude-spark { width: 16px; height: 16px; flex: none; color: var(--claude-clay); }
-.claude-brand:has(.claude-status:not(:empty)) .claude-spark { animation: claude-spark-turn 2.4s linear infinite; }
-@keyframes claude-spark-turn { to { transform: rotate(360deg); } }
 .claude-brand .claude-status { color: var(--claude-clay); }
 .claude-brand .tr-sp-assistant .tr-speaker { color: var(--claude-clay); }
 .claude-brand .tr-sp-human .tr-speaker { color: var(--claude-ivory); }

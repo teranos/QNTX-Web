@@ -102,6 +102,61 @@ export interface SessionTranscript {
   transcript: Transcript | undefined;
 }
 
+/**
+ * SessionEvent is one thing a harness's session emitted, as it emitted it:
+ * live, in the order it happened, and no attestation. The transcript is the
+ * session after the fact (Transcript); this is the session while it runs.
+ */
+export interface SessionEvent {
+  /** The session it happened in. */
+  session: string;
+  /** Whose line this is: claude, pi, anthropic. */
+  harness: string;
+  /** When, as the harness stamped it, or when the node read it when it did not. */
+  at: string;
+  /**
+   * What it is, in the words every harness has one of: started, text, delta,
+   * tool_use, tool_result, thinking, ended, failed. A line that is none of
+   * these is "other", and raw still carries it whole.
+   */
+  kind: string;
+  /**
+   * What was said: the text, the delta, a tool's result, the answer on ended,
+   * the error on failed.
+   */
+  text: string;
+  /** On tool_use and tool_result: the tool and the id the harness gave the call. */
+  tool: string;
+  tool_use_id: string;
+  /** On tool_use: the input, as JSON, whole. */
+  input: string;
+  /**
+   * The harness's own line, whole, as it printed it. Nothing above says more
+   * than this; what the fields do not carry is still here.
+   */
+  raw: string;
+  /**
+   * Where in the session's stream this line ends, so a reader asks for what
+   * follows it and nothing is read twice or skipped.
+   */
+  mark: number;
+}
+
+/**
+ * SessionEvents is the events of a turn from a mark on, and whether the turn
+ * is still printing. Over SSE each event travels alone, as one data line.
+ */
+export interface SessionEvents {
+  events: SessionEvent[];
+  /**
+   * Whether the harness is still printing: false is the turn over, and its
+   * last event ended or failed.
+   */
+  live: boolean;
+  /** The mark to ask from next. */
+  mark: number;
+}
+
 /** ClaudeSaid is what claude say answers. */
 export interface ClaudeSaid {
   /** What it answered. */

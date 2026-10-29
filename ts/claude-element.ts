@@ -8,10 +8,10 @@ import { openElement } from './sidebar.ts';
 import { apiJson } from './client';
 import { log, SEG } from './logger.ts';
 import { Claude } from './sym';
-import { spark } from './claude-spark';
 import { apiError, sacredEntry } from './components/sacred';
-import { renderTranscript, type TranscriptRead } from './components/element/transcript-element';
+import { renderAssistant, renderTranscript, type TranscriptRead } from './components/element/transcript-element';
 import { uploadFile } from './api/files';
+import { backendPath } from './client/url';
 
 const ELEMENT_ID = 'claude-element';
 
@@ -55,11 +55,26 @@ export interface Carried {
     file_id?: string;
 }
 
+// One line of the turn's stream as the harness printed it (protocol.SessionEvent):
+// the session while it runs, beside the transcript, which is it after the fact.
+// > it doesnt stream in, only the [tool] and [mcp] pieces fly in.
+export interface LiveEvent {
+    kind: string;
+    text: string;
+    tool: string;
+    tool_use_id: string;
+    at: string;
+    mark: string;
+}
+
 // The node, as this element asks it.
 export interface NodeAgent {
     am(): Promise<ClaudeAm>;
     say(says: string, mode: string, carried?: Carried, model?: string): Promise<ClaudeSaid>;
     read(): Promise<TranscriptRead | undefined>;
+    // The turn going, each event as it lands, and ended when the node closes
+    // it or nothing answers; what it gives back stops listening.
+    live?(onEvent: (event: LiveEvent) => void, onEnd: () => void): () => void;
 }
 
 /** The say body: harness, words, the mode when one is chosen, and what is carried. */
@@ -83,6 +98,19 @@ function agentAt(at: string): NodeAgent {
         // Its one session, read whole wherever whoever reads it stands.
         read: () => apiJson<{ transcript: TranscriptRead }>(`${at}/session?harness=claude`)
             .then(answer => answer.transcript),
+        // Server-sent events, the cookie as the plugin log stream carries it.
+        // Nothing answers between turns, and EventSource does not retry a
+        // refusal: that is onEnd, and whoever listens asks again.
+        live: (onEvent, onEnd) => {
+            const events = new EventSource(backendPath(`${at}/live?harness=claude`), { withCredentials: true });
+            events.onmessage = (message: MessageEvent) => {
+                try { onEvent(JSON.parse(message.data) as LiveEvent); }
+                catch (err) { log.warn(SEG.ELEMENT, `[Claude] a live event did not parse: ${wordsOf(err)}`); }
+            };
+            events.addEventListener('end', () => { events.close(); onEnd(); });
+            events.onerror = () => { if (events.readyState === EventSource.CLOSED) onEnd(); };
+            return () => events.close();
+        },
     };
 }
 
@@ -127,6 +155,9 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     const who = part('div', 'claude-who');
     who.textContent = 'Asking the node who answers…';
     const session = part('div', 'claude-session tr');
+    // The turn going, as it is said: deltas as they land, each message whole
+    // when it is, each tool as it is reached for. Emptied when the turn ends.
+    const live = part('div', 'claude-live');
     const status = part('div', 'claude-status');
     const denied = part('div', 'claude-denied');
     const failed = part('div', 'claude-failed');
@@ -159,12 +190,64 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     preventDrag(form);
     preventDrag(session);
 
-    body.replaceChildren(who, session, status, denied, failed, form);
+    body.replaceChildren(who, session, live, status, denied, failed, form);
 
     let reading = '';
     let sending = false;
     let following: ReturnType<typeof setInterval> | null = null;
     let picture: Blob | null = null;
+    let listening: (() => void) | null = null;
+    let draft: HTMLElement | null = null;
+    let drafted = '';
+
+    const liveRow = (speaker: string, text: string): HTMLElement => {
+        const row = part('div', `tr-turn tr-${speaker} tr-sp-${speaker}`);
+        const who = part('span', 'tr-speaker');
+        who.textContent = `[${speaker}]`;
+        const said = part('span', 'tr-text');
+        said.textContent = text;
+        row.append(who, said);
+        live.appendChild(row);
+        live.scrollTop = live.scrollHeight;
+        return row;
+    };
+
+    // What the stream says happened, drawn as it lands.
+    const landed = (event: LiveEvent) => {
+        switch (event.kind) {
+            case 'delta':
+                if (!draft) { draft = liveRow('assistant', ''); drafted = ''; }
+                drafted += event.text;
+                draft.querySelector('.tr-text')!.textContent = drafted;
+                live.scrollTop = live.scrollHeight;
+                return;
+            case 'text': {
+                // The message whole: the deltas it was said in are done.
+                const row = draft ?? liveRow('assistant', '');
+                row.querySelector('.tr-text')!.innerHTML = renderAssistant(event.text);
+                draft = null;
+                return;
+            }
+            case 'tool_use':
+                draft = null;
+                liveRow(event.tool.startsWith('mcp__') ? 'mcp' : 'tool', event.tool);
+                return;
+            case 'ended':
+            case 'failed':
+                draft = null;
+                return;
+        }
+    };
+
+    // Listening to the turn going; asked again while it goes and nothing
+    // answers yet, since live has nothing before the turn prints.
+    const listen = () => {
+        if (listening || !node.live) return;
+        listening = node.live(landed, () => {
+            listening = null;
+            if (sending || following) setTimeout(listen, 500);
+        });
+    };
 
     // The picture to be said, shown until it is sent or let go of.
     const carry = (image: Blob | null) => {
@@ -213,12 +296,17 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
 
     const settle = () => {
         if (following) { clearInterval(following); following = null; }
+        if (listening) { listening(); listening = null; }
+        // The turn is in the transcript now, read whole: the live view is done.
+        live.replaceChildren();
+        draft = null;
         hold(false);
     };
 
     // A turn that is going is read again and again until the node says it ended.
     const follow = () => {
         if (following) return;
+        listen();
         following = setInterval(() => {
             node.am()
                 .then(is => {
@@ -243,6 +331,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         hold(true);
         failed.replaceChildren();
         denied.textContent = '';
+        liveRow('human', words);
         follow();
         carried()
             .then(carries => node.say(words, mode.value, carries, model.hidden ? '' : model.value))
@@ -268,6 +357,8 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             // "No need to show did key to user"
             who.textContent = [is.model, is.effort, is.not_ready].filter(Boolean).join('  ');
             who.title = is.allow.length > 0 ? `Allowed without being asked: ${is.allow.join(', ')}` : 'Nothing is allowed without being asked';
+            // The titlebar is the element's one head: who answers is said here only when it could not be asked.
+            who.hidden = !is.not_ready;
             // A harness with no permission modes, Pi, has nothing to choose here.
             mode.hidden = is.permission_modes.length === 0;
             // "claude element 'dontask' doesnt make sense there"
@@ -308,13 +399,9 @@ export function createClaudeElement(): Element {
         // "claude element should not start at top when opening requiring user to scroll down every single time"
         opensAt: 'end',
         renderContent: () => {
+            // "make sure we only use titlebar": nothing heads the session but the element's own bar.
             const body = part('div', 'content-area claude claude-brand');
             drawClaude(body);
-            // The Spark heads who answers, and turns while it answers.
-            const who = body.querySelector<HTMLElement>('.claude-who')!;
-            const head = part('div', 'claude-head');
-            who.replaceWith(head);
-            head.append(spark(), who);
             return body;
         },
     };

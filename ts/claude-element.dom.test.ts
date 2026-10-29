@@ -8,7 +8,7 @@
 
 import { describe, test, expect } from 'bun:test';
 import { createPiElement } from './pi-element';
-import { createClaudeElement, drawClaude, type ClaudeAm, type ClaudeSaid, type NodeAgent } from './claude-element';
+import { createClaudeElement, drawClaude, type ClaudeAm, type ClaudeSaid, type LiveEvent, type NodeAgent } from './claude-element';
 import type { TranscriptRead } from './components/element/transcript-element';
 
 const USE_JSDOM = process.env.USE_JSDOM === '1';
@@ -127,16 +127,20 @@ describe('Claude - Tim', () => {
         stop();
     });
 
-    // "I WANT THE CLAUDE ELEMENT TO FEEL MORE DISTINCTLY CLAUDE"
-    test('the Claude element is headed by the Spark, and the Pi element is not', () => {
+    // "make sure we only use titlebar, so red part should not exist"
+    test('nothing heads the session but the titlebar, and who answers is hidden once it answered', async () => {
         const claude = createClaudeElement().renderContent!() as HTMLElement;
-        const head = claude.querySelector('.claude-head')!;
-        expect(head.querySelector('.claude-spark')).not.toBeNull();
-        expect(head.querySelector('.claude-who')).not.toBeNull();
+        expect(claude.querySelector('.claude-head')).toBeNull();
+        expect(claude.querySelector('.claude-spark')).toBeNull();
         expect(claude.classList.contains('claude-brand')).toBe(true);
 
+        const body = document.createElement('div');
+        const stop = drawClaude(body, node());
+        await settled();
+        expect(body.querySelector<HTMLElement>('.claude-who')!.hidden).toBe(true);
+        stop();
+
         const pi = createPiElement().renderContent!() as HTMLElement;
-        expect(pi.querySelector('.claude-spark')).toBeNull();
         expect(pi.classList.contains('claude-brand')).toBe(false);
     });
 
@@ -304,3 +308,81 @@ describe('Claude - Jenny', () => {
         stop();
     });
 });
+
+describe('Claude - the session while it runs', () => {
+    if (!USE_JSDOM) {
+        test.skip('Skipped locally (run with USE_JSDOM=1 to enable)', () => {});
+        return;
+    }
+
+    const event = (kind: string, text: string, tool = ''): LiveEvent => ({ kind, text, tool, tool_use_id: '', at: '2026-10-28T22:35:16Z', mark: '1' });
+
+    // "it doesnt stream in, only the [tool] and [mcp] pieces fly in."
+    // The words are drawn as the stream hands them, while say has not answered.
+    test('the words of a turn going are drawn before say answers, and the live view empties when it has', async () => {
+        const body = document.createElement('div');
+        let landed: ((e: LiveEvent) => void) | null = null;
+        let ended: (() => void) | null = null;
+        let answer: ((said: ClaudeSaid) => void) | null = null;
+        const stop = drawClaude(body, node({
+            say: () => new Promise(resolve => { answer = resolve; }),
+            live: (onEvent, onEnd) => { landed = onEvent; ended = onEnd; return () => {}; },
+        }));
+        await settled();
+        say(body, 'how long has the box been up?');
+        await settled();
+        expect(landed).not.toBeNull();
+        const live = body.querySelector<HTMLElement>('.claude-live')!;
+        expect(live.textContent).toContain('[human]');
+        expect(live.textContent).toContain('how long has the box been up?');
+
+        landed!(event('tool_use', 'Bash', 'Bash'));
+        landed!(event('delta', 'Up 3'));
+        landed!(event('delta', ' days.'));
+        const rows = Array.from(live.querySelectorAll('.tr-turn')).map(r => r.textContent);
+        expect(rows).toEqual(['[human]how long has the box been up?', '[tool]Bash', '[assistant]Up 3 days.']);
+        // Still answering: say has not come back.
+        expect(body.querySelector<HTMLButtonElement>('.claude-send')!.disabled).toBe(true);
+
+        landed!(event('text', 'Up 3 days.'));
+        expect(live.querySelectorAll('.tr-sp-assistant').length).toBe(1);
+        landed!(event('ended', 'Up 3 days.'));
+        ended!();
+        answer!(answered);
+        await settled();
+        // The transcript has it now, and the live view is empty.
+        expect(live.childElementCount).toBe(0);
+        expect(body.querySelector('.claude-session')!.textContent).toContain('Up 3 days.');
+        expect(body.querySelector<HTMLButtonElement>('.claude-send')!.disabled).toBe(false);
+        stop();
+    });
+
+    // A tool the agent reached for by MCP is [mcp], as the transcript names it.
+    test('an mcp tool is drawn as [mcp]', async () => {
+        const body = document.createElement('div');
+        let landed: ((e: LiveEvent) => void) | null = null;
+        const stop = drawClaude(body, node({
+            say: () => new Promise(() => {}),
+            live: (onEvent) => { landed = onEvent; return () => {}; },
+        }));
+        await settled();
+        say(body, 'what reaches me?');
+        await settled();
+        landed!(event('tool_use', 'mcp__qntx__reach_list', 'mcp__qntx__reach_list'));
+        expect(body.querySelector('.claude-live .tr-sp-mcp')!.textContent).toBe('[mcp]mcp__qntx__reach_list');
+        stop();
+    });
+
+    // A node from before live has no stream: the element reads the transcript as it did.
+    test('a node with no live still answers through the transcript', async () => {
+        const body = document.createElement('div');
+        const stop = drawClaude(body, node());
+        await settled();
+        say(body, 'how long has the box been up?');
+        await settled();
+        expect(body.querySelector('.claude-session')!.textContent).toContain('Up 3 days.');
+        expect(body.querySelector('.claude-live')!.childElementCount).toBe(0);
+        stop();
+    });
+});
+

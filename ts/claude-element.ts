@@ -323,7 +323,8 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             }
             case 'thinking':
                 draft = null;
-                liveRow('thought', textNode(event.text));
+                // A thinking block whose words are kept back is nothing to draw.
+                if (event.text) liveRow('thought', textNode(event.text));
                 return;
             case 'tool_use':
                 draft = null;

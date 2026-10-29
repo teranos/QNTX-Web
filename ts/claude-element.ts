@@ -12,6 +12,7 @@ import { apiError, sacredEntry } from './components/sacred';
 import { renderAssistant, renderTranscript, type TranscriptRead } from './components/element/transcript-element';
 import { uploadFile } from './api/files';
 import { backendPath } from './client/url';
+import { bearing } from './client/session';
 
 const ELEMENT_ID = 'claude-element';
 
@@ -113,7 +114,7 @@ export function readLive(url: string, onEvent: (event: LiveEvent) => void, onEnd
     const stopping = new AbortController();
     let ended = false;
     const end = () => { if (!ended) { ended = true; onEnd(); } };
-    fetch(url, { credentials: 'include', signal: stopping.signal, headers: { Accept: 'text/event-stream' } })
+    fetch(url, { credentials: 'include', signal: stopping.signal, headers: bearing({ Accept: 'text/event-stream' }) })
         .then(async answer => {
             if (!answer.ok || !answer.body) {
                 log.warn(SEG.ELEMENT, `[Claude] live: HTTP ${answer.status} ${(await answer.text()).slice(0, 200)}`);

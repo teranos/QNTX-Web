@@ -148,6 +148,20 @@ export function readLive(url: string, onEvent: (event: LiveEvent) => void, onEnd
     return () => { stopping.abort(); end(); };
 }
 
+// "i scroll, why is the time spacer interfering?"
+// What lands follows the bottom only for a reader who is at the bottom: one
+// who scrolled up is reading, and is left where they are.
+export function atBottom(box: HTMLElement): boolean {
+    return box.scrollHeight - box.scrollTop - box.clientHeight < 8;
+}
+
+/** Runs change, and keeps box at its bottom when it was there before. */
+function keepingBottom(box: HTMLElement, change: () => void): void {
+    const follow = atBottom(box);
+    change();
+    if (follow) box.scrollTop = box.scrollHeight;
+}
+
 function textNode(text: string): HTMLElement {
     const pre = part('pre', 'claude-live-text');
     pre.textContent = text;
@@ -288,8 +302,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     const liveRow = (kind: string, ...parts: Node[]): HTMLElement => {
         const row = part('div', `claude-live-row claude-live-${kind}`);
         row.append(...parts);
-        live.appendChild(row);
-        live.scrollTop = live.scrollHeight;
+        keepingBottom(live, () => live.appendChild(row));
         return row;
     };
 
@@ -299,13 +312,12 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             case 'delta':
                 if (!draft) { draft = liveRow('said', part('span', 'tr-text')); drafted = ''; }
                 drafted += event.text;
-                draft.querySelector('.tr-text')!.textContent = drafted;
-                live.scrollTop = live.scrollHeight;
+                keepingBottom(live, () => { draft!.querySelector('.tr-text')!.textContent = drafted; });
                 return;
             case 'text': {
                 // The message whole: the deltas it was said in are done.
                 const row = draft ?? liveRow('said', part('span', 'tr-text'));
-                row.querySelector('.tr-text')!.innerHTML = renderAssistant(event.text);
+                keepingBottom(live, () => { row.querySelector('.tr-text')!.innerHTML = renderAssistant(event.text); });
                 draft = null;
                 return;
             }
@@ -369,12 +381,16 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     const read = (): Promise<void> => node.read()
         .then(answer => {
             if (!answer) return;
+            // The column is drawn anew: where it stood is read before, and a
+            // reader at the bottom is kept there; one who scrolled up is not moved.
+            const before = session.querySelector<HTMLElement>('.tr-col');
+            const follow = !before || atBottom(before);
+            const stood = before?.scrollTop ?? 0;
             renderTranscript(session, answer, (text) => {
                 navigator.clipboard.writeText(text).catch((err: unknown) => fails('copy', err));
             });
-            // What was said last is what is looked at.
             const column = session.querySelector<HTMLElement>('.tr-col');
-            if (column) column.scrollTop = column.scrollHeight;
+            if (column) column.scrollTop = follow ? column.scrollHeight : stood;
         })
         .catch((err: unknown) => fails('read', err));
 

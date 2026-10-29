@@ -85,8 +85,8 @@ class Going {
     print(kind: string, text: string, tool = ''): void {
         const event: LiveEvent = {
             session: this.session, harness: 'claude', at: new Date().toISOString(), kind, text, tool,
-            tool_use_id: tool ? `toolu_${this.events.length}` : '', input: tool ? '{"command":"uptime"}' : '',
-            raw: JSON.stringify({ type: kind === 'delta' ? 'stream_event' : kind, text }), mark: String(this.events.length + 1),
+            tool_use_id: tool ? `mock-tool-use-${this.events.length}` : '', input: tool ? '{"command":"echo MOCK uptime"}' : '',
+            raw: JSON.stringify({ mock: true, type: kind === 'delta' ? 'stream_event' : kind, text }), mark: String(this.events.length + 1),
         };
         this.events.push(event);
         for (const listen of this.listeners) listen(event);
@@ -171,7 +171,9 @@ export class Agent {
         const held = this.session(element);
         const saw = fileId ? ` I was handed a picture, file ${fileId}.` : '';
         const about = element ? ` This is ${element}'s own session with me.` : '';
-        const answer = `MOCK ${this.of} answers, turn ${held.turns.length / 2 + 1} of our one conversation.${about}${saw} You said: ${says}`;
+        // Long enough to be read, scrolled and watched while it is said.
+        const more = ' I will say a little more, so there is something to watch arrive: a mock has no thoughts of its own, so it counts instead, one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, and that is the end of what the mock has to say.';
+        const answer = `MOCK ${this.of} answers, turn ${held.turns.length / 2 + 1} of our one conversation.${about}${saw} You said: ${says}${more}`;
         // The person's words are written down first, as the node does, and the
         // answer is printed a word at a time: the stream is what tails it.
         held.turns.push({ at: new Date().toISOString(), speaker: 'person', text: says, of: 'person' });
@@ -181,7 +183,10 @@ export class Agent {
         await wait(WORD_MS);
         going.print('tool_use', 'Bash', 'Bash');
         await wait(WORD_MS);
-        going.print('tool_result', 'up 3 days');
+        going.print('tool_result', 'MOCK uptime: up 0 days, this is the mock');
+        await wait(WORD_MS);
+        going.print('tool_use', 'Write', 'Write');
+        going.events[going.events.length - 1]!.input = JSON.stringify({ file_path: `mock/turn-${held.turns.length}.md`, content: Array.from({ length: 40 }, (_, i) => `MOCK line ${i + 1} of 40, written by the mock`).join('\n') });
         let said = '';
         for (const word of answer.split(' ')) {
             await wait(WORD_MS);

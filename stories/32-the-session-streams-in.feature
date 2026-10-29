@@ -9,4 +9,6 @@ Feature: The session streams in
     Given I am ROOT with the Claude element open
     When I say "What would you tell people at a claude code community meetup?" to it
     Then its words arrive while it answers
+    And when I scroll up in them, I am left where I am while more arrive
+    And when I scroll back down, what arrives follows
     And once it has answered, the transcript holds them and the live view is gone

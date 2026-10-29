@@ -23,8 +23,9 @@ Then('its words arrive while it answers', async ({ page }) => {
     const live = page.locator('.claude-live');
     const assistant = live.locator('.claude-live-said .tr-text');
     // What it did lands first, as the thing itself, then the words, while the send button is still held.
-    await expect(live.locator('.claude-live-did')).toHaveText('$ uptime');
-    await expect(live.locator('.claude-live-got')).toHaveText('up 3 days');
+    await expect(live.locator('.claude-live-did').first()).toHaveText('$ echo MOCK uptime');
+    await expect(live.locator('.claude-live-did').nth(1)).toContainText('+ MOCK line 40 of 40, written by the mock');
+    await expect(live.locator('.claude-live-got')).toHaveText('MOCK uptime: up 0 days, this is the mock');
     await expect(live).not.toContainText('[tool]');
     await expect(assistant).toBeVisible();
     const first = await assistant.textContent();
@@ -35,6 +36,28 @@ Then('its words arrive while it answers', async ({ page }) => {
     await page.screenshot({ path: `${SHOTS}/2-more-words.png` });
     // What was said is not drawn twice: the transcript holds it, the live view does not.
     await expect(live).not.toContainText('[human]');
+});
+
+// "i scroll, why is the time spacer interfering?"
+Then('when I scroll up in them, I am left where I am while more arrive', async ({ page }) => {
+    const live = page.locator('.claude-live');
+    const assistant = live.locator('.claude-live-said .tr-text');
+    // There is more than fits: the write's lines, so the box scrolls.
+    await expect.poll(() => live.evaluate(el => el.scrollHeight > el.clientHeight + 40)).toBe(true);
+    await live.evaluate(el => { el.scrollTop = 0; });
+    const before = await assistant.textContent();
+    await expect.poll(() => assistant.textContent()).not.toBe(before);
+    await expect.poll(() => live.evaluate(el => el.scrollTop)).toBe(0);
+    await page.screenshot({ path: `${SHOTS}/2b-scrolled-up.png` });
+});
+
+Then('when I scroll back down, what arrives follows', async ({ page }) => {
+    const live = page.locator('.claude-live');
+    const assistant = live.locator('.claude-live-said .tr-text');
+    await live.evaluate(el => { el.scrollTop = el.scrollHeight; });
+    const before = await assistant.textContent();
+    await expect.poll(() => assistant.textContent()).not.toBe(before);
+    await expect.poll(() => live.evaluate(el => el.scrollHeight - el.scrollTop - el.clientHeight < 8)).toBe(true);
 });
 
 Then('once it has answered, the transcript holds them and the live view is gone', async ({ page }) => {

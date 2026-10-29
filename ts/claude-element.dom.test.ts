@@ -333,19 +333,22 @@ describe('Claude - the session while it runs', () => {
         await settled();
         expect(landed).not.toBeNull();
         const live = body.querySelector<HTMLElement>('.claude-live')!;
-        expect(live.textContent).toContain('[human]');
-        expect(live.textContent).toContain('how long has the box been up?');
+        // What was said is the transcript's to show, written down before the turn: not drawn twice.
+        expect(live.textContent).not.toContain('[human]');
 
-        landed!(event('tool_use', 'Bash', 'Bash'));
+        landed!({ ...event('tool_use', 'Bash', 'Bash'), input: '{"command":"uptime"}' });
+        landed!(event('tool_result', 'up 3 days, 2 users'));
         landed!(event('delta', 'Up 3'));
         landed!(event('delta', ' days.'));
-        const rows = Array.from(live.querySelectorAll('.tr-turn')).map(r => r.textContent);
-        expect(rows).toEqual(['[human]how long has the box been up?', '[tool]Bash', '[assistant]Up 3 days.']);
+        // The thing itself, no speaker in front of it.
+        const rows = Array.from(live.querySelectorAll('.claude-live-row')).map(r => r.textContent);
+        expect(rows).toEqual(['$ uptime', 'up 3 days, 2 users', 'Up 3 days.']);
+        expect(live.textContent).not.toContain('[tool]');
         // Still answering: say has not come back.
         expect(body.querySelector<HTMLButtonElement>('.claude-send')!.disabled).toBe(true);
 
         landed!(event('text', 'Up 3 days.'));
-        expect(live.querySelectorAll('.tr-sp-assistant').length).toBe(1);
+        expect(live.querySelectorAll('.claude-live-said').length).toBe(1);
         landed!(event('ended', 'Up 3 days.'));
         ended!();
         answer!(answered);
@@ -357,20 +360,19 @@ describe('Claude - the session while it runs', () => {
         stop();
     });
 
-    // A tool the agent reached for by MCP is [mcp], as the transcript names it.
-    test('an mcp tool is drawn as [mcp]', async () => {
-        const body = document.createElement('div');
-        let landed: ((e: LiveEvent) => void) | null = null;
-        const stop = drawClaude(body, node({
-            say: () => new Promise(() => {}),
-            live: (onEvent) => { landed = onEvent; return () => {}; },
-        }));
-        await settled();
-        say(body, 'what reaches me?');
-        await settled();
-        landed!(event('tool_use', 'mcp__qntx__reach_list', 'mcp__qntx__reach_list'));
-        expect(body.querySelector('.claude-live .tr-sp-mcp')!.textContent).toBe('[mcp]mcp__qntx__reach_list');
-        stop();
+    // "including +/- diffs fly by"
+    test('an edit flies by as what was and what is, a write as what is, and a tool with no shape as its input whole', async () => {
+        const { toolUseShown } = await import('./claude-element');
+        const edit = toolUseShown('Edit', JSON.stringify({ file_path: 'a.go', old_string: 'x := 1\ny := 2', new_string: 'x := 3' }));
+        expect(Array.from(edit.children).map(c => c.textContent)).toEqual(['a.go', '- x := 1', '- y := 2', '+ x := 3']);
+        expect(edit.querySelectorAll('.claude-live-del').length).toBe(2);
+        expect(edit.querySelectorAll('.claude-live-add').length).toBe(1);
+        const write = toolUseShown('Write', JSON.stringify({ file_path: 'b.md', content: 'hi' }));
+        expect(Array.from(write.children).map(c => c.textContent)).toEqual(['b.md', '+ hi']);
+        const mcp = toolUseShown('mcp__qntx__reach_list', '{"path":"/api/agent"}');
+        expect(mcp.textContent).toContain('mcp__qntx__reach_list');
+        expect(mcp.textContent).toContain('"path": "/api/agent"');
+        expect(toolUseShown('Read', '{"file_path":"c.ts"}').textContent).toBe('c.ts');
     });
 
     // A node from before live has no stream: the element reads the transcript as it did.
@@ -386,3 +388,52 @@ describe('Claude - the session while it runs', () => {
     });
 });
 
+
+describe('Claude - live read off fetch', () => {
+    if (!USE_JSDOM) {
+        test.skip('Skipped locally (run with USE_JSDOM=1 to enable)', () => {});
+        return;
+    }
+
+    const sse = (chunks: string[], status = 200) => {
+        const utf8 = new TextEncoder();
+        const body = new ReadableStream<Uint8Array>({
+            start(controller) { for (const chunk of chunks) controller.enqueue(utf8.encode(chunk)); controller.close(); },
+        });
+        return new Response(status === 200 ? body : 'the Node Agent is not in a turn', { status, headers: { 'Content-Type': 'text/event-stream' } });
+    };
+
+    // An event split across chunks is one event, and end ends it once.
+    test('events are read whole across chunks, and end is the end', async () => {
+        const { readLive } = await import('./claude-element');
+        const original = globalThis.fetch;
+        const asked: string[] = [];
+        globalThis.fetch = ((url: string) => { asked.push(url); return Promise.resolve(sse([
+            'data: {"kind":"delta","text":"Up","tool":"","tool_use_id":"","at":"","mark":"1"}\n\n',
+            'data: {"kind":"delta","text":" 3 da',
+            'ys.","tool":"","tool_use_id":"","at":"","mark":"2"}\n\nevent: end\ndata: {"events":[],"live":false,"mark":"3"}\n\n',
+        ])); }) as typeof fetch;
+        try {
+            const got: string[] = [];
+            let ends = 0;
+            readLive('/api/agent/live?harness=claude', e => got.push(e.text), () => { ends++; });
+            await settled();
+            expect(asked).toEqual(['/api/agent/live?harness=claude']);
+            expect(got).toEqual(['Up', ' 3 days.']);
+            expect(ends).toBe(1);
+        } finally { globalThis.fetch = original; }
+    });
+
+    // Nothing answers between turns: that ends it, and whoever listens asks again.
+    test('a refusal ends the read', async () => {
+        const { readLive } = await import('./claude-element');
+        const original = globalThis.fetch;
+        globalThis.fetch = (() => Promise.resolve(sse([], 404))) as typeof fetch;
+        try {
+            let ends = 0;
+            readLive('/api/agent/live?harness=claude', () => {}, () => { ends++; });
+            await settled();
+            expect(ends).toBe(1);
+        } finally { globalThis.fetch = original; }
+    });
+});

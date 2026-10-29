@@ -158,10 +158,28 @@ async function agentAnswer(level: Level, method: string, path: string, _url: URL
         const transcript = agent.read("");
         return transcript ? json({ transcript }) : json({ error: `${agent.of} has no session yet` }, 404);
     }
+    if (rest === "/live" && method === "GET") {
+        const going = agent.live("");
+        if (!going) return json({ error: `${agent.of} is not in a turn, so there is no stream to tail` }, 404);
+        const mark = parseInt(_url.searchParams.get("mark") ?? "0", 10) || 0;
+        let stop = () => {};
+        const stream = new ReadableStream<Uint8Array>({
+            start(controller) {
+                const out = new TextEncoder();
+                stop = going.listen(mark, event => {
+                    if (event) { controller.enqueue(out.encode(`data: ${JSON.stringify(event)}\n\n`)); return; }
+                    controller.enqueue(out.encode(`event: end\ndata: ${JSON.stringify({ events: [], live: false, mark: String(going.events.length) })}\n\n`));
+                    controller.close();
+                });
+            },
+            cancel() { stop(); },
+        });
+        return new Response(stream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" } });
+    }
     if (rest === "/say" && method === "POST") {
         const sent = (await req.json()) as Record<string, string>;
         if (!sent.says) return json({ error: "says is required" }, 400);
-        const said = agent.say(sent.says, "", sent.file_id ?? "", sent.permission_mode ?? "");
+        const said = await agent.say(sent.says, "", sent.file_id ?? "", sent.permission_mode ?? "");
         console.log(`${pink}${level} said to ${agent.of}${sent.file_id ? ` with ${sent.file_id}` : ""}: ${sent.says}${reset}`);
         return json({ claude: said });
     }

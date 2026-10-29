@@ -5,8 +5,8 @@
 
 // > say being able to carry an image sounds usefull to me
 
-// What is said is answered at once, in the mock's own words, so the page's
-// turn, its picture and its element can be seen without a node.
+// What is said is answered in the mock's own words, over a few seconds, so the
+// page's turn, its picture, its element and its stream can be seen without a node.
 
 export interface Turn {
     at: string;
@@ -57,9 +57,63 @@ export interface Said {
 
 const MODEL = 'claude-fable-5-1';
 
+// One line of the turn's stream as the node tails it (protocol.SessionEvent).
+export interface LiveEvent {
+    session: string;
+    harness: string;
+    at: string;
+    kind: string;
+    text: string;
+    tool: string;
+    tool_use_id: string;
+    input: string;
+    raw: string;
+    mark: string;
+}
+
+// How long each word of the answer takes to land.
+const WORD_MS = 120;
+
+/** The turn going: what it printed so far, who listens, and whether it ended. */
+class Going {
+    readonly events: LiveEvent[] = [];
+    private listeners = new Set<(event: LiveEvent | null) => void>();
+    ended = false;
+
+    constructor(readonly session: string) {}
+
+    print(kind: string, text: string, tool = ''): void {
+        const event: LiveEvent = {
+            session: this.session, harness: 'claude', at: new Date().toISOString(), kind, text, tool,
+            tool_use_id: tool ? `toolu_${this.events.length}` : '', input: tool ? '{"command":"uptime"}' : '',
+            raw: JSON.stringify({ type: kind === 'delta' ? 'stream_event' : kind, text }), mark: String(this.events.length + 1),
+        };
+        this.events.push(event);
+        for (const listen of this.listeners) listen(event);
+    }
+
+    end(): void {
+        this.ended = true;
+        for (const listen of this.listeners) listen(null);
+        this.listeners.clear();
+    }
+
+    /** Each event from the mark on as it lands, then null at the end; what it gives back stops listening. */
+    listen(mark: number, onEvent: (event: LiveEvent | null) => void): () => void {
+        for (const event of this.events.slice(mark)) onEvent(event);
+        if (this.ended) { onEvent(null); return () => {}; }
+        this.listeners.add(onEvent);
+        return () => this.listeners.delete(onEvent);
+    }
+}
+
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 /** One agent's sessions: its own, and one per element. */
 export class Agent {
     private sessions = new Map<string, Transcript>();
+    // The turn going per session key, while one is.
+    private going = new Map<string, Going>();
 
     constructor(readonly of: string, readonly did: string, seed?: Transcript) {
         if (seed) this.sessions.set('', seed);
@@ -95,7 +149,7 @@ export class Agent {
             permission_modes: ['default', 'acceptEdits', 'plan'],
             allow: ['Bash(git *)'],
             session: held ? held.session : '',
-            answering: false,
+            answering: this.going.has(element),
             claude_code: 'mock',
             not_ready: '',
             signed_in: true,
@@ -107,16 +161,41 @@ export class Agent {
         return this.sessions.get(element);
     }
 
+    /** The turn going in the session, or none between turns. */
+    live(element: string): Going | undefined {
+        return this.going.get(element);
+    }
+
     /** What is said, answered: the mock names the element and the picture it was handed, and gives the words back. */
-    say(says: string, element: string, fileId: string, mode: string): Said {
+    async say(says: string, element: string, fileId: string, mode: string): Promise<Said> {
         const held = this.session(element);
-        const now = new Date().toISOString();
         const saw = fileId ? ` I was handed a picture, file ${fileId}.` : '';
         const about = element ? ` This is ${element}'s own session with me.` : '';
         const answer = `MOCK ${this.of} answers, turn ${held.turns.length / 2 + 1} of our one conversation.${about}${saw} You said: ${says}`;
-        held.turns.push({ at: now, speaker: 'person', text: says, of: 'person' });
+        // The person's words are written down first, as the node does, and the
+        // answer is printed a word at a time: the stream is what tails it.
+        held.turns.push({ at: new Date().toISOString(), speaker: 'person', text: says, of: 'person' });
+        const going = new Going(held.session);
+        this.going.set(element, going);
+        going.print('started', MODEL);
+        await wait(WORD_MS);
+        going.print('tool_use', 'Bash', 'Bash');
+        await wait(WORD_MS);
+        going.print('tool_result', 'up 3 days');
+        let said = '';
+        for (const word of answer.split(' ')) {
+            await wait(WORD_MS);
+            const piece = said ? ` ${word}` : word;
+            said += piece;
+            going.print('delta', piece);
+        }
+        going.print('text', answer);
+        going.print('ended', answer);
+        const now = new Date().toISOString();
         held.turns.push({ at: now, speaker: 'agent', text: answer, of: 'agent' });
         held.ended = now;
+        this.going.delete(element);
+        going.end();
         return {
             answer,
             is_error: false,

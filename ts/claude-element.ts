@@ -63,6 +63,7 @@ export interface LiveEvent {
     text: string;
     tool: string;
     tool_use_id: string;
+    input?: string;
     at: string;
     mark: string;
 }
@@ -98,20 +99,100 @@ function agentAt(at: string): NodeAgent {
         // Its one session, read whole wherever whoever reads it stands.
         read: () => apiJson<{ transcript: TranscriptRead }>(`${at}/session?harness=claude`)
             .then(answer => answer.transcript),
-        // Server-sent events, the cookie as the plugin log stream carries it.
-        // Nothing answers between turns, and EventSource does not retry a
-        // refusal: that is onEnd, and whoever listens asks again.
-        live: (onEvent, onEnd) => {
-            const events = new EventSource(backendPath(`${at}/live?harness=claude`), { withCredentials: true });
-            events.onmessage = (message: MessageEvent) => {
-                try { onEvent(JSON.parse(message.data) as LiveEvent); }
-                catch (err) { log.warn(SEG.ELEMENT, `[Claude] a live event did not parse: ${wordsOf(err)}`); }
-            };
-            events.addEventListener('end', () => { events.close(); onEnd(); });
-            events.onerror = () => { if (events.readyState === EventSource.CLOSED) onEnd(); };
-            return () => events.close();
-        },
+        // Server-sent events read off fetch, with the cookie every other call
+        // carries: what EventSource does after a refusal is each browser's own,
+        // and this is one thing in every browser. Nothing answers between turns
+        // (404) and before the turn prints: that ends it, said in the console,
+        // and whoever listens asks again.
+        live: (onEvent, onEnd) => readLive(backendPath(`${at}/live?harness=claude`), onEvent, onEnd),
     };
+}
+
+/** Reads url as server-sent events until the node ends them or the reader stops; onEnd once, either way. */
+export function readLive(url: string, onEvent: (event: LiveEvent) => void, onEnd: () => void): () => void {
+    const stopping = new AbortController();
+    let ended = false;
+    const end = () => { if (!ended) { ended = true; onEnd(); } };
+    fetch(url, { credentials: 'include', signal: stopping.signal, headers: { Accept: 'text/event-stream' } })
+        .then(async answer => {
+            if (!answer.ok || !answer.body) {
+                log.warn(SEG.ELEMENT, `[Claude] live: HTTP ${answer.status} ${(await answer.text()).slice(0, 200)}`);
+                return;
+            }
+            const reader = answer.body.getReader();
+            const utf8 = new TextDecoder();
+            let held = '';
+            for (;;) {
+                const { value, done } = await reader.read();
+                if (done) return;
+                held += utf8.decode(value, { stream: true });
+                // One event per blank line; each is its data line, and end is named.
+                let cut = held.indexOf('\n\n');
+                while (cut >= 0) {
+                    const lines = held.slice(0, cut).split('\n');
+                    held = held.slice(cut + 2);
+                    const named = lines.find(line => line.startsWith('event: '))?.slice(7).trim() ?? '';
+                    const data = lines.filter(line => line.startsWith('data: ')).map(line => line.slice(6)).join('\n');
+                    if (named === 'end') return;
+                    if (data) {
+                        try { onEvent(JSON.parse(data) as LiveEvent); }
+                        catch (err) { log.warn(SEG.ELEMENT, `[Claude] a live event did not parse: ${wordsOf(err)}`); }
+                    }
+                    cut = held.indexOf('\n\n');
+                }
+            }
+        })
+        .catch((err: unknown) => { if (!stopping.signal.aborted) log.warn(SEG.ELEMENT, `[Claude] live: ${wordsOf(err)}`); })
+        .finally(end);
+    return () => { stopping.abort(); end(); };
+}
+
+function textNode(text: string): HTMLElement {
+    const pre = part('pre', 'claude-live-text');
+    pre.textContent = text;
+    return pre;
+}
+
+/** A line of a diff: - for what was, + for what is, as the colours say. */
+function diffLine(sign: '-' | '+', text: string): HTMLElement {
+    const line = part('div', sign === '-' ? 'claude-live-del' : 'claude-live-add');
+    line.textContent = `${sign} ${text}`;
+    return line;
+}
+
+/** A tool reached for, shown as the thing it does: the command, the edit as +/-, the file, or its input whole. */
+export function toolUseShown(tool: string, input: string): HTMLElement {
+    let sent: Record<string, unknown> = {};
+    try { sent = input ? JSON.parse(input) as Record<string, unknown> : {}; } catch { /* shown whole below */ }
+    const str = (key: string) => typeof sent[key] === 'string' ? sent[key] as string : '';
+    const head = (text: string) => { const h = part('div', 'claude-live-head'); h.textContent = text; return h; };
+    const out = part('pre', 'claude-live-tool');
+    switch (tool.toLowerCase()) {
+        case 'bash':
+            out.textContent = `$ ${str('command')}`;
+            return out;
+        case 'edit':
+            out.append(head(str('file_path')));
+            for (const line of str('old_string').split('\n')) out.append(diffLine('-', line));
+            for (const line of str('new_string').split('\n')) out.append(diffLine('+', line));
+            return out;
+        case 'write':
+            out.append(head(str('file_path')));
+            for (const line of str('content').split('\n')) out.append(diffLine('+', line));
+            return out;
+        case 'read':
+            out.textContent = str('file_path');
+            return out;
+        case 'grep':
+        case 'glob': {
+            const where = str('path') ? ` in ${str('path')}` : '';
+            out.textContent = `${tool.toLowerCase()} ${str('pattern')}${where}`;
+            return out;
+        }
+    }
+    out.append(head(tool));
+    out.append(textNode(Object.keys(sent).length ? JSON.stringify(sent, null, 2) : input));
+    return out;
 }
 
 // The Node Agent in Claude Code, at the agent signum's path.
@@ -200,13 +281,12 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     let draft: HTMLElement | null = null;
     let drafted = '';
 
-    const liveRow = (speaker: string, text: string): HTMLElement => {
-        const row = part('div', `tr-turn tr-${speaker} tr-sp-${speaker}`);
-        const who = part('span', 'tr-speaker');
-        who.textContent = `[${speaker}]`;
-        const said = part('span', 'tr-text');
-        said.textContent = text;
-        row.append(who, said);
+    // A row of the live view: the thing itself, with no speaker in front of it.
+    // "i dont want [tool] [read] [write] etc. because im in a convo, i prefer to
+    // just see the whole thing, including +/- diffs fly by"
+    const liveRow = (kind: string, ...parts: Node[]): HTMLElement => {
+        const row = part('div', `claude-live-row claude-live-${kind}`);
+        row.append(...parts);
         live.appendChild(row);
         live.scrollTop = live.scrollHeight;
         return row;
@@ -216,21 +296,29 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     const landed = (event: LiveEvent) => {
         switch (event.kind) {
             case 'delta':
-                if (!draft) { draft = liveRow('assistant', ''); drafted = ''; }
+                if (!draft) { draft = liveRow('said', part('span', 'tr-text')); drafted = ''; }
                 drafted += event.text;
                 draft.querySelector('.tr-text')!.textContent = drafted;
                 live.scrollTop = live.scrollHeight;
                 return;
             case 'text': {
                 // The message whole: the deltas it was said in are done.
-                const row = draft ?? liveRow('assistant', '');
+                const row = draft ?? liveRow('said', part('span', 'tr-text'));
                 row.querySelector('.tr-text')!.innerHTML = renderAssistant(event.text);
                 draft = null;
                 return;
             }
+            case 'thinking':
+                draft = null;
+                liveRow('thought', textNode(event.text));
+                return;
             case 'tool_use':
                 draft = null;
-                liveRow(event.tool.startsWith('mcp__') ? 'mcp' : 'tool', event.tool);
+                liveRow('did', toolUseShown(event.tool, event.input ?? ''));
+                return;
+            case 'tool_result':
+                draft = null;
+                if (event.text) liveRow('got', textNode(event.text));
                 return;
             case 'ended':
             case 'failed':
@@ -239,13 +327,13 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         }
     };
 
-    // Listening to the turn going; asked again while it goes and nothing
-    // answers yet, since live has nothing before the turn prints.
+    // Listening to the turn going; asked again while it goes, since live
+    // has nothing before the turn prints and nothing between turns.
     const listen = () => {
         if (listening || !node.live) return;
         listening = node.live(landed, () => {
             listening = null;
-            if (sending || following) setTimeout(listen, 500);
+            if (sending || following) setTimeout(() => { if (sending || following) listen(); }, 1000);
         });
     };
 
@@ -311,6 +399,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             node.am()
                 .then(is => {
                     if (is.session) { reading = is.session; void read(); }
+                    if (is.answering) listen();
                     if (!is.answering && !sending) settle();
                 })
                 .catch((err: unknown) => { fails('follow', err); if (!sending) settle(); });
@@ -331,7 +420,6 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         hold(true);
         failed.replaceChildren();
         denied.textContent = '';
-        liveRow('human', words);
         follow();
         carried()
             .then(carries => node.say(words, mode.value, carries, model.hidden ? '' : model.value))

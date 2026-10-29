@@ -347,8 +347,17 @@
 .claude-who { padding: 3px 6px; border-bottom: 1px solid var(--border-on-dark); color: var(--text-on-dark-secondary); font-size: var(--font-size-xs); white-space: normal; overflow-wrap: break-word; word-break: break-word; flex-shrink: 0; }
 .claude-session { flex: 1; color: var(--text-on-dark-tertiary); }
 .claude-session .tr-head { display: none; }
-.claude-live { padding: 0 6px; max-height: 40%; overflow-y: auto; flex-shrink: 0; border-top: 1px dashed var(--border-on-dark); }
+.claude-live { padding: 2px 6px; max-height: 40%; overflow-y: auto; flex-shrink: 0; border-top: 1px dashed var(--border-on-dark); font-size: var(--font-size-xs); }
 .claude-live:empty { display: none; }
+.claude-live-row { margin: 2px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.claude-live-said { color: var(--text-on-dark); }
+.claude-live-thought { color: var(--text-on-dark-tertiary); font-style: italic; }
+.claude-live pre { margin: 0; font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
+.claude-live-tool { color: var(--text-on-dark-secondary); }
+.claude-live-got { color: var(--text-on-dark-tertiary); max-height: 12em; overflow-y: auto; }
+.claude-live-head { color: var(--text-on-dark-secondary); }
+.claude-live-add { color: var(--color-success, #7cb87c); }
+.claude-live-del { color: var(--color-warning); }
 .claude-status { padding: 0 6px; color: var(--element-status-running-text); font-size: var(--font-size-xs); flex-shrink: 0; }
 .claude-denied { padding: 0 6px; color: var(--color-warning); font-size: var(--font-size-xs); flex-shrink: 0; }
 .claude-failed { padding: 0 6px; flex-shrink: 0; }

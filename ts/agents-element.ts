@@ -16,7 +16,7 @@ import { log, SEG } from './logger.ts';
 import { Agent } from './sym';
 import { standingNamespace } from './standing.ts';
 import { drawClaude, sayBody, readLive, type ClaudeAm, type ClaudeSaid, type NodeAgent } from './claude-element';
-import type { SessionRead } from './chat';
+import { when, type SessionRead } from './chat';
 import { backendPath } from './client/url';
 import { drawNamespaceAgent, agentOf } from './agent-element';
 import { storyAgent, type Story } from './stories-element';
@@ -213,6 +213,25 @@ export function drawAgentChat(body: HTMLElement, agent: Reachable, chatOf: (agen
         const says = talk.querySelector<HTMLTextAreaElement>('.claude-says');
         if (says) says.placeholder = `Say something to ${agent.called}`;
     };
+
+    // "so it means we need the SDK to list back sessions": an element's agent at the Console has Sessions there, listed under the tabs.
+    if (agent.at.startsWith('/api/elements/')) {
+        const sessions = part('div', 'agents-sessions');
+        body.insertBefore(sessions, talk);
+        apiJson<{ agent: string; sessions: Array<{ id: string; title: string; status: string; created_at: string; archived: boolean; current: boolean }> }>(`${agent.at}/sessions`)
+            .then(answer => {
+                if (!answer.agent || answer.sessions.length === 0) { sessions.remove(); return; }
+                const head = part('div', 'agents-sessions-head');
+                head.textContent = `${answer.sessions.length} session${answer.sessions.length === 1 ? '' : 's'} at Anthropic's Console`;
+                sessions.append(head);
+                for (const each of answer.sessions) {
+                    const row = part('div', 'agents-session' + (each.current ? ' agents-session-current' : ''));
+                    row.textContent = `${each.title || each.id} · ${each.status}${each.archived ? ' · archived' : ''} · ${when(each.created_at)}${each.current ? ' · this chat' : ''}`;
+                    sessions.append(row);
+                }
+            })
+            .catch((err: unknown) => { log.info(SEG.ELEMENT, `[Agents] no sessions listed for ${agent.called}: ${err instanceof Error ? err.message : String(err)}`); sessions.remove(); });
+    }
 
     for (const harness of HARNESSES) {
         const tab = part('button', 'qntx-btn qntx-btn-small agents-tab');

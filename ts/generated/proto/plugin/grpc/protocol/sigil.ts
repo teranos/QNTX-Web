@@ -198,8 +198,9 @@ export interface ElementSession {
 }
 
 /**
- * ElementSessions is what elements sessions answers: every Session the element's
- * agent has at the Console, newest first; none when it runs on the box.
+ * ElementSessions is what elements sessions and elements pick answer: every
+ * Session the element's agent has at the Console, newest first; none when it
+ * runs on the box.
  */
 export interface ElementSessions {
   /** The agent's id at the Console, or empty when it runs on the box. */

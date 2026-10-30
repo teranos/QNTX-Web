@@ -15,7 +15,7 @@ import { everyMs } from './trace-every';
 /** What the build stamped into the page. build.ts writes both. */
 interface Stamped {
     __SENTRY_DSN__?: string;
-    __QNTX_WEB_BUILD__?: { commit: string; build_time: string; web: string };
+    __QNTX_WEB_BUILD__?: { commit: string; build_time: string; web: string; version?: string };
 }
 
 export interface Leaving {

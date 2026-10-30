@@ -19,7 +19,7 @@ function formatFailure(f: Failure): string {
     return `${ts}  ${f.source}  ${f.url}\n  ${f.reason}`;
 }
 
-interface WebBuildStamp { commit: string; build_time: string; web?: string; }
+interface WebBuildStamp { commit: string; build_time: string; web?: string; version?: string }
 
 // Two shas answering two questions: web is the QNTX-Web code that was built, commit
 // is the pipeline that built it. They differ because the deploy lives in its own

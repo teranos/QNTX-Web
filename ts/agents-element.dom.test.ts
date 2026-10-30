@@ -74,6 +74,23 @@ describe('Agents', () => {
         stop();
     });
 
+    // "each element is an agent as well": every element the viewer was given is listed, shaken or not.
+    test('every element the viewer was given is an agent to talk to, the held ones beside them, none twice', async () => {
+        const { reachableAgents } = await import('./agents-element');
+        const { elementsOfTheViewer } = await import('./default-elements');
+        elementsOfTheViewer.length = 0;
+        elementsOfTheViewer.push({ id: 'db-element', title: 'Database' }, { id: 'agent-element', title: 'Agents' }, { id: 'ground-element', title: 'Ground' });
+        const ask = (async (path: string) => {
+            if (path === '/api/agent?harness=claude') return { claude: am };
+            if (path === '/api/elements') return { agents: [{ element: 'ground-element', session: 's-g', answering: false }, { element: 'shaken-thing', session: 's-x', answering: false }, { element: 'story-1-x', session: '', answering: false }] };
+            throw new Error(`${path}: not in this test`);
+        }) as <T>(path: string) => Promise<T>;
+        const found = await reachableAgents('', ask);
+        const elements = found.filter(a => a.kind === 'element').map(a => a.called);
+        expect(elements).toEqual(['Database', 'Ground', 'shaken-thing']);
+        expect(found.filter(a => a.kind === 'element').map(a => a.at)).toContain('/api/elements/shaken-thing');
+    });
+
     test('pi am and pi say are drawn as the chat draws any harness', () => {
         const is = piAsAm({ did: 'd', model: 'm', thinking: 'low', gateway: 'g', session: 's', answering: false, pi: '/pi', pi_version: '1', not_ready: '' });
         expect(is.model).toBe('m');

@@ -394,7 +394,8 @@
 .agents-tab-on { color: var(--accent-on-dark); border-bottom: 2px solid var(--accent-on-dark); }
 .agents-sessions { padding: 4px 8px; border-bottom: 1px solid var(--border-on-dark); font-size: var(--font-size-xs); color: var(--text-on-dark-secondary); flex-shrink: 0; }
 .agents-sessions-head { color: var(--text-on-dark-tertiary); }
-.agents-session-current { color: var(--accent-on-dark); }
+.agents-session { display: block; width: 100%; text-align: left; background: transparent; border: 0; color: inherit; font: inherit; padding: 1px 0; cursor: pointer; }
+.agents-session-current { color: var(--accent-on-dark); cursor: default; }
 .agents-talk { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .agents-talk > .claude-who, .agents-talk > .claude-status, .agents-talk > .claude-say { flex-shrink: 0; }
 .agents-talk > .chat-scroll { flex: 1; }

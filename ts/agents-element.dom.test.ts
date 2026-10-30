@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { drawAgents, piAsAm, piAsSaid, type Reachable, type Harness } from './agents-element';
+import { piAsAm, piAsSaid, type Reachable, type Harness } from './agents-element';
 import type { ClaudeAm, ClaudeSaid, NodeAgent } from './claude-element';
 
 const USE_JSDOM = process.env.USE_JSDOM === '1';
@@ -40,33 +40,31 @@ describe('Agents', () => {
         return { am: () => Promise.resolve({ ...am, model: `${harness}-model` }), say: () => Promise.resolve(said), read: () => Promise.resolve(undefined) };
     };
 
-    // "the Agents Element as the main entry-point into all Agents that User has access to"
-    test('every agent reached is listed, the first is the chat, and another is chosen by pressing it', async () => {
-        const body = document.createElement('div');
-        asked.length = 0;
-        const stop = drawAgents(body, Promise.resolve(reached), chatOf);
+    // "the leftside menu bar thing, why would we not be able to reuse that pattern for menu into menu navigation"
+    test('Agents is a level of the sidebar: every agent reached is a row, the way back above them, a row opens its chat', async () => {
+        const { fillAgentsLevel } = await import('./agents-element');
+        const level = document.createElement('div');
+        const opened: string[] = [];
+        fillAgentsLevel(level, Promise.resolve(reached), agent => opened.push(agent.id));
         await settled();
-        const rows = Array.from(body.querySelectorAll('.agents-row')).map(r => r.textContent);
+        const rows = Array.from(level.querySelectorAll('.sidebar-level-row')).map(r => r.textContent);
         expect(rows).toEqual(['Node Agent', '1  ROOT invites a user']);
-        expect(body.querySelector('.agents-row-on')?.textContent).toBe('Node Agent');
-        expect(body.querySelector('.claude-says')).not.toBeNull();
-        expect(asked[0]).toEqual(['node', 'claude']);
-        body.querySelectorAll<HTMLButtonElement>('.agents-row')[1]!.click();
-        await settled();
-        expect(body.querySelector('.agents-row-on')?.textContent).toBe('1  ROOT invites a user');
-        expect(asked[asked.length - 1]).toEqual(['story:story-1-x', 'claude']);
-        stop();
+        level.querySelectorAll<HTMLButtonElement>('.sidebar-level-row')[1]!.click();
+        expect(opened).toEqual(['story:story-1-x']);
+        expect(level.querySelector('.sidebar-row-on')?.textContent).toBe('1  ROOT invites a user');
     });
 
     // "THEY ARE MORE LIKE TABS WITHIN A WINDOW"
-    test('the harness is a tab: pressing pi draws the same agent in Pi', async () => {
+    test('a chat has the harness as a tab: pressing pi draws the same agent in Pi', async () => {
+        const { drawAgentChat } = await import('./agents-element');
         const body = document.createElement('div');
         asked.length = 0;
-        const stop = drawAgents(body, Promise.resolve(reached), chatOf);
+        const stop = drawAgentChat(body, reached[0]!, chatOf);
         await settled();
         const tabs = Array.from(body.querySelectorAll('.agents-tab')).map(t => t.textContent);
         expect(tabs).toEqual(['claude', 'pi', 'codex']);
         expect(body.querySelector('.agents-tab-on')?.textContent).toBe('claude');
+        expect(body.querySelector('.claude-says')).not.toBeNull();
         body.querySelectorAll<HTMLButtonElement>('.agents-tab')[1]!.click();
         await settled();
         expect(body.querySelector('.agents-tab-on')?.textContent).toBe('pi');

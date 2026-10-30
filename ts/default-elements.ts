@@ -23,7 +23,8 @@ import { createMarketElement, needs as marketNeeds } from './market-element.ts';
 import { createMailElement, needs as mailNeeds } from './mail-element.ts';
 import { createApprovalsElement, needs as approvalsNeeds } from './approvals-element.ts';
 import { createGroundElement, needs as groundNeeds } from './ground-element.ts';
-import { createAgentsElement, needs as agentsNeeds } from './agents-element.ts';
+import { restAgentsInSidebar, needs as agentsNeeds, ELEMENT_ID as AGENTS_ID } from './agents-element.ts';
+import { Agent } from './sym';
 import { createIElement, needs as iNeeds } from './i-element.ts';
 import { createAmElement, needs as amNeeds } from './am-element.ts';
 import { createConnectorElement, needs as connectorNeeds } from './connector-element.ts';
@@ -73,8 +74,8 @@ export async function registerDefaultElements(hasCanvas: boolean = true): Promis
         { needs: approvalsNeeds, create: createApprovalsElement },
         // Ground Element — aware of anything Ground; the sessions it recorded, each opened as a Transcript
         { needs: groundNeeds, create: createGroundElement },
-        // ✦ — Agents: every agent this person reaches, each a chat, the harness a tab (ADR-048, ADR-054)
-        { needs: agentsNeeds, create: createAgentsElement },
+        // ✦ — Agents: a level of the sidebar, every agent this person reaches a row of it, each a chat (ADR-048, ADR-054)
+        { needs: agentsNeeds, create: () => ({ id: AGENTS_ID, title: 'Agents', symbol: Agent, renderContent: () => document.createElement('div') }) },
         // Pulse Panel Element — scheduled jobs dashboard
         { needs: pulseNeeds, create: createPulseElement },
         // Plugin Panel Element — panel manifestation
@@ -95,7 +96,8 @@ export async function registerDefaultElements(hasCanvas: boolean = true): Promis
     for (const each of forThem) {
         const item = each.create();
         elementsOfTheViewer.push({ id: item.id, title: item.title });
-        if (item.opensAs === 'workspace') tray.add(item);
+        if (item.id === AGENTS_ID) restAgentsInSidebar();
+        else if (item.opensAs === 'workspace') tray.add(item);
         else restInSidebar(item);
     }
 

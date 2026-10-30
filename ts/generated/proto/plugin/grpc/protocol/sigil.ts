@@ -168,6 +168,8 @@ export interface ElementAgent {
   session: string;
   /** Whether it is answering now. */
   answering: boolean;
+  /** Its Session at Anthropic's Console, when it runs there (ADR-054), or empty. */
+  anthropic_session: string;
 }
 
 /**

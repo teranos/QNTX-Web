@@ -9,9 +9,8 @@
 // "IN MY MIND, THERE IS ONE FUCKING CHAT, WHERE I CAN SWITCH HARNESS, AND THEN
 // I TALK TO CODEX, AND THEN I TALK TO PI, AND THEY ARE MORE LIKE TABS WITHIN A WINDOW."
 
-import type { Element } from '@teranos/elements';
-import { preventDrag } from '@teranos/elements';
-import { openElement } from './sidebar.ts';
+import { preventDrag, tray } from '@teranos/elements';
+import { restLevelInSidebar, enterLevel, levelRow } from './sidebar.ts';
 import { apiJson } from './client';
 import { log, SEG } from './logger.ts';
 import { Agent } from './sym';
@@ -24,8 +23,11 @@ import { storyAgent, type Story } from './stories-element';
 import { elementsOfTheViewer } from './default-elements';
 
 export const ELEMENT_ID = 'agent-element';
+// The Agents level's own row in the sidebar; the id above is the namespace agent's chat, as the Connectors flow opens it.
+export const LEVEL_ID = 'agents';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
+const PHONE = '(max-width: 768px)';
 
 /** The harnesses a chat can run in, as the node names them. */
 export const HARNESSES = ['claude', 'pi', 'codex'] as const;
@@ -225,61 +227,78 @@ export function drawAgentChat(body: HTMLElement, agent: Reachable, chatOf: (agen
     return () => settle();
 }
 
-/** The Agents element drawn into body: the agents reached, and the chat of the one chosen. */
-export function drawAgents(body: HTMLElement, agents: Promise<Reachable[]>, chatOf?: (agent: Reachable, harness: Harness) => NodeAgent): () => void {
-    const list = part('div', 'agents-list');
-    const chat = part('div', 'agents-chat');
-    body.replaceChildren(list, chat);
-    list.textContent = 'Asking the node who you reach…';
-    let settle = () => {};
+/** Where an agent's chat rests in the tray: the namespace agent's under the id the Connectors flow opens. */
+export function chatIdOf(agent: Reachable): string {
+    return agent.kind === 'namespace' ? ELEMENT_ID : `chat:${agent.id}`;
+}
 
-    const choose = (agent: Reachable) => {
-        for (const row of list.querySelectorAll<HTMLButtonElement>('.agents-row')) row.classList.toggle('agents-row-on', row.dataset.agent === agent.id);
-        settle();
-        settle = drawAgentChat(chat, agent, chatOf);
-    };
+/** Opens the chat of agent: a window on a desktop, the screen on a phone, as the shake's chat is. */
+export function openAgentChat(agent: Reachable, chatOf?: (agent: Reachable, harness: Harness) => NodeAgent): void {
+    const id = chatIdOf(agent);
+    if (!tray.has(id)) {
+        tray.add({
+            id,
+            title: agent.called,
+            symbol: Agent,
+            opensAs: window.matchMedia?.(PHONE).matches ? 'panel' : 'window',
+            opensAt: 'end',
+            renderContent: () => {
+                const body = part('div', 'content-area chat');
+                drawAgentChat(body, agent, chatOf);
+                return body;
+            },
+        });
+    }
+    tray.open(id);
+}
 
+/** Every agent reached, as rows of the Agents level of the sidebar; pressing one opens its chat. */
+export function fillAgentsLevel(into: HTMLElement, agents: Promise<Reachable[]>, open: (agent: Reachable) => void = openAgentChat): void {
+    const waiting = part('div', 'sidebar-level-note');
+    waiting.textContent = 'Asking the node who you reach…';
+    into.appendChild(waiting);
     agents.then(found => {
-        list.replaceChildren();
-        if (found.length === 0) { list.textContent = 'You reach no agent here.'; return; }
+        waiting.remove();
+        if (found.length === 0) { waiting.textContent = 'You reach no agent here.'; into.appendChild(waiting); return; }
         for (const agent of found) {
-            const row = part('button', 'qntx-btn qntx-btn-ghost qntx-btn-small agents-row');
-            row.type = 'button';
-            row.dataset.agent = agent.id;
+            const row = levelRow(into, { id: `agent:${agent.id}`, title: agent.called, symbol: symbolOf(agent) }, () => {
+                for (const each of into.querySelectorAll('.sidebar-level-row')) each.classList.toggle('sidebar-row-on', each === row);
+                open(agent);
+            });
+            row.classList.add('agents-row');
             row.dataset.kind = agent.kind;
-            row.textContent = agent.called;
-            row.addEventListener('click', () => choose(agent));
-            list.append(row);
         }
-        preventDrag(list);
-        choose(found[0]!);
     }).catch((err: unknown) => {
-        list.textContent = err instanceof Error ? err.message : String(err);
+        waiting.textContent = err instanceof Error ? err.message : String(err);
+        into.appendChild(waiting);
     });
-    return () => settle();
+}
+
+function symbolOf(agent: Reachable): string {
+    switch (agent.kind) {
+        case 'node': return Agent;
+        case 'namespace': return Agent;
+        case 'story': return '§';
+        default: return '⩕';
+    }
 }
 
 // Who this is for: whoever reaches the agent of a namespace, which is everyone who stands in one (audience.ts).
 export const needs = ['/api/agents/{namespace}'] as const;
 
-export function createAgentsElement(): Element {
-    return {
-        id: ELEMENT_ID,
-        title: 'Agents',
-        symbol: Agent,
-        opensAt: 'end',
-        renderContent: () => {
-            const body = part('div', 'content-area chat agents');
-            drawAgents(body, reachableAgents(standingNamespace()));
-            return body;
-        },
-    };
+/** Agents rests in the sidebar as a level: its row opens the agents reached, each a row that opens its chat. */
+export function restAgentsInSidebar(agents: () => Promise<Reachable[]> = () => reachableAgents(standingNamespace())): void {
+    restLevelInSidebar({ id: LEVEL_ID, title: 'Agents', symbol: Agent }, into => fillAgentsLevel(into, agents()));
 }
 
-/** Opens the Agents element. */
+/** Opens the Agents level of the sidebar. */
 export function openAgentsElement(): void {
-    openElement(ELEMENT_ID);
+    enterLevel({ id: LEVEL_ID, title: 'Agents', symbol: Agent }, into => fillAgentsLevel(into, reachableAgents(standingNamespace())));
 }
 
-/** The same, by its earlier name. */
-export const openAgentElement = openAgentsElement;
+/** Opens the chat of the agent of the namespace stood in: what the Connectors flow opens as agent-element. */
+export function openAgentElement(): void {
+    const namespace = standingNamespace();
+    openAgentChat({ id: `namespace:${namespace}`, called: `the agent of ${namespace}`, at: `/api/agents/${encodeURIComponent(namespace)}`, kind: 'namespace',
+        unwrap: a => ({ claude: (a as { agent?: ClaudeAm }).agent }) });
+}

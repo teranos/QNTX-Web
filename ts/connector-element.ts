@@ -16,6 +16,7 @@ import { createGitHubElement } from './github-element';
 import { createObsidianElement } from './obsidian-element';
 import { person } from './self-person';
 import { openElement as openStanding } from './sidebar.ts';
+import { openAgentElement, ELEMENT_ID as AGENT_CHAT_ID } from './agents-element.ts';
 import { CONNECTOR } from './sym';
 import { createToken, OAUTH, type CreateTokenResponse } from './token-mint-element';
 import type { NamespaceKeys } from './generated/proto/plugin/grpc/protocol/sigil';
@@ -370,6 +371,8 @@ const OPENED: Record<string, () => Element> = {
 
 /** An element a connection is: one of the tray's, added the first time, or one resting in the sidebar. */
 function openElement(id: string): void {
+    // Claude Code is the agent of the namespace stood in, whose chat opens from the Agents level too.
+    if (id === AGENT_CHAT_ID) { openAgentElement(); return; }
     const create = OPENED[id];
     if (!create) { openStanding(id); return; }
     if (!tray.has(id)) tray.add(create());

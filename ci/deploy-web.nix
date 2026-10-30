@@ -79,6 +79,9 @@ in
         "with" = {
           repository = "teranos/QNTX-Web";
           ref = "\${{ inputs.branch }}";
+          # The web's version is git describe of its tags (build.ts): a checkout without them stamps dev.
+          fetch-depth = 0;
+          fetch-tags = true;
         };
       }
 

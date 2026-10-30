@@ -392,6 +392,9 @@
 /* An agent's chat, opened from the Agents level of the sidebar: its harness a tab above the conversation. */
 .agents-tabs { display: flex; gap: 2px; padding: 4px 6px; border-bottom: 1px solid var(--border-on-dark); flex-shrink: 0; }
 .agents-tab-on { color: var(--accent-on-dark); border-bottom: 2px solid var(--accent-on-dark); }
+.agents-sessions { padding: 4px 8px; border-bottom: 1px solid var(--border-on-dark); font-size: var(--font-size-xs); color: var(--text-on-dark-secondary); flex-shrink: 0; }
+.agents-sessions-head { color: var(--text-on-dark-tertiary); }
+.agents-session-current { color: var(--accent-on-dark); }
 .agents-talk { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .agents-talk > .claude-who, .agents-talk > .claude-status, .agents-talk > .claude-say { flex-shrink: 0; }
 .agents-talk > .chat-scroll { flex: 1; }

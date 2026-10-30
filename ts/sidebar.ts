@@ -175,7 +175,8 @@ function rowFrom(row: SidebarRow, press: (e: MouseEvent) => void, className = 's
     button.type = 'button';
     button.className = className;
     button.dataset.form = 'button';
-    button.dataset.elementId = row.id;
+    // A row is not an element: what it opens is, under its own id.
+    button.dataset.row = row.id;
     if (row.symbol) button.dataset.symbol = row.symbol;
     button.textContent = row.title;
     button.addEventListener('click', press);

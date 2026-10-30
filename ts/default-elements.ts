@@ -19,7 +19,7 @@ import { createLlmProviderElement, needs as llmNeeds } from './llm-provider-elem
 import { createTokensElement, needs as tokensNeeds } from './tokens-element.ts';
 import { createRolesElement, needs as rolesNeeds } from './roles-element.ts';
 import { createUsersElement, needs as usersNeeds } from './users-element.ts';
-import { createMarketElement, needs as marketNeeds } from './market-element.ts';
+import { createMarketElement, needs as marketNeeds, restStandsInSidebar, ELEMENT_ID as MARKET_ID } from './market-element.ts';
 import { createMailElement, needs as mailNeeds } from './mail-element.ts';
 import { createApprovalsElement, needs as approvalsNeeds } from './approvals-element.ts';
 import { createGroundElement, needs as groundNeeds } from './ground-element.ts';
@@ -27,7 +27,7 @@ import { restAgentsInSidebar, needs as agentsNeeds, ELEMENT_ID as AGENTS_ID } fr
 import { Agent } from './sym';
 import { createIElement, needs as iNeeds } from './i-element.ts';
 import { createAmElement, needs as amNeeds } from './am-element.ts';
-import { createConnectorElement, needs as connectorNeeds } from './connector-element.ts';
+import { createConnectorElement, needs as connectorNeeds, restConnectorsInSidebar, ELEMENT_ID as CONNECTOR_ID } from './connector-element.ts';
 import { createParityElement, needs as parityNeeds } from './parity-element.ts';
 import { log, SEG } from './logger.ts';
 
@@ -96,7 +96,10 @@ export async function registerDefaultElements(hasCanvas: boolean = true): Promis
     for (const each of forThem) {
         const item = each.create();
         elementsOfTheViewer.push({ id: item.id, title: item.title });
+        // "and Connectors needs to work the same way" / "and Staands as well": levels of the sidebar, their rows what they list.
         if (item.id === AGENTS_ID) restAgentsInSidebar();
+        else if (item.id === CONNECTOR_ID) restConnectorsInSidebar();
+        else if (item.id === MARKET_ID) restStandsInSidebar();
         else if (item.opensAs === 'workspace') tray.add(item);
         else restInSidebar(item);
     }

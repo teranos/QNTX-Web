@@ -181,6 +181,33 @@ export interface ElementAgents {
   agents: ElementAgent[];
 }
 
+/** ElementSession is one Session an element's agent has at Anthropic's Console. */
+export interface ElementSession {
+  /** The Session's id at the Console. */
+  id: string;
+  /** Its title there, when it has one. */
+  title: string;
+  /** Its status there: idle, running, terminated, as the Console says it. */
+  status: string;
+  /** When it was made, RFC 3339. */
+  created_at: string;
+  /** Whether the Console archived it. */
+  archived: boolean;
+  /** Whether it is the one the element's chat goes on in. */
+  current: boolean;
+}
+
+/**
+ * ElementSessions is what elements sessions answers: every Session the element's
+ * agent has at the Console, newest first; none when it runs on the box.
+ */
+export interface ElementSessions {
+  /** The agent's id at the Console, or empty when it runs on the box. */
+  agent: string;
+  /** Each Session, newest first. */
+  sessions: ElementSession[];
+}
+
 /** ClaudeSaid is what claude say answers. */
 export interface ClaudeSaid {
   /** What it answered. */

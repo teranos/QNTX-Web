@@ -157,6 +157,28 @@ export interface SessionEvents {
   mark: number;
 }
 
+/**
+ * ElementAgent is one element whose agent this node holds (ADR-054): named,
+ * and in a session when one was kept.
+ */
+export interface ElementAgent {
+  /** The element, as it is said to. */
+  element: string;
+  /** Its session in Claude Code, or empty before anything was said to it. */
+  session: string;
+  /** Whether it is answering now. */
+  answering: boolean;
+}
+
+/**
+ * ElementAgents is what elements list answers: every element agent this node
+ * holds, the stories' included, each by the element's name.
+ */
+export interface ElementAgents {
+  /** Each element agent held, by the element's name. */
+  agents: ElementAgent[];
+}
+
 /** ClaudeSaid is what claude say answers. */
 export interface ClaudeSaid {
   /** What it answered. */

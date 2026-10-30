@@ -21,6 +21,7 @@ import type { SessionRead } from './chat';
 import { backendPath } from './client/url';
 import { drawNamespaceAgent, agentOf } from './agent-element';
 import { storyAgent, type Story } from './stories-element';
+import { elementsOfTheViewer } from './default-elements';
 
 export const ELEMENT_ID = 'agent-element';
 
@@ -150,13 +151,22 @@ export async function reachableAgents(namespace: string, ask: <T>(path: string) 
         found.push({ id: `namespace:${namespace}`, called: `the agent of ${namespace}`, at: `/api/agents/${encodeURIComponent(namespace)}`, kind: 'namespace',
             unwrap: a => ({ claude: (a as { agent?: ClaudeAm }).agent }) });
     }
-    // The element agents the node holds, and the stories' agents, are ROOT's, as the Node Agent is: listed when it is.
+    // The element agents are ROOT's, as the Node Agent is: listed when it is.
+    // "each element is an agent as well": every element this viewer was given,
+    // shaken or not, and every one the node holds beyond those.
     if (found.some(a => a.kind === 'node')) {
+        const listed = new Set<string>();
+        const element = (id: string, called: string) => {
+            if (listed.has(id) || id === ELEMENT_ID) return;
+            listed.add(id);
+            found.push({ id: `element:${id}`, called, at: `/api/elements/${encodeURIComponent(id)}`, kind: 'element' });
+        };
+        for (const each of elementsOfTheViewer) element(each.id, each.title);
         try {
             const held = await ask<{ agents: Array<{ element: string; session: string; answering: boolean }> }>('/api/elements');
             for (const each of held.agents) {
                 if (each.element.startsWith('story-')) continue;
-                found.push({ id: `element:${each.element}`, called: each.element, at: `/api/elements/${encodeURIComponent(each.element)}`, kind: 'element' });
+                element(each.element, each.element);
             }
         } catch (err: unknown) {
             log.info(SEG.ELEMENT, `[Agents] no element agents listed: ${err instanceof Error ? err.message : String(err)}`);

@@ -40,6 +40,9 @@ export { updateAmVersion as updateSelfVersion, updateAmCapabilities as updateSel
 // Register default system elements. A namespace with no canvas has no canvas
 // element either: nothing of it is drawn, not even the dot in the tray.
 // "the ui needs to stop suggesting things that arent possible, needs to stop handing out dead birds"
+// "each element is an agent as well": the elements this viewer was given, each one an agent to talk to (ADR-054).
+export const elementsOfTheViewer: Array<{ id: string; title: string }> = [];
+
 export async function registerDefaultElements(hasCanvas: boolean = true): Promise<void> {
     const offered: Audience[] = [
         // Canvas Element - Fractal container with spatial grid
@@ -88,8 +91,10 @@ export async function registerDefaultElements(hasCanvas: boolean = true): Promis
     // A standing element rests in the sidebar; the tray is for what is put
     // down and for the temporal (sidebar.ts). The canvas opens as the
     // workspace, which a button cannot become, so it alone rests in the tray.
+    elementsOfTheViewer.length = 0;
     for (const each of forThem) {
         const item = each.create();
+        elementsOfTheViewer.push({ id: item.id, title: item.title });
         if (item.opensAs === 'workspace') tray.add(item);
         else restInSidebar(item);
     }

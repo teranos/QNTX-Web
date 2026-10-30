@@ -26,6 +26,7 @@ export default defineConfig({
     },
     projects: [
         { name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
-        { name: 'firefox', use: { ...devices['Desktop Firefox'], viewport: { width: 1440, height: 900 } } },
+        // Firefox is walked where it is installed (STORIES_FIREFOX=1, after `bunx playwright install firefox`); CI holds Chromium.
+        ...(process.env.STORIES_FIREFOX === '1' ? [{ name: 'firefox', use: { ...devices['Desktop Firefox'], viewport: { width: 1440, height: 900 } } }] : []),
     ],
 });

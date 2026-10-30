@@ -7,9 +7,8 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { createPiElement } from './pi-element';
-import { createClaudeElement, drawClaude, type ClaudeAm, type ClaudeSaid, type LiveEvent, type NodeAgent } from './claude-element';
-import type { TranscriptRead } from './components/element/transcript-element';
+import { drawClaude, type ClaudeAm, type ClaudeSaid, type LiveEvent, type NodeAgent } from './claude-element';
+import type { SessionRead } from './chat';
 
 const USE_JSDOM = process.env.USE_JSDOM === '1';
 
@@ -44,7 +43,7 @@ const answered: ClaudeSaid = {
     unwritten: '',
 };
 
-const session: TranscriptRead = {
+const session: SessionRead = {
     session: SESSION,
     subjects: ['qntx/root-agent'],
     started: '2026-10-05T09:00:00Z',
@@ -128,20 +127,13 @@ describe('Claude - Tim', () => {
     });
 
     // "make sure we only use titlebar, so red part should not exist"
-    test('nothing heads the session but the titlebar, and who answers is hidden once it answered', async () => {
-        const claude = createClaudeElement().renderContent!() as HTMLElement;
-        expect(claude.querySelector('.claude-head')).toBeNull();
-        expect(claude.querySelector('.claude-spark')).toBeNull();
-        expect(claude.classList.contains('claude-brand')).toBe(true);
-
+    test('nothing heads the chat, and who answers is hidden once it answered', async () => {
         const body = document.createElement('div');
         const stop = drawClaude(body, node());
         await settled();
+        expect(body.querySelector('.claude-head')).toBeNull();
         expect(body.querySelector<HTMLElement>('.claude-who')!.hidden).toBe(true);
         stop();
-
-        const pi = createPiElement().renderContent!() as HTMLElement;
-        expect(pi.classList.contains('claude-brand')).toBe(false);
     });
 
     // "make sure --permission-mode is configurable in the Claude Element"
@@ -167,8 +159,8 @@ describe('Claude - Tim', () => {
         await settled();
 
         expect(asked.sent).toEqual([['how long has the box been up?', 'plan']]);
-        const rows = [...body.querySelectorAll('.tr-turn')].map(t => t.querySelector('.tr-text')?.textContent?.trim());
-        expect(rows).toEqual(['how long has the box been up?', 'Up 3 days.']);
+        const rows = [...body.querySelectorAll('.chat-row')].map(t => t.textContent?.trim());
+        expect(rows).toEqual(['last talked Oct 5 09:00', 'how long has the box been up?', '$ uptime', 'Up 3 days.']);
         expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('');
         stop();
     });
@@ -178,7 +170,7 @@ describe('Claude - Tim', () => {
         const body = document.createElement('div');
         const stop = drawClaude(body, node({}, { ...am, session: SESSION }));
         await settled();
-        expect(body.querySelectorAll('.tr-turn')).toHaveLength(2);
+        expect(body.querySelectorAll('.chat-row')).toHaveLength(4);
         stop();
     });
 });
@@ -332,7 +324,7 @@ describe('Claude - the session while it runs', () => {
         say(body, 'how long has the box been up?');
         await settled();
         expect(landed).not.toBeNull();
-        const live = body.querySelector<HTMLElement>('.claude-live')!;
+        const live = body.querySelector<HTMLElement>('.chat-live')!;
         // What was said is the transcript's to show, written down before the turn: not drawn twice.
         expect(live.textContent).not.toContain('[human]');
 
@@ -341,14 +333,14 @@ describe('Claude - the session while it runs', () => {
         landed!(event('delta', 'Up 3'));
         landed!(event('delta', ' days.'));
         // The thing itself, no speaker in front of it.
-        const rows = Array.from(live.querySelectorAll('.claude-live-row')).map(r => r.textContent);
+        const rows = Array.from(live.querySelectorAll('.chat-row')).map(r => r.textContent?.trim());
         expect(rows).toEqual(['$ uptime', 'up 3 days, 2 users', 'Up 3 days.']);
         expect(live.textContent).not.toContain('[tool]');
         // Still answering: say has not come back.
         expect(body.querySelector<HTMLButtonElement>('.claude-send')!.disabled).toBe(true);
 
         landed!(event('text', 'Up 3 days.'));
-        expect(live.querySelectorAll('.claude-live-said').length).toBe(1);
+        expect(live.querySelectorAll('.chat-said').length).toBe(1);
         landed!(event('ended', 'Up 3 days.'));
         ended!();
         answer!(answered);
@@ -362,20 +354,63 @@ describe('Claude - the session while it runs', () => {
 
     // "including +/- diffs fly by"
     test('an edit flies by as what was and what is, a write as what is, and a tool with no shape as its input whole', async () => {
-        const { toolUseShown } = await import('./claude-element');
+        const { toolUseShown } = await import('./chat');
         const edit = toolUseShown('Edit', JSON.stringify({ file_path: 'a.go', old_string: 'x := 1\ny := 2', new_string: 'x := 3' }));
-        expect(Array.from(edit.children).map(c => c.textContent)).toEqual(['a.go', '- x := 1', '- y := 2', '+ x := 3']);
-        expect(edit.querySelectorAll('.claude-live-del').length).toBe(2);
-        expect(edit.querySelectorAll('.claude-live-add').length).toBe(1);
+        expect(Array.from(edit.children).map(c => c.textContent)).toEqual(['edited a.go', '- x := 1', '- y := 2', '+ x := 3']);
+        expect(edit.querySelectorAll('.chat-del').length).toBe(2);
+        expect(edit.querySelectorAll('.chat-add').length).toBe(1);
         const write = toolUseShown('Write', JSON.stringify({ file_path: 'b.md', content: 'hi' }));
-        expect(Array.from(write.children).map(c => c.textContent)).toEqual(['b.md', '+ hi']);
+        expect(Array.from(write.children).map(c => c.textContent)).toEqual(['wrote b.md', '+ hi']);
         const mcp = toolUseShown('mcp__qntx__reach_list', '{"path":"/api/agent"}');
-        expect(mcp.textContent).toContain('mcp__qntx__reach_list');
+        expect(mcp.textContent).toContain('asked qntx: reach_list');
+        expect(mcp.textContent).not.toContain('mcp__');
         expect(mcp.textContent).toContain('"path": "/api/agent"');
-        expect(toolUseShown('Read', '{"file_path":"c.ts"}').textContent).toBe('c.ts');
+        expect(toolUseShown('Read', '{"file_path":"c.ts"}').textContent).toBe('read c.ts');
     });
 
-    // A node from before live has no stream: the element reads the transcript as it did.
+    // "I WANT A CHAT, I DONT WANT A READER": the session is drawn as the chat, never by the reader.
+    test('the session is the chat: text to select, no row to press, no label, no chip, no spacer', async () => {
+        const body = document.createElement('div');
+        const stop = drawClaude(body, node({}, { ...am, session: SESSION }));
+        await settled();
+        const chat = body.querySelector<HTMLElement>('.claude-session')!;
+        expect(chat.querySelector('.tr-turn')).toBeNull();
+        expect(chat.querySelector('.tr-chip')).toBeNull();
+        expect(chat.querySelector('.tr-spacer')).toBeNull();
+        expect(chat.textContent).not.toContain('[human]');
+        expect(chat.textContent).not.toContain('[assistant]');
+        expect(chat.textContent).not.toContain('[tool]');
+        const rows = Array.from(chat.querySelectorAll('.chat-row')).map(r => r.textContent?.trim());
+        expect(rows).toEqual(['last talked Oct 5 09:00', 'how long has the box been up?', '$ uptime', 'Up 3 days.']);
+        expect(chat.querySelector('.chat-you')).not.toBeNull();
+        // It has been a while since 2026-10-05: the chat says when we last talked, once, at the top.
+        expect(chat.querySelector('.chat-row')!.textContent).toContain('last talked');
+        stop();
+    });
+
+    test('the harness starting or resuming is not a line of the conversation', async () => {
+        const { renderChat } = await import('./chat');
+        const body = document.createElement('div');
+        renderChat(body, { ...session, turns: [...session.turns, { at: '2026-10-05T09:00:05Z', speaker: 'session', text: 'Start resume', of: 'x-1' }] });
+        expect(body.textContent).not.toContain('Start resume');
+        expect(body.textContent).not.toContain('session');
+    });
+
+    test('after the fact a tool says what it did, a compaction says it happened, and nothing hovers', async () => {
+        const { renderChat } = await import('./chat');
+        const body = document.createElement('div');
+        renderChat(body, { ...session, turns: [
+            { at: '2026-10-05T09:00:01Z', speaker: 'edit', text: 'server/a.go', of: 'e-1' },
+            { at: '2026-10-05T09:00:02Z', speaker: 'mcp', text: 'mcp__qntx__reach_list', of: 'm-1' },
+            { at: '2026-10-05T09:00:03Z', speaker: 'compaction', text: 'compacted', of: 'c-1' },
+        ] });
+        const rows = Array.from(body.querySelectorAll('.chat-row')).map(r => r.textContent?.trim());
+        expect(rows.slice(-3)).toEqual(['edited server/a.go', 'asked qntx: reach_list', 'the context was compacted here']);
+        expect(body.textContent).not.toContain('[');
+        expect(body.querySelector('[title]')).toBeNull();
+    });
+
+    // A node from before live has no stream: the element reads the session as it did.
     test('a node with no live still answers through the transcript', async () => {
         const body = document.createElement('div');
         const stop = drawClaude(body, node());
@@ -383,7 +418,7 @@ describe('Claude - the session while it runs', () => {
         say(body, 'how long has the box been up?');
         await settled();
         expect(body.querySelector('.claude-session')!.textContent).toContain('Up 3 days.');
-        expect(body.querySelector('.claude-live')!.childElementCount).toBe(0);
+        expect(body.querySelector('.chat-live')!.childElementCount).toBe(0);
         stop();
     });
 });

@@ -23,9 +23,7 @@ import { createMarketElement, needs as marketNeeds } from './market-element.ts';
 import { createMailElement, needs as mailNeeds } from './mail-element.ts';
 import { createApprovalsElement, needs as approvalsNeeds } from './approvals-element.ts';
 import { createGroundElement, needs as groundNeeds } from './ground-element.ts';
-import { createClaudeElement, needs as claudeNeeds } from './claude-element.ts';
-import { createPiElement, needs as piNeeds } from './pi-element.ts';
-import { createAgentElement, needs as agentNeeds } from './agent-element.ts';
+import { createAgentsElement, needs as agentsNeeds } from './agents-element.ts';
 import { createIElement, needs as iNeeds } from './i-element.ts';
 import { createAmElement, needs as amNeeds } from './am-element.ts';
 import { createConnectorElement, needs as connectorNeeds } from './connector-element.ts';
@@ -72,11 +70,8 @@ export async function registerDefaultElements(hasCanvas: boolean = true): Promis
         { needs: approvalsNeeds, create: createApprovalsElement },
         // Ground Element — aware of anything Ground; the sessions it recorded, each opened as a Transcript
         { needs: groundNeeds, create: createGroundElement },
-        // ✻ — the Node Agent: said to, and read as the session it continues (ADR-048)
-        { needs: claudeNeeds, create: createClaudeElement },
-        { needs: piNeeds, create: createPiElement },
-        // ✦ — the agent of the namespace this person stands in, on its own sign-in (ADR-048)
-        { needs: agentNeeds, create: createAgentElement },
+        // ✦ — Agents: every agent this person reaches, each a chat, the harness a tab (ADR-048, ADR-054)
+        { needs: agentsNeeds, create: createAgentsElement },
         // Pulse Panel Element — scheduled jobs dashboard
         { needs: pulseNeeds, create: createPulseElement },
         // Plugin Panel Element — panel manifestation

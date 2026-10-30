@@ -1,22 +1,18 @@
-// Agent Element — the agent of the namespace this person stands in (ADR-048):
-// signed in on their own account, by Claude Code's own flow, and said to.
+// The agent of the namespace this person stands in (ADR-048): signed in on
+// their own account, by Claude Code's own flow, and said to. Drawn inside the
+// Agents element (agents-element.ts).
 
 // "Agent setup is its own thing, skippable as part of namespace creation, but still someything you probably want to setup"
 
 // "Agent setup is the claude login flow"
 
-import type { Element } from '@teranos/elements';
 import { preventDrag } from '@teranos/elements';
-import { openElement } from './sidebar.ts';
 import { apiJson } from './client';
 import { log, SEG } from './logger.ts';
-import { Agent } from './sym';
-import { standingNamespace } from './standing.ts';
-import { drawClaude, sayBody, type ClaudeAm, type ClaudeSaid, type NodeAgent } from './claude-element';
-import type { TranscriptRead } from './components/element/transcript-element';
+import { drawClaude, sayBody, readLive, type ClaudeAm, type ClaudeSaid, type NodeAgent } from './claude-element';
+import { backendPath } from './client/url';
+import type { SessionRead } from './chat';
 import { apiError, sacredEntry } from './components/sacred';
-
-const ELEMENT_ID = 'agent-element';
 
 // The namespace's agent, as agents am answers it: who opted the namespace
 // into it, and who it is in Claude Code.
@@ -54,8 +50,9 @@ export function agentOf(namespace: string): NamespaceAgent {
             body: sayBody(says, mode, carried),
         }).then(said => said.claude),
         // Its one session in Claude Code, shared by everyone who has reach on the namespace.
-        read: () => apiJson<{ transcript: TranscriptRead }>(`${at}/session?harness=claude`)
+        read: () => apiJson<{ transcript: SessionRead }>(`${at}/session?harness=claude`)
             .then(answer => answer.transcript),
+        live: (onEvent, onEnd) => readLive(backendPath(`${at}/live?harness=claude`), onEvent, onEnd),
         // Without a code a sign-in is begun and the URL given; with the code shown there it is finished.
         begin: () => apiJson<SignedIn>(`${at}/login`, { method: 'POST', headers: JSON_HEADERS, body: '{}' }),
         finish: (code) => apiJson<SignedIn>(`${at}/login`, {
@@ -80,9 +77,9 @@ function wordsOf(err: unknown): string {
  * The agent of namespace drawn into body: its sign-in while it is not signed in,
  * the conversation once it is. What it gives back stops reading a turn that is going.
  */
-export function drawAgent(body: HTMLElement, namespace: string, node: NamespaceAgent = agentOf(namespace), opening: { image?: Blob } = {}): () => void {
+export function drawNamespaceAgent(body: HTMLElement, namespace: string, node: NamespaceAgent = agentOf(namespace), opening: { image?: Blob } = {}): () => void {
     const head = part('div', 'agent-head');
-    head.textContent = `the agent of ${namespace}`;
+    head.hidden = true;
     const signin = part('div', 'agent-signin');
     const failed = part('div', 'agent-failed');
     const talk = part('div', 'agent-talk');
@@ -166,6 +163,7 @@ export function drawAgent(body: HTMLElement, namespace: string, node: NamespaceA
         })
         .catch((err: unknown) => {
             // The node says why: no agent set, or none that this person acts in.
+            head.hidden = false;
             head.textContent = wordsOf(err);
             log.warn(SEG.ELEMENT, `[Agent] the node did not say who the agent of ${namespace} is: ${wordsOf(err)}`);
         });
@@ -173,23 +171,5 @@ export function drawAgent(body: HTMLElement, namespace: string, node: NamespaceA
     return () => settle();
 }
 
-// Who this is for: whoever reaches these (audience.ts).
-export const needs = ['/api/agents/{namespace}'] as const;
-
-export function createAgentElement(): Element {
-    return {
-        id: ELEMENT_ID,
-        title: 'Agent',
-        symbol: Agent,
-        renderContent: () => {
-            const body = part('div', 'content-area claude agent');
-            drawAgent(body, standingNamespace());
-            return body;
-        },
-    };
-}
-
-/** Opens the Agent element. */
-export function openAgentElement(): void {
-    openElement(ELEMENT_ID);
-}
+/** The same, by its earlier name. */
+export const drawAgent = drawNamespaceAgent;

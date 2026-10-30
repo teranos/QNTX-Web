@@ -1,20 +1,17 @@
-// Claude Element — the Node Agent: said to, and read as the session it continues.
+// The chat: an agent said to, and what it answers, as it answers it (drawClaude).
+// "WHEN I AM IN A CHAT, I WANT A CHAT ONLY"
 // "in terms of ui, this will be the Claude Element"
 // What it is and why is ADR-048's; this draws what the claude signum answers.
 
-import type { Element } from '@teranos/elements';
 import { declareSay, preventDrag } from '@teranos/elements';
-import { openElement } from './sidebar.ts';
 import { apiJson } from './client';
 import { log, SEG } from './logger.ts';
-import { Claude } from './sym';
 import { apiError, sacredEntry } from './components/sacred';
-import { renderAssistant, renderTranscript, type TranscriptRead } from './components/element/transcript-element';
+import { renderAssistant, renderChat, chatRow, chatText, toolUseShown, contextOf, atBottom, keepingBottom, scrollToBottom, type SessionRead } from './chat';
+import { spark } from './claude-spark';
 import { uploadFile } from './api/files';
 import { backendPath } from './client/url';
 import { bearing } from './client/session';
-
-const ELEMENT_ID = 'claude-element';
 
 // Who the Node Agent is and how the node runs it (claude am).
 export interface ClaudeAm {
@@ -65,6 +62,7 @@ export interface LiveEvent {
     tool: string;
     tool_use_id: string;
     input?: string;
+    raw?: string;
     at: string;
     mark: string;
 }
@@ -73,7 +71,7 @@ export interface LiveEvent {
 export interface NodeAgent {
     am(): Promise<ClaudeAm>;
     say(says: string, mode: string, carried?: Carried, model?: string): Promise<ClaudeSaid>;
-    read(): Promise<TranscriptRead | undefined>;
+    read(): Promise<SessionRead | undefined>;
     // The turn going, each event as it lands, and ended when the node closes
     // it or nothing answers; what it gives back stops listening.
     live?(onEvent: (event: LiveEvent) => void, onEnd: () => void): () => void;
@@ -98,7 +96,7 @@ function agentAt(at: string): NodeAgent {
             body: sayBody(says, mode, carried, model),
         }).then(said => said.claude),
         // Its one session, read whole wherever whoever reads it stands.
-        read: () => apiJson<{ transcript: TranscriptRead }>(`${at}/session?harness=claude`)
+        read: () => apiJson<{ transcript: SessionRead }>(`${at}/session?harness=claude`)
             .then(answer => answer.transcript),
         // Server-sent events read off fetch, with the cookie every other call
         // carries: what EventSource does after a refusal is each browser's own,
@@ -148,68 +146,6 @@ export function readLive(url: string, onEvent: (event: LiveEvent) => void, onEnd
     return () => { stopping.abort(); end(); };
 }
 
-// "i scroll, why is the time spacer interfering?"
-// What lands follows the bottom only for a reader who is at the bottom: one
-// who scrolled up is reading, and is left where they are.
-export function atBottom(box: HTMLElement): boolean {
-    return box.scrollHeight - box.scrollTop - box.clientHeight < 8;
-}
-
-/** Runs change, and keeps box at its bottom when it was there before. */
-function keepingBottom(box: HTMLElement, change: () => void): void {
-    const follow = atBottom(box);
-    change();
-    if (follow) box.scrollTop = box.scrollHeight;
-}
-
-function textNode(text: string): HTMLElement {
-    const pre = part('pre', 'claude-live-text');
-    pre.textContent = text;
-    return pre;
-}
-
-/** A line of a diff: - for what was, + for what is, as the colours say. */
-function diffLine(sign: '-' | '+', text: string): HTMLElement {
-    const line = part('div', sign === '-' ? 'claude-live-del' : 'claude-live-add');
-    line.textContent = `${sign} ${text}`;
-    return line;
-}
-
-/** A tool reached for, shown as the thing it does: the command, the edit as +/-, the file, or its input whole. */
-export function toolUseShown(tool: string, input: string): HTMLElement {
-    let sent: Record<string, unknown> = {};
-    try { sent = input ? JSON.parse(input) as Record<string, unknown> : {}; } catch { /* shown whole below */ }
-    const str = (key: string) => typeof sent[key] === 'string' ? sent[key] as string : '';
-    const head = (text: string) => { const h = part('div', 'claude-live-head'); h.textContent = text; return h; };
-    const out = part('pre', 'claude-live-tool');
-    switch (tool.toLowerCase()) {
-        case 'bash':
-            out.textContent = `$ ${str('command')}`;
-            return out;
-        case 'edit':
-            out.append(head(str('file_path')));
-            for (const line of str('old_string').split('\n')) out.append(diffLine('-', line));
-            for (const line of str('new_string').split('\n')) out.append(diffLine('+', line));
-            return out;
-        case 'write':
-            out.append(head(str('file_path')));
-            for (const line of str('content').split('\n')) out.append(diffLine('+', line));
-            return out;
-        case 'read':
-            out.textContent = str('file_path');
-            return out;
-        case 'grep':
-        case 'glob': {
-            const where = str('path') ? ` in ${str('path')}` : '';
-            out.textContent = `${tool.toLowerCase()} ${str('pattern')}${where}`;
-            return out;
-        }
-    }
-    out.append(head(tool));
-    out.append(textNode(Object.keys(sent).length ? JSON.stringify(sent, null, 2) : input));
-    return out;
-}
-
 // The Node Agent in Claude Code, at the agent signum's path.
 const theNode: NodeAgent = agentAt('/api/agent');
 
@@ -250,19 +186,22 @@ function wordsOf(err: unknown): string {
 export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: number = FOLLOW_MS, opening: { image?: Blob } = {}): () => void {
     const who = part('div', 'claude-who');
     who.textContent = 'Asking the node who answers…';
-    const session = part('div', 'claude-session tr');
+    const session = part('div', 'claude-session');
     // The turn going, as it is said: deltas as they land, each message whole
     // when it is, each tool as it is reached for. Emptied when the turn ends.
-    const live = part('div', 'claude-live');
+    const live = part('div', 'chat-live');
+    // One conversation that scrolls: what was said, then what is being said.
+    const scroller = part('div', 'chat-scroll');
+    scroller.append(session, live);
     const status = part('div', 'claude-status');
+    // The context the last message was answered on, in tokens.
+    const context = part('span', 'claude-context');
     const denied = part('div', 'claude-denied');
     const failed = part('div', 'claude-failed');
 
     const mode = part('select', 'claude-mode');
-    mode.title = 'The permission mode Claude Code runs this turn in';
     // "would like ability to pick model as well"
     const model = part('select', 'claude-model');
-    model.title = 'The model that answers this turn';
     model.hidden = true;
     const says = part('textarea', 'claude-says');
     says.rows = 2;
@@ -276,7 +215,6 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     pick.hidden = true;
     const attach = part('button', 'qntx-btn qntx-btn-small claude-attach');
     attach.textContent = 'Picture';
-    attach.title = 'A picture said with the words';
     const attached = part('div', 'claude-attached');
     const form = part('div', 'claude-say');
     form.append(mode, model, attach, pick, send, attached, says);
@@ -286,7 +224,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     preventDrag(form);
     preventDrag(session);
 
-    body.replaceChildren(who, session, live, status, denied, failed, form);
+    body.replaceChildren(who, scroller, status, denied, failed, form);
 
     let reading = '';
     let sending = false;
@@ -300,9 +238,8 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     // "i dont want [tool] [read] [write] etc. because im in a convo, i prefer to
     // just see the whole thing, including +/- diffs fly by"
     const liveRow = (kind: string, ...parts: Node[]): HTMLElement => {
-        const row = part('div', `claude-live-row claude-live-${kind}`);
-        row.append(...parts);
-        keepingBottom(live, () => live.appendChild(row));
+        const row = chatRow(kind, ...parts);
+        keepingBottom(scroller, () => live.appendChild(row));
         return row;
     };
 
@@ -310,29 +247,31 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     const landed = (event: LiveEvent) => {
         switch (event.kind) {
             case 'delta':
-                if (!draft) { draft = liveRow('said', part('span', 'tr-text')); drafted = ''; }
+                if (!draft) { draft = liveRow('said', part('span', 'chat-words')); drafted = ''; }
                 drafted += event.text;
-                keepingBottom(live, () => { draft!.querySelector('.tr-text')!.textContent = drafted; });
+                keepingBottom(scroller, () => { draft!.querySelector('.chat-words')!.textContent = drafted; });
                 return;
             case 'text': {
                 // The message whole: the deltas it was said in are done.
-                const row = draft ?? liveRow('said', part('span', 'tr-text'));
-                keepingBottom(live, () => { row.querySelector('.tr-text')!.innerHTML = renderAssistant(event.text); });
+                sayContext(contextOf(event.raw ?? ''));
+                const row = draft ?? liveRow('said', part('span', 'chat-words'));
+                keepingBottom(scroller, () => { row.querySelector('.chat-words')!.innerHTML = renderAssistant(event.text); });
                 draft = null;
                 return;
             }
             case 'thinking':
                 draft = null;
                 // A thinking block whose words are kept back is nothing to draw.
-                if (event.text) liveRow('thought', textNode(event.text));
+                if (event.text) liveRow('thought', chatText(event.text));
                 return;
             case 'tool_use':
                 draft = null;
+                sayContext(contextOf(event.raw ?? ''));
                 liveRow('did', toolUseShown(event.tool, event.input ?? ''));
                 return;
             case 'tool_result':
                 draft = null;
-                if (event.text) liveRow('got', textNode(event.text));
+                if (event.text) liveRow('got', chatText(event.text));
                 return;
             case 'ended':
             case 'failed':
@@ -384,20 +323,23 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             if (!answer) return;
             // The column is drawn anew: where it stood is read before, and a
             // reader at the bottom is kept there; one who scrolled up is not moved.
-            const before = session.querySelector<HTMLElement>('.tr-col');
-            const follow = !before || atBottom(before);
-            const stood = before?.scrollTop ?? 0;
-            renderTranscript(session, answer, (text) => {
-                navigator.clipboard.writeText(text).catch((err: unknown) => fails('copy', err));
-            });
-            const column = session.querySelector<HTMLElement>('.tr-col');
-            if (column) column.scrollTop = follow ? column.scrollHeight : stood;
+            const drawn = session.querySelector('.chat-col') !== null;
+            const follow = !drawn || atBottom(scroller);
+            const stood = scroller.scrollTop;
+            renderChat(session, answer);
+            if (follow) scrollToBottom(scroller); else scroller.scrollTop = stood;
         })
         .catch((err: unknown) => fails('read', err));
 
+    // "CHAT MUST HAVE SOMETHING THAT ANIMATES"
+    // "SO YOU KNOW THE SYSTEM IS THINKING"
+    const sayContext = (tokens: number) => {
+        if (tokens > 0) context.textContent = `${Math.round(tokens / 1000)}k of context`;
+    };
     const hold = (answering: boolean) => {
         send.disabled = answering;
-        status.textContent = answering ? 'answering…' : '';
+        if (answering) { const said = part('span', 'claude-status-text'); said.textContent = 'answering…'; status.replaceChildren(spark(), said, context); }
+        else status.replaceChildren(context);
     };
 
     const settle = () => {
@@ -462,7 +404,6 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         .then(is => {
             // "No need to show did key to user"
             who.textContent = [is.model, is.effort, is.not_ready].filter(Boolean).join('  ');
-            who.title = is.allow.length > 0 ? `Allowed without being asked: ${is.allow.join(', ')}` : 'Nothing is allowed without being asked';
             // The titlebar is the element's one head: who answers is said here only when it could not be asked.
             who.hidden = !is.not_ready;
             // A harness with no permission modes, Pi, has nothing to choose here.
@@ -494,26 +435,3 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     return settle;
 }
 
-// Who this is for: whoever reaches these (audience.ts).
-export const needs = ['/api/agent'] as const;
-
-export function createClaudeElement(): Element {
-    return {
-        id: ELEMENT_ID,
-        title: 'Claude',
-        symbol: Claude,
-        // "claude element should not start at top when opening requiring user to scroll down every single time"
-        opensAt: 'end',
-        renderContent: () => {
-            // "make sure we only use titlebar": nothing heads the session but the element's own bar.
-            const body = part('div', 'content-area claude claude-brand');
-            drawClaude(body);
-            return body;
-        },
-    };
-}
-
-/** Opens the Claude element. */
-export function openClaudeElement(): void {
-    openElement(ELEMENT_ID);
-}

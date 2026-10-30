@@ -218,18 +218,28 @@ export function drawAgentChat(body: HTMLElement, agent: Reachable, chatOf: (agen
     if (agent.at.startsWith('/api/elements/')) {
         const sessions = part('div', 'agents-sessions');
         body.insertBefore(sessions, talk);
-        apiJson<{ agent: string; sessions: Array<{ id: string; title: string; status: string; created_at: string; archived: boolean; current: boolean }> }>(`${agent.at}/sessions`)
-            .then(answer => {
-                if (!answer.agent || answer.sessions.length === 0) { sessions.remove(); return; }
-                const head = part('div', 'agents-sessions-head');
-                head.textContent = `${answer.sessions.length} session${answer.sessions.length === 1 ? '' : 's'} at Anthropic's Console`;
-                sessions.append(head);
-                for (const each of answer.sessions) {
-                    const row = part('div', 'agents-session' + (each.current ? ' agents-session-current' : ''));
-                    row.textContent = `${each.title || each.id} · ${each.status}${each.archived ? ' · archived' : ''} · ${when(each.created_at)}${each.current ? ' · this chat' : ''}`;
-                    sessions.append(row);
-                }
-            })
+        type Listed = { agent: string; sessions: Array<{ id: string; title: string; status: string; created_at: string; archived: boolean; current: boolean }> };
+        // Pressing an earlier Session makes it the one the chat goes on in, and the chat is drawn again from it.
+        const show = (answer: Listed) => {
+            sessions.replaceChildren();
+            if (!answer.agent || answer.sessions.length === 0) { sessions.remove(); return; }
+            const head = part('div', 'agents-sessions-head');
+            head.textContent = `${answer.sessions.length} session${answer.sessions.length === 1 ? '' : 's'} at Anthropic's Console`;
+            sessions.append(head);
+            for (const each of answer.sessions) {
+                const row = part('button', 'agents-session' + (each.current ? ' agents-session-current' : ''));
+                row.type = 'button';
+                row.dataset.session = each.id;
+                row.textContent = `${each.title || each.id} · ${each.status}${each.archived ? ' · archived' : ''} · ${when(each.created_at)}${each.current ? ' · this chat' : ''}`;
+                if (!each.current) row.addEventListener('click', () => {
+                    apiJson<Listed>(`${agent.at}/sessions`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ session: each.id }) })
+                        .then(picked => { show(picked); draw(); })
+                        .catch((err: unknown) => log.warn(SEG.ELEMENT, `[Agents] the session was not picked: ${err instanceof Error ? err.message : String(err)}`));
+                });
+                sessions.append(row);
+            }
+        };
+        apiJson<Listed>(`${agent.at}/sessions`).then(show)
             .catch((err: unknown) => { log.info(SEG.ELEMENT, `[Agents] no sessions listed for ${agent.called}: ${err instanceof Error ? err.message : String(err)}`); sessions.remove(); });
     }
 

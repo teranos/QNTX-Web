@@ -1,19 +1,17 @@
-// Claude Element — the Node Agent: said to, and read as the session it continues.
+// The chat: an agent said to, and what it answers, as it answers it (drawClaude).
+// "WHEN I AM IN A CHAT, I WANT A CHAT ONLY"
 // "in terms of ui, this will be the Claude Element"
 // What it is and why is ADR-048's; this draws what the claude signum answers.
 
-import type { Element } from '@teranos/elements';
 import { declareSay, preventDrag } from '@teranos/elements';
-import { openElement } from './sidebar.ts';
 import { apiJson } from './client';
 import { log, SEG } from './logger.ts';
-import { Claude } from './sym';
-import { spark } from './claude-spark';
 import { apiError, sacredEntry } from './components/sacred';
-import { renderTranscript, type TranscriptRead } from './components/element/transcript-element';
+import { renderAssistant, renderChat, chatRow, chatText, toolUseShown, contextOf, atBottom, keepingBottom, scrollToBottom, type SessionRead } from './chat';
+import { spark } from './claude-spark';
 import { uploadFile } from './api/files';
-
-const ELEMENT_ID = 'claude-element';
+import { backendPath } from './client/url';
+import { bearing } from './client/session';
 
 // Who the Node Agent is and how the node runs it (claude am).
 export interface ClaudeAm {
@@ -55,11 +53,28 @@ export interface Carried {
     file_id?: string;
 }
 
+// One line of the turn's stream as the harness printed it (protocol.SessionEvent):
+// the session while it runs, beside the transcript, which is it after the fact.
+// > it doesnt stream in, only the [tool] and [mcp] pieces fly in.
+export interface LiveEvent {
+    kind: string;
+    text: string;
+    tool: string;
+    tool_use_id: string;
+    input?: string;
+    raw?: string;
+    at: string;
+    mark: string;
+}
+
 // The node, as this element asks it.
 export interface NodeAgent {
     am(): Promise<ClaudeAm>;
     say(says: string, mode: string, carried?: Carried, model?: string): Promise<ClaudeSaid>;
-    read(): Promise<TranscriptRead | undefined>;
+    read(): Promise<SessionRead | undefined>;
+    // The turn going, each event as it lands, and ended when the node closes
+    // it or nothing answers; what it gives back stops listening.
+    live?(onEvent: (event: LiveEvent) => void, onEnd: () => void): () => void;
 }
 
 /** The say body: harness, words, the mode when one is chosen, and what is carried. */
@@ -81,9 +96,54 @@ function agentAt(at: string): NodeAgent {
             body: sayBody(says, mode, carried, model),
         }).then(said => said.claude),
         // Its one session, read whole wherever whoever reads it stands.
-        read: () => apiJson<{ transcript: TranscriptRead }>(`${at}/session?harness=claude`)
+        read: () => apiJson<{ transcript: SessionRead }>(`${at}/session?harness=claude`)
             .then(answer => answer.transcript),
+        // Server-sent events read off fetch, with the cookie every other call
+        // carries: what EventSource does after a refusal is each browser's own,
+        // and this is one thing in every browser. Nothing answers between turns
+        // (404) and before the turn prints: that ends it, said in the console,
+        // and whoever listens asks again.
+        live: (onEvent, onEnd) => readLive(backendPath(`${at}/live?harness=claude`), onEvent, onEnd),
     };
+}
+
+/** Reads url as server-sent events until the node ends them or the reader stops; onEnd once, either way. */
+export function readLive(url: string, onEvent: (event: LiveEvent) => void, onEnd: () => void): () => void {
+    const stopping = new AbortController();
+    let ended = false;
+    const end = () => { if (!ended) { ended = true; onEnd(); } };
+    fetch(url, { credentials: 'include', signal: stopping.signal, headers: bearing({ Accept: 'text/event-stream' }) })
+        .then(async answer => {
+            if (!answer.ok || !answer.body) {
+                log.warn(SEG.ELEMENT, `[Claude] live: HTTP ${answer.status} ${(await answer.text()).slice(0, 200)}`);
+                return;
+            }
+            const reader = answer.body.getReader();
+            const utf8 = new TextDecoder();
+            let held = '';
+            for (;;) {
+                const { value, done } = await reader.read();
+                if (done) return;
+                held += utf8.decode(value, { stream: true });
+                // One event per blank line; each is its data line, and end is named.
+                let cut = held.indexOf('\n\n');
+                while (cut >= 0) {
+                    const lines = held.slice(0, cut).split('\n');
+                    held = held.slice(cut + 2);
+                    const named = lines.find(line => line.startsWith('event: '))?.slice(7).trim() ?? '';
+                    const data = lines.filter(line => line.startsWith('data: ')).map(line => line.slice(6)).join('\n');
+                    if (named === 'end') return;
+                    if (data) {
+                        try { onEvent(JSON.parse(data) as LiveEvent); }
+                        catch (err) { log.warn(SEG.ELEMENT, `[Claude] a live event did not parse: ${wordsOf(err)}`); }
+                    }
+                    cut = held.indexOf('\n\n');
+                }
+            }
+        })
+        .catch((err: unknown) => { if (!stopping.signal.aborted) log.warn(SEG.ELEMENT, `[Claude] live: ${wordsOf(err)}`); })
+        .finally(end);
+    return () => { stopping.abort(); end(); };
 }
 
 // The Node Agent in Claude Code, at the agent signum's path.
@@ -126,16 +186,22 @@ function wordsOf(err: unknown): string {
 export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: number = FOLLOW_MS, opening: { image?: Blob } = {}): () => void {
     const who = part('div', 'claude-who');
     who.textContent = 'Asking the node who answers…';
-    const session = part('div', 'claude-session tr');
+    const session = part('div', 'claude-session');
+    // The turn going, as it is said: deltas as they land, each message whole
+    // when it is, each tool as it is reached for. Emptied when the turn ends.
+    const live = part('div', 'chat-live');
+    // One conversation that scrolls: what was said, then what is being said.
+    const scroller = part('div', 'chat-scroll');
+    scroller.append(session, live);
     const status = part('div', 'claude-status');
+    // The context the last message was answered on, in tokens.
+    const context = part('span', 'claude-context');
     const denied = part('div', 'claude-denied');
     const failed = part('div', 'claude-failed');
 
     const mode = part('select', 'claude-mode');
-    mode.title = 'The permission mode Claude Code runs this turn in';
     // "would like ability to pick model as well"
     const model = part('select', 'claude-model');
-    model.title = 'The model that answers this turn';
     model.hidden = true;
     const says = part('textarea', 'claude-says');
     says.rows = 2;
@@ -149,7 +215,6 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     pick.hidden = true;
     const attach = part('button', 'qntx-btn qntx-btn-small claude-attach');
     attach.textContent = 'Picture';
-    attach.title = 'A picture said with the words';
     const attached = part('div', 'claude-attached');
     const form = part('div', 'claude-say');
     form.append(mode, model, attach, pick, send, attached, says);
@@ -159,12 +224,71 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     preventDrag(form);
     preventDrag(session);
 
-    body.replaceChildren(who, session, status, denied, failed, form);
+    body.replaceChildren(who, scroller, status, denied, failed, form);
 
     let reading = '';
     let sending = false;
     let following: ReturnType<typeof setInterval> | null = null;
     let picture: Blob | null = null;
+    let listening: (() => void) | null = null;
+    let draft: HTMLElement | null = null;
+    let drafted = '';
+
+    // A row of the live view: the thing itself, with no speaker in front of it.
+    // "i dont want [tool] [read] [write] etc. because im in a convo, i prefer to
+    // just see the whole thing, including +/- diffs fly by"
+    const liveRow = (kind: string, ...parts: Node[]): HTMLElement => {
+        const row = chatRow(kind, ...parts);
+        keepingBottom(scroller, () => live.appendChild(row));
+        return row;
+    };
+
+    // What the stream says happened, drawn as it lands.
+    const landed = (event: LiveEvent) => {
+        switch (event.kind) {
+            case 'delta':
+                if (!draft) { draft = liveRow('said', part('span', 'chat-words')); drafted = ''; }
+                drafted += event.text;
+                keepingBottom(scroller, () => { draft!.querySelector('.chat-words')!.textContent = drafted; });
+                return;
+            case 'text': {
+                // The message whole: the deltas it was said in are done.
+                sayContext(contextOf(event.raw ?? ''));
+                const row = draft ?? liveRow('said', part('span', 'chat-words'));
+                keepingBottom(scroller, () => { row.querySelector('.chat-words')!.innerHTML = renderAssistant(event.text); });
+                draft = null;
+                return;
+            }
+            case 'thinking':
+                draft = null;
+                // A thinking block whose words are kept back is nothing to draw.
+                if (event.text) liveRow('thought', chatText(event.text));
+                return;
+            case 'tool_use':
+                draft = null;
+                sayContext(contextOf(event.raw ?? ''));
+                liveRow('did', toolUseShown(event.tool, event.input ?? ''));
+                return;
+            case 'tool_result':
+                draft = null;
+                if (event.text) liveRow('got', chatText(event.text));
+                return;
+            case 'ended':
+            case 'failed':
+                draft = null;
+                return;
+        }
+    };
+
+    // Listening to the turn going; asked again while it goes, since live
+    // has nothing before the turn prints and nothing between turns.
+    const listen = () => {
+        if (listening || !node.live) return;
+        listening = node.live(landed, () => {
+            listening = null;
+            if (sending || following) setTimeout(() => { if (sending || following) listen(); }, 1000);
+        });
+    };
 
     // The picture to be said, shown until it is sent or let go of.
     const carry = (image: Blob | null) => {
@@ -197,32 +321,47 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     const read = (): Promise<void> => node.read()
         .then(answer => {
             if (!answer) return;
-            renderTranscript(session, answer, (text) => {
-                navigator.clipboard.writeText(text).catch((err: unknown) => fails('copy', err));
-            });
-            // What was said last is what is looked at.
-            const column = session.querySelector<HTMLElement>('.tr-col');
-            if (column) column.scrollTop = column.scrollHeight;
+            // The column is drawn anew: where it stood is read before, and a
+            // reader at the bottom is kept there; one who scrolled up is not moved.
+            const drawn = session.querySelector('.chat-col') !== null;
+            const follow = !drawn || atBottom(scroller);
+            const stood = scroller.scrollTop;
+            renderChat(session, answer);
+            if (follow) scrollToBottom(scroller); else scroller.scrollTop = stood;
         })
         .catch((err: unknown) => fails('read', err));
 
+    // "CHAT MUST HAVE SOMETHING THAT ANIMATES"
+    // "SO YOU KNOW THE SYSTEM IS THINKING"
+    const sayContext = (tokens: number) => {
+        if (tokens > 0) context.textContent = `${Math.round(tokens / 1000)}k of context`;
+    };
     const hold = (answering: boolean) => {
         send.disabled = answering;
-        status.textContent = answering ? 'answering…' : '';
+        if (answering) { const said = part('span', 'claude-status-text'); said.textContent = 'answering…'; status.replaceChildren(spark(), said, context); }
+        else status.replaceChildren(context);
     };
 
     const settle = () => {
         if (following) { clearInterval(following); following = null; }
+        if (listening) { listening(); listening = null; }
+        // The turn is in the session now, read whole: the live view is done once it is drawn.
+        if (reading) void read().then(() => { live.replaceChildren(); });
+        else live.replaceChildren();
+        draft = null;
         hold(false);
     };
 
     // A turn that is going is read again and again until the node says it ended.
     const follow = () => {
         if (following) return;
+        listen();
         following = setInterval(() => {
             node.am()
                 .then(is => {
-                    if (is.session) { reading = is.session; void read(); }
+                    // With live in hand the turn is drawn as it goes; the session is read once it ended.
+                    if (is.session) { reading = is.session; if (!node.live) void read(); }
+                    if (is.answering) listen();
                     if (!is.answering && !sending) settle();
                 })
                 .catch((err: unknown) => { fails('follow', err); if (!sending) settle(); });
@@ -243,6 +382,8 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         hold(true);
         failed.replaceChildren();
         denied.textContent = '';
+        // Your words, at once, where the turn goes on from.
+        if (node.live) liveRow('you', chatText(words));
         follow();
         carried()
             .then(carries => node.say(words, mode.value, carries, model.hidden ? '' : model.value))
@@ -267,7 +408,8 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         .then(is => {
             // "No need to show did key to user"
             who.textContent = [is.model, is.effort, is.not_ready].filter(Boolean).join('  ');
-            who.title = is.allow.length > 0 ? `Allowed without being asked: ${is.allow.join(', ')}` : 'Nothing is allowed without being asked';
+            // The titlebar is the element's one head: who answers is said here only when it could not be asked.
+            who.hidden = !is.not_ready;
             // A harness with no permission modes, Pi, has nothing to choose here.
             mode.hidden = is.permission_modes.length === 0;
             // "claude element 'dontask' doesnt make sense there"
@@ -297,30 +439,3 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     return settle;
 }
 
-// Who this is for: whoever reaches these (audience.ts).
-export const needs = ['/api/agent'] as const;
-
-export function createClaudeElement(): Element {
-    return {
-        id: ELEMENT_ID,
-        title: 'Claude',
-        symbol: Claude,
-        // "claude element should not start at top when opening requiring user to scroll down every single time"
-        opensAt: 'end',
-        renderContent: () => {
-            const body = part('div', 'content-area claude claude-brand');
-            drawClaude(body);
-            // The Spark heads who answers, and turns while it answers.
-            const who = body.querySelector<HTMLElement>('.claude-who')!;
-            const head = part('div', 'claude-head');
-            who.replaceWith(head);
-            head.append(spark(), who);
-            return body;
-        },
-    };
-}
-
-/** Opens the Claude element. */
-export function openClaudeElement(): void {
-    openElement(ELEMENT_ID);
-}

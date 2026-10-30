@@ -341,40 +341,39 @@
 .tr-error .tr-speaker { color: var(--sacred-error); }
 
 /* Claude element: the Node Agent's session, drawn as a transcript, over where something is said to it */
-.claude { display: flex; flex-direction: column; box-sizing: border-box; width: 520px; height: 640px; max-width: 100%; max-height: 100%; min-height: 0; padding: 0; text-align: left; font-family: var(--font-mono, monospace); font-size: var(--font-size-sm); color: var(--text-on-dark); }
+.claude, .chat { display: flex; flex-direction: column; box-sizing: border-box; width: 520px; height: 640px; max-width: 100%; max-height: 100%; min-height: 0; padding: 0; text-align: left; font-family: var(--font-mono, monospace); font-size: var(--font-size-sm); color: var(--text-on-dark); }
 /* A content-area scrolls (window.css); Claude's does not: its transcript is its one scroller, declared to the package. */
-.content-area.claude { overflow: hidden; }
+.content-area.claude, .content-area.chat { overflow: hidden; }
 .claude-who { padding: 3px 6px; border-bottom: 1px solid var(--border-on-dark); color: var(--text-on-dark-secondary); font-size: var(--font-size-xs); white-space: normal; overflow-wrap: break-word; word-break: break-word; flex-shrink: 0; }
-.claude-session { flex: 1; color: var(--text-on-dark-tertiary); }
-.claude-session .tr-head { display: none; }
-.claude-status { padding: 0 6px; color: var(--element-status-running-text); font-size: var(--font-size-xs); flex-shrink: 0; }
+/* The chat: one conversation that scrolls, yours on the right, the agent's on the left, what it did small between. */
+.chat-scroll { flex: 1; min-height: 0; overflow-y: auto; scroll-behavior: smooth; display: flex; flex-direction: column; padding: 6px 10px; user-select: text; -webkit-user-select: text; cursor: text; font-size: var(--font-size-sm); line-height: 1.45; background: color-mix(in srgb, var(--bg-almost-black) 85%, black); color: color-mix(in srgb, var(--text-on-dark) 80%, white); }
+.claude-session, .chat-col, .chat-live { display: flex; flex-direction: column; flex-shrink: 0; }
+.chat-live:empty { display: none; }
+.chat-row { margin: 3px 0; white-space: pre-wrap; overflow-wrap: anywhere; animation: chat-arrive 160ms ease-out; }
+@keyframes chat-arrive { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.chat-you { align-self: flex-end; max-width: 82%; margin: 10px 0 6px auto; padding: 6px 10px; border-radius: 14px 14px 4px 14px; background: var(--accent-on-dark); color: var(--bg-almost-black); }
+.chat-said { align-self: flex-start; max-width: 92%; padding: 2px 0; color: inherit; }
+.chat-did, .chat-got, .chat-thought, .chat-marker { align-self: flex-start; max-width: 92%; font-size: var(--font-size-xs); color: var(--text-on-dark-secondary); }
+.chat-did { border-left: 2px solid var(--border-on-dark); padding-left: 6px; }
+.chat-got { max-height: 10em; overflow-y: auto; padding-left: 8px; }
+.chat-thought, .chat-marker { font-style: italic; }
+.chat-row pre, .chat-text { margin: 0; font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
+.chat-head { color: var(--text-on-dark-secondary); }
+.chat-add { color: var(--color-success, #7cb87c); }
+.chat-del { color: var(--color-warning); }
+.chat-code { background: var(--bg-almost-black); border: 1px solid var(--border-on-dark); padding: 4px 6px; margin: 2px 0; white-space: pre-wrap; }
+.chat-inline-code { background: var(--bg-almost-black); padding: 0 3px; }
+.claude-status { display: flex; align-items: center; gap: 6px; padding: 2px 8px; color: var(--element-status-running-text); font-size: var(--font-size-xs); flex-shrink: 0; min-height: 18px; }
+.claude-status .claude-spark { width: 14px; height: 14px; flex: none; color: var(--accent-on-dark); animation: claude-spark-turn 2.4s linear infinite; }
+@keyframes claude-spark-turn { to { transform: rotate(360deg); } }
+.claude-status-text { animation: claude-pulse 1.6s ease-in-out infinite; }
+.claude-context { margin-left: auto; color: var(--text-on-dark-tertiary); }
+@keyframes claude-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 .claude-denied { padding: 0 6px; color: var(--color-warning); font-size: var(--font-size-xs); flex-shrink: 0; }
 .claude-failed { padding: 0 6px; flex-shrink: 0; }
 .claude-say { display: flex; gap: 4px; align-items: stretch; padding: 4px 6px; border-top: 1px solid var(--border-on-dark); flex-shrink: 0; }
 .claude-mode { background: var(--bg-almost-black); color: var(--text-on-dark-secondary); border: 1px solid var(--border-on-dark); font: inherit; font-size: var(--font-size-xs); }
 /* The Claude element in Claude's own colours: Clay, Ivory and Slate, from Anthropic's media resources */
-.claude-brand { --claude-clay: #D97757; --claude-ivory: #FAF9F5; --claude-slate: #151514; background: var(--claude-slate); color: var(--claude-ivory); }
-.claude-head { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border-bottom: 1px solid var(--claude-clay); flex-shrink: 0; }
-.claude-head .claude-who { padding: 0; border-bottom: none; flex: 1; min-width: 0; }
-.claude-spark { width: 16px; height: 16px; flex: none; color: var(--claude-clay); }
-.claude-brand:has(.claude-status:not(:empty)) .claude-spark { animation: claude-spark-turn 2.4s linear infinite; }
-@keyframes claude-spark-turn { to { transform: rotate(360deg); } }
-.claude-brand .claude-status { color: var(--claude-clay); }
-.claude-brand .tr-sp-assistant .tr-speaker { color: var(--claude-clay); }
-.claude-brand .tr-sp-human .tr-speaker { color: var(--claude-ivory); }
-.claude-brand .claude-say { border-top-color: var(--claude-clay); }
-.claude-brand .claude-says:focus { outline: 1px solid var(--claude-clay); outline-offset: -1px; }
-.claude-brand .claude-send { background: var(--claude-clay); border-color: var(--claude-clay); color: var(--claude-slate); }
-.claude-brand .claude-send:disabled { opacity: 0.5; }
-.claude-says { flex: 1; min-width: 0; resize: none; background: var(--bg-almost-black); color: var(--text-on-dark); border: 1px solid var(--border-on-dark); font: inherit; padding: 2px 4px; }
-/* The picture said with the words: shown above the field until sent or let go of */
-.claude-attached:empty { display: none; }
-.claude-attached { flex: 1 1 100%; display: flex; gap: 6px; align-items: flex-start; }
-.claude-picture { max-height: 120px; max-width: 60%; border: 1px solid var(--border-on-dark); }
-.claude-brand .claude-attach { background: transparent; border-color: var(--claude-clay); color: var(--claude-ivory); }
-
-/* ROOT SHAKE: the element on screen, named above its own talk */
-.shake-head { padding: 3px 6px; border-bottom: 1px solid var(--claude-clay); color: var(--claude-ivory); font-size: var(--font-size-xs); overflow-wrap: anywhere; flex-shrink: 0; }
 .shake-body { display: flex; flex-direction: column; }
 .shake-talk { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 
@@ -389,3 +388,20 @@
 .agent-talk { display: contents; }
 
 /* Ground and Comet wear ground.css. */
+
+/* Agents: the agents reached down the side, the chat of the one chosen, its harness a tab */
+.agents { flex-direction: row; width: 760px; }
+.agents-list { display: flex; flex-direction: column; gap: 2px; width: 200px; flex: none; padding: 6px; border-right: 1px solid var(--border-on-dark); overflow-y: auto; }
+.agents-row { text-align: left; justify-content: flex-start; white-space: normal; overflow-wrap: anywhere; }
+.agents-row-on { background: var(--bg-dark-hover); color: var(--accent-on-dark); }
+.agents { align-items: stretch; }
+.agents-list, .agents-chat { max-height: 100%; }
+.agents-chat { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
+.agents-tabs { display: flex; gap: 2px; padding: 4px 6px; border-bottom: 1px solid var(--border-on-dark); flex-shrink: 0; }
+.agents-tab-on { color: var(--accent-on-dark); border-bottom: 2px solid var(--accent-on-dark); }
+.agents-talk { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.agents-talk > .claude-who, .agents-talk > .chat-scroll, .agents-talk > .claude-status, .agents-talk > .claude-say { flex-shrink: 0; }
+.agents-talk > .chat-scroll { flex: 1; }
+.agents .claude-say { flex-wrap: wrap; }
+.agents .claude-say select { flex: 0 1 auto; min-width: 0; max-width: 46%; font-size: var(--font-size-xs); }
+.agents .claude-says { flex-basis: 100%; }

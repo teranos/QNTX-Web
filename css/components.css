@@ -402,3 +402,6 @@
 .agents-talk { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .agents-talk > .claude-who, .agents-talk > .chat-scroll, .agents-talk > .claude-status, .agents-talk > .claude-say { flex-shrink: 0; }
 .agents-talk > .chat-scroll { flex: 1; }
+.agents .claude-say { flex-wrap: wrap; }
+.agents .claude-say select { flex: 0 1 auto; min-width: 0; max-width: 46%; font-size: var(--font-size-xs); }
+.agents .claude-says { flex-basis: 100%; }

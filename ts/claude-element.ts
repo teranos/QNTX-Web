@@ -345,8 +345,9 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     const settle = () => {
         if (following) { clearInterval(following); following = null; }
         if (listening) { listening(); listening = null; }
-        // The turn is in the transcript now, read whole: the live view is done.
-        live.replaceChildren();
+        // The turn is in the session now, read whole: the live view is done once it is drawn.
+        if (reading) void read().then(() => { live.replaceChildren(); });
+        else live.replaceChildren();
         draft = null;
         hold(false);
     };
@@ -358,7 +359,8 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         following = setInterval(() => {
             node.am()
                 .then(is => {
-                    if (is.session) { reading = is.session; void read(); }
+                    // With live in hand the turn is drawn as it goes; the session is read once it ended.
+                    if (is.session) { reading = is.session; if (!node.live) void read(); }
                     if (is.answering) listen();
                     if (!is.answering && !sending) settle();
                 })
@@ -380,6 +382,8 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         hold(true);
         failed.replaceChildren();
         denied.textContent = '';
+        // Your words, at once, where the turn goes on from.
+        if (node.live) liveRow('you', chatText(words));
         follow();
         carried()
             .then(carries => node.say(words, mode.value, carries, model.hidden ? '' : model.value))

@@ -327,6 +327,7 @@ describe('Claude - the session while it runs', () => {
         const live = body.querySelector<HTMLElement>('.chat-live')!;
         // What was said is the transcript's to show, written down before the turn: not drawn twice.
         expect(live.textContent).not.toContain('[human]');
+        expect(live.querySelector('.chat-you')?.textContent).toBe('how long has the box been up?');
 
         landed!({ ...event('tool_use', 'Bash', 'Bash'), input: '{"command":"uptime"}' });
         landed!(event('tool_result', 'up 3 days, 2 users'));
@@ -334,7 +335,7 @@ describe('Claude - the session while it runs', () => {
         landed!(event('delta', ' days.'));
         // The thing itself, no speaker in front of it.
         const rows = Array.from(live.querySelectorAll('.chat-row')).map(r => r.textContent?.trim());
-        expect(rows).toEqual(['$ uptime', 'up 3 days, 2 users', 'Up 3 days.']);
+        expect(rows).toEqual(['how long has the box been up?', '$ uptime', 'up 3 days, 2 users', 'Up 3 days.']);
         expect(live.textContent).not.toContain('[tool]');
         // Still answering: say has not come back.
         expect(body.querySelector<HTMLButtonElement>('.claude-send')!.disabled).toBe(true);

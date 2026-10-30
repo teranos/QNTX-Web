@@ -91,7 +91,8 @@ export function diffLine(sign: '-' | '+', text: string): HTMLElement {
 /** What a tool did, in words: ran, edited, wrote, read, searched, or asked a server. */
 export function didSay(kind: string, what: string): string {
     switch (kind) {
-        case 'tool': return `$ ${what}`;
+        // The node keeps a command of Bash and a name of any other tool (server/transcripts.go toolTurn).
+        case 'tool': return /^[A-Z][A-Za-z0-9_]*$/.test(what) ? `used ${what}` : `$ ${what}`;
         case 'edit': return `edited ${what}`;
         case 'write': return `wrote ${what}`;
         case 'read': return `read ${what}`;

@@ -144,12 +144,23 @@ export async function reachableAgents(namespace: string, ask: <T>(path: string) 
         catch (err: unknown) { log.info(SEG.ELEMENT, `[Agents] ${agent.called} is not reached: ${err instanceof Error ? err.message : String(err)}`); }
     };
     await tryOne({ id: 'node', called: 'Node Agent', at: '/api/agent', kind: 'node' });
+    // The agent of the namespace stood in is listed whether or not it is set up
+    // yet: its chat is where it is signed in, or where the node says why not.
     if (namespace) {
-        await tryOne({ id: `namespace:${namespace}`, called: `the agent of ${namespace}`, at: `/api/agents/${encodeURIComponent(namespace)}`, kind: 'namespace',
+        found.push({ id: `namespace:${namespace}`, called: `the agent of ${namespace}`, at: `/api/agents/${encodeURIComponent(namespace)}`, kind: 'namespace',
             unwrap: a => ({ claude: (a as { agent?: ClaudeAm }).agent }) });
     }
-    // The stories' agents are ROOT's, as the Node Agent is: listed when it is.
+    // The element agents the node holds, and the stories' agents, are ROOT's, as the Node Agent is: listed when it is.
     if (found.some(a => a.kind === 'node')) {
+        try {
+            const held = await ask<{ agents: Array<{ element: string; session: string; answering: boolean }> }>('/api/elements');
+            for (const each of held.agents) {
+                if (each.element.startsWith('story-')) continue;
+                found.push({ id: `element:${each.element}`, called: each.element, at: `/api/elements/${encodeURIComponent(each.element)}`, kind: 'element' });
+            }
+        } catch (err: unknown) {
+            log.info(SEG.ELEMENT, `[Agents] no element agents listed: ${err instanceof Error ? err.message : String(err)}`);
+        }
         try {
             const r = await fetch('stories.json');
             if (r.ok) {

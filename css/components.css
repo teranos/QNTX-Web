@@ -389,19 +389,20 @@
 
 /* Ground and Comet wear ground.css. */
 
-/* Agents: the agents reached down the side, the chat of the one chosen, its harness a tab */
-.agents { flex-direction: row; width: 760px; }
-.agents-list { display: flex; flex-direction: column; gap: 2px; width: 200px; flex: none; padding: 6px; border-right: 1px solid var(--border-on-dark); overflow-y: auto; }
-.agents-row { text-align: left; justify-content: flex-start; white-space: normal; overflow-wrap: anywhere; }
-.agents-row-on { background: var(--bg-dark-hover); color: var(--accent-on-dark); }
-.agents { align-items: stretch; }
-.agents-list, .agents-chat { max-height: 100%; }
-.agents-chat { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
+/* An agent's chat, opened from the Agents level of the sidebar: its harness a tab above the conversation. */
 .agents-tabs { display: flex; gap: 2px; padding: 4px 6px; border-bottom: 1px solid var(--border-on-dark); flex-shrink: 0; }
 .agents-tab-on { color: var(--accent-on-dark); border-bottom: 2px solid var(--accent-on-dark); }
 .agents-talk { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.agents-talk > .claude-who, .agents-talk > .chat-scroll, .agents-talk > .claude-status, .agents-talk > .claude-say { flex-shrink: 0; }
+.agents-talk > .claude-who, .agents-talk > .claude-status, .agents-talk > .claude-say { flex-shrink: 0; }
 .agents-talk > .chat-scroll { flex: 1; }
-.agents .claude-say { flex-wrap: wrap; }
-.agents .claude-say select { flex: 0 1 auto; min-width: 0; max-width: 46%; font-size: var(--font-size-xs); }
-.agents .claude-says { flex-basis: 100%; }
+.chat .claude-say { flex-wrap: wrap; }
+.chat .claude-say select { flex: 0 1 auto; min-width: 0; max-width: 46%; font-size: var(--font-size-xs); }
+.chat .claude-says { flex-basis: 100%; }
+
+/* "you made it unusable on mobile": on a phone the chat is the screen, the composer within thumb's reach. */
+@media (max-width: 768px) {
+    .claude, .chat { width: 100%; height: 100%; padding-bottom: env(safe-area-inset-bottom, 0); }
+    .chat-you { max-width: 92%; }
+    .chat .claude-say select { flex: 1 1 40%; max-width: none; }
+    .claude-says { font-size: 16px; }
+}

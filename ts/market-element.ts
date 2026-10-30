@@ -11,8 +11,8 @@
 // event; a stand writes only under staand:*, so nothing here sets a predicate.
 
 import type { Element } from '@teranos/elements';
-import { buttonFrom, pressFrom } from '@teranos/elements';
-import { openElement } from './sidebar.ts';
+import { buttonFrom, pressFrom, tray } from '@teranos/elements';
+import { openElement, restLevelInSidebar, levelRow } from './sidebar.ts';
 import { apiJson } from './client/http';
 import { backendUrl } from './client/url';
 import { tooltip } from './components/tooltip';
@@ -552,6 +552,56 @@ export function createMarketElement(): Element {
             return content;
         },
     };
+}
+
+// The Stands level's own row in the sidebar.
+export const LEVEL_ID = 'stands';
+
+/** Stands as a level of the sidebar: a new stand first, then each stand a row; a row opens the stand, the new one its form. */
+export function fillStandsLevel(into: HTMLElement, load: () => Promise<[StaandInfo[], string[]]> = () => Promise.all([fetchStands(), fetchNamespaces()])): void {
+    const waiting = document.createElement('div');
+    waiting.className = 'sidebar-level-note';
+    waiting.textContent = 'Asking the node for the stands…';
+    into.appendChild(waiting);
+    const redraw = () => { for (const row of into.querySelectorAll('.sidebar-level-row')) row.remove(); fillStandsLevel(into, load); };
+    load().then(([stands, namespaces]) => {
+        waiting.remove();
+        const used = new Set(stands.map((s) => s.slug));
+        levelRow(into, { id: 'stand:new', title: 'New stand', symbol: '+' }, () => {
+            const id = 'stand:new';
+            if (tray.has(id)) tray.remove(id);
+            tray.add({ id, title: 'New stand', symbol: '⛬', renderContent: () => {
+                const body = document.createElement('div');
+                body.className = 'stands-element-content';
+                body.style.fontFamily = FONT;
+                body.appendChild(buildCreateForm(namespaces, used, async (market, slug) => { await createStand(market, slug); tray.remove(id); redraw(); }));
+                return body;
+            } });
+            tray.open(id);
+        });
+        for (const s of stands) {
+            const id = `stand:${s.market}/${s.slug}`;
+            levelRow(into, { id, title: `${s.slug} · ${s.market}`, symbol: '⛬' }, () => {
+                if (tray.has(id)) tray.remove(id);
+                tray.add({ id, title: s.slug, symbol: '⛬', renderContent: () => {
+                    const body = document.createElement('div');
+                    body.className = 'stands-element-content';
+                    body.style.fontFamily = FONT;
+                    tooltip.attach(body);
+                    renderStandDetail(body, s, () => tray.remove(id), async () => { await deleteStand(s.market, s.slug); tray.remove(id); redraw(); });
+                    return body;
+                } });
+                tray.open(id);
+            });
+        }
+    }).catch((err: unknown) => {
+        waiting.textContent = `the node refused: ${err instanceof Error ? err.message : String(err)}`;
+    });
+}
+
+/** Stands rests in the sidebar as a level. */
+export function restStandsInSidebar(): void {
+    restLevelInSidebar({ id: LEVEL_ID, title: 'Stands', symbol: '⛬' }, into => fillStandsLevel(into));
 }
 
 /** Opens the Stands element. */

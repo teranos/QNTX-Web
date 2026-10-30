@@ -10,8 +10,9 @@ const SHOTS = 'test-results/streams';
 
 Given('I am ROOT with the Claude element open', async ({ page }) => {
     await page.goto('/__mock__/as/ROOT');
+    // Agents is a level of the sidebar; the Node Agent a row of it; its chat opens from the row.
     await page.locator('.sidebar-button', { hasText: 'Agents' }).click();
-    await page.locator('.agents-row', { hasText: 'Node Agent' }).click();
+    await page.locator('.sidebar-level-row', { hasText: 'Node Agent' }).click();
     await expect(page.locator('.claude-says')).toBeVisible();
 });
 

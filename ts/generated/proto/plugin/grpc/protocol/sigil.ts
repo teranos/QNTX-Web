@@ -510,6 +510,72 @@ export interface NamespaceAgentAm {
 }
 
 /**
+ * A Quote is TEI's q: words distinguished from the text around them, and whose
+ * they are. The words are the one who said them's; everything else here is
+ * about the words and never inside them (ADR-055).
+ */
+export interface Quote {
+  /** The words, verbatim: the element's content in TEI. */
+  content: string;
+  /**
+   * Who said them, each a pointer to a person or an agent: TEI's who. An
+   * agent's name is rendered inside the quote, as [Fable].
+   */
+  who: string[];
+  /**
+   * Whether the words were spoken, thought or written, or how else the quote
+   * is to be read: TEI's type, with its values.
+   */
+  type: string;
+  /**
+   * Where the words were taken from: a session, a transcript, a commit, a PR
+   * description, a memory. TEI's source.
+   */
+  source: string[];
+  /**
+   * Who ascribed the words to who said them: the human who reported it after
+   * the fact, or the model that relayed it. TEI's resp.
+   */
+  resp: string[];
+  /** How certain the ascription is: TEI's cert. */
+  cert: string;
+  /**
+   * How the quote was rendered where it was read: a person's quotation marks,
+   * or an agent's notation. TEI's rend.
+   */
+  rend: string[];
+  /**
+   * The interpretations made of the words, each an Interp by its id, apart
+   * from the words and none of them theirs: TEI's ana.
+   */
+  ana: string[];
+  /** The quote's own id, for an Interp to point to: TEI's xml:id. */
+  id: string;
+}
+
+/**
+ * An Interp is TEI's interp: what someone made of a quote, kept apart from
+ * the words and carrying none of their speaker's authority (ADR-055).
+ */
+export interface Interp {
+  /** The interpretation itself: the element's content. */
+  content: string;
+  /**
+   * Whose interpretation it is, each a pointer: TEI's resp. An agent's, when
+   * an agent made it.
+   */
+  resp: string[];
+  /** How certain of it they are: TEI's cert. */
+  cert: string;
+  /** What kind of thing it notes: TEI's type. */
+  type: string;
+  /** The quotes it interprets, each by its id: TEI's inst. */
+  inst: string[];
+  /** Its own id, for a quote's ana to point to: TEI's xml:id. */
+  id: string;
+}
+
+/**
  * Follows says which column of a reference each of a signum's fields is. The
  * reference is named, not described: its own schema says what its columns are.
  */

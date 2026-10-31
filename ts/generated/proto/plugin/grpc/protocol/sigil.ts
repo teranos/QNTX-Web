@@ -44,6 +44,12 @@ export interface Node {
   name: string;
   description: string;
   signa: Signum[];
+  /**
+   * The media types the node gives, across every signum: JSON, everywhere.
+   * To A2A these are the card's default output modes, which a skill's own
+   * output modes override.
+   */
+  output_modes: string[];
 }
 
 /**
@@ -297,7 +303,11 @@ export interface NamespaceAgentSaid {
     | ClaudeSaid
     | undefined;
   /** What it answered in Pi. */
-  pi: PiSaid | undefined;
+  pi:
+    | PiSaid
+    | undefined;
+  /** What the namespace agent answered in Codex. */
+  codex: CodexSaid | undefined;
 }
 
 /**
@@ -334,7 +344,7 @@ export interface NodeAgentAm {
   codex: CodexAm | undefined;
 }
 
-/** CodexSaid is what the Node Agent answered in codex. */
+/** CodexSaid is what an agent answered in codex. */
 export interface CodexSaid {
   /** What it answered. */
   answer: string;
@@ -351,9 +361,11 @@ export interface CodexSaid {
   took_ms: number;
   /** Why a row of the session was not written down, when one was not. */
   unwritten: string;
+  /** The CLI thread used to resume, distinct from the transcript session. */
+  thread: string;
 }
 
-/** CodexAm is who the Node Agent is in codex and how the node runs it. */
+/** CodexAm is who an agent is in codex and how the node runs it. */
 export interface CodexAm {
   /** Its own DID, which signs what it writes down. */
   did: string;
@@ -506,7 +518,11 @@ export interface NamespaceAgentAm {
     | ClaudeAm
     | undefined;
   /** Who the agent is and how it runs, in Pi. */
-  pi: PiAm | undefined;
+  pi:
+    | PiAm
+    | undefined;
+  /** Who the namespace agent is in Codex. */
+  codex: CodexAm | undefined;
 }
 
 /**

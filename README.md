@@ -171,3 +171,5 @@ describe('YourComponent', () => {
 ```
 
 See test files for live examples.
+
+Words an agent wrote stand inside 「 」 with the agent's name first, 「[Fable] …」, and a person's inside double quotes: QNTX ADR-055.

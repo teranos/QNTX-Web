@@ -592,6 +592,15 @@ export interface Interp {
 }
 
 /**
+ * Quotes is what transcripts quoted answers: each span in double quotes of the
+ * text it was given, as a Quote.
+ */
+export interface Quotes {
+  /** One per span, in the order the text has them. */
+  quotes: Quote[];
+}
+
+/**
  * Follows says which column of a reference each of a signum's fields is. The
  * reference is named, not described: its own schema says what its columns are.
  */

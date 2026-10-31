@@ -44,6 +44,12 @@ export interface Node {
   name: string;
   description: string;
   signa: Signum[];
+  /**
+   * The media types the node gives, across every signum: JSON, everywhere.
+   * To A2A these are the card's default output modes, which a skill's own
+   * output modes override.
+   */
+  output_modes: string[];
 }
 
 /**
@@ -297,7 +303,11 @@ export interface NamespaceAgentSaid {
     | ClaudeSaid
     | undefined;
   /** What it answered in Pi. */
-  pi: PiSaid | undefined;
+  pi:
+    | PiSaid
+    | undefined;
+  /** What the namespace agent answered in Codex. */
+  codex: CodexSaid | undefined;
 }
 
 /**
@@ -334,7 +344,7 @@ export interface NodeAgentAm {
   codex: CodexAm | undefined;
 }
 
-/** CodexSaid is what the Node Agent answered in codex. */
+/** CodexSaid is what an agent answered in codex. */
 export interface CodexSaid {
   /** What it answered. */
   answer: string;
@@ -351,9 +361,11 @@ export interface CodexSaid {
   took_ms: number;
   /** Why a row of the session was not written down, when one was not. */
   unwritten: string;
+  /** The CLI thread used to resume, distinct from the transcript session. */
+  thread: string;
 }
 
-/** CodexAm is who the Node Agent is in codex and how the node runs it. */
+/** CodexAm is who an agent is in codex and how the node runs it. */
 export interface CodexAm {
   /** Its own DID, which signs what it writes down. */
   did: string;
@@ -506,7 +518,86 @@ export interface NamespaceAgentAm {
     | ClaudeAm
     | undefined;
   /** Who the agent is and how it runs, in Pi. */
-  pi: PiAm | undefined;
+  pi:
+    | PiAm
+    | undefined;
+  /** Who the namespace agent is in Codex. */
+  codex: CodexAm | undefined;
+}
+
+/**
+ * A Quote is TEI's q: words distinguished from the text around them, and whose
+ * they are. The words are the one who said them's; everything else here is
+ * about the words and never inside them (ADR-055).
+ */
+export interface Quote {
+  /** The words, verbatim: the element's content in TEI. */
+  content: string;
+  /**
+   * Who said them, each a pointer to a person or an agent: TEI's who. An
+   * agent's name is rendered inside the quote, as [Fable].
+   */
+  who: string[];
+  /**
+   * Whether the words were spoken, thought or written, or how else the quote
+   * is to be read: TEI's type, with its values.
+   */
+  type: string;
+  /**
+   * Where the words were taken from: a session, a transcript, a commit, a PR
+   * description, a memory. TEI's source.
+   */
+  source: string[];
+  /**
+   * Who ascribed the words to who said them: the human who reported it after
+   * the fact, or the model that relayed it. TEI's resp.
+   */
+  resp: string[];
+  /** How certain the ascription is: TEI's cert. */
+  cert: string;
+  /**
+   * How the quote was rendered where it was read: a person's quotation marks,
+   * or an agent's notation. TEI's rend.
+   */
+  rend: string[];
+  /**
+   * The interpretations made of the words, each an Interp by its id, apart
+   * from the words and none of them theirs: TEI's ana.
+   */
+  ana: string[];
+  /** The quote's own id, for an Interp to point to: TEI's xml:id. */
+  id: string;
+}
+
+/**
+ * An Interp is TEI's interp: what someone made of a quote, kept apart from
+ * the words and carrying none of their speaker's authority (ADR-055).
+ */
+export interface Interp {
+  /** The interpretation itself: the element's content. */
+  content: string;
+  /**
+   * Whose interpretation it is, each a pointer: TEI's resp. An agent's, when
+   * an agent made it.
+   */
+  resp: string[];
+  /** How certain of it they are: TEI's cert. */
+  cert: string;
+  /** What kind of thing it notes: TEI's type. */
+  type: string;
+  /** The quotes it interprets, each by its id: TEI's inst. */
+  inst: string[];
+  /** Its own id, for a quote's ana to point to: TEI's xml:id. */
+  id: string;
+}
+
+/**
+ * Quotes is what transcripts quoted answers: each span in double quotes of the
+ * text it was given, as a Quote.
+ */
+export interface Quotes {
+  /** One per span, in the order the text has them. */
+  quotes: Quote[];
 }
 
 /**

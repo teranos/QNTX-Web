@@ -156,6 +156,82 @@ export function restInSidebar(item: Element): void {
     list.appendChild(button);
 }
 
+// ── A menu into a menu ──────────────────────────────────────────────
+// "the leftside menu bar thing, why would we not be able to reuse that pattern
+// for menu into menu navigation"
+
+/** A row of the sidebar: what it is called, its symbol, and what it is for. */
+export interface SidebarRow {
+    id: string;
+    title: string;
+    symbol?: string;
+}
+
+let level: HTMLElement | null = null;
+
+/** A row in the sidebar's own form, pressed for what it is for. */
+function rowFrom(row: SidebarRow, press: (e: MouseEvent) => void, className = 'sidebar-button'): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = className;
+    button.dataset.form = 'button';
+    // A row is not an element: what it opens is, under its own id.
+    button.dataset.row = row.id;
+    if (row.symbol) button.dataset.symbol = row.symbol;
+    button.textContent = row.title;
+    button.addEventListener('click', press);
+    return button;
+}
+
+/**
+ * Rests a level in the sidebar: a row that, pressed, shows what fill puts in
+ * its place, with the way back above it. The chat of an agent opens from such
+ * a row; the level itself opens no window.
+ */
+export function restLevelInSidebar(item: SidebarRow, fill: (into: HTMLElement) => void): void {
+    if (!list) {
+        throw new Error(`the sidebar is not up; ${item.id} has nowhere to rest`);
+    }
+    if (elements.has(item.id)) return;
+    const button = rowFrom(item, (e) => { e.stopPropagation(); enterLevel(item, fill); });
+    elements.set(item.id, button);
+    list.appendChild(button);
+}
+
+/** Shows the level under item: the rows above step aside, the way back is the first row. */
+export function enterLevel(item: SidebarRow, fill: (into: HTMLElement) => void): void {
+    if (!list) return;
+    leaveLevel();
+    for (const above of Array.from(list.children)) (above as HTMLElement).classList.add('sidebar-above');
+    level = document.createElement('div');
+    level.className = 'sidebar-level';
+    level.dataset.level = item.id;
+    const back = rowFrom({ id: `${item.id}-back`, title: item.title, symbol: '‹' }, (e) => { e.stopPropagation(); leaveLevel(); }, 'sidebar-button sidebar-back');
+    level.appendChild(back);
+    fill(level);
+    list.appendChild(level);
+}
+
+/** Back up: the level goes, the rows above return. */
+export function leaveLevel(): void {
+    if (!list) return;
+    level?.remove();
+    level = null;
+    for (const above of Array.from(list.children)) (above as HTMLElement).classList.remove('sidebar-above');
+}
+
+/** The level shown, by the id of the row it is under, or empty. */
+export function levelShown(): string {
+    return level?.dataset.level ?? '';
+}
+
+/** A row of a level, pressed for what it is for; on a phone the drawer gets out of the way, as for any row. */
+export function levelRow(into: HTMLElement, row: SidebarRow, press: () => void): HTMLButtonElement {
+    const button = rowFrom(row, press, 'sidebar-button sidebar-level-row');
+    into.appendChild(button);
+    return button;
+}
+
 // ── The drawer's swipe, on a phone ──────────────────────────────────
 
 function attachSwipe(doc: Document): void {
@@ -311,6 +387,7 @@ export function initSidebar(doc: Document = document): void {
 
 /** For tests: forget the sidebar, so the next init builds it again. */
 export function resetSidebar(): void {
+    level = null;
     nav = null;
     list = null;
     scrim = null;

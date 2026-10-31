@@ -27,6 +27,7 @@ import { autoMeldResultBelow } from '../meld/auto-meld-result';
 import { makeDraggable, runCleanup } from '@teranos/elements';
 import { showActionBar, hideActionBar } from './action-bar';
 import { showSpawnMenu, isSpawnMenuOpen } from './spawn-menu';
+import { onTouchHold } from './touch-hold';
 import { isPlacementActive } from './placement-mode';
 import { addSpine, removeSpine, getSpineByNode } from './spine-renderer';
 import { enterThreadBuildingMode } from './thread-line';
@@ -445,16 +446,20 @@ export function buildCanvasWorkspace(
 
     // Right-click opens spawn menu — suppressed if already open or placing
     // Context-aware: right-click on element symbol shows thread actions, background shows element types
-    container.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
+    const openSpawnMenu = (clientX: number, clientY: number, target: HTMLElement) => {
         if (isPlacementActive() || isSpawnMenuOpen()) return;
-        const target = e.target as HTMLElement;
         // Find the actual symbol span — walk up from click target or search within element
         const elementEl = target.closest('.canvas-element') as HTMLElement | null;
         const symbolEl = target.closest('.symbol') as HTMLElement | null
             ?? elementEl?.querySelector('.symbol') as HTMLElement | null;
-        showSpawnMenu(e.clientX, e.clientY, contentLayer, items, canvasId, symbolEl);
+        showSpawnMenu(clientX, clientY, contentLayer, items, canvasId, symbolEl);
+    };
+    container.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        openSpawnMenu(e.clientX, e.clientY, e.target as HTMLElement);
     });
+    // On a phone a finger held still is the right-click (touch-hold.ts).
+    onTouchHold(container, openSpawnMenu);
 
     // Prevent dblclick from bubbling past workspace boundary (stops re-morph on parent subcanvas)
     container.addEventListener('dblclick', (e) => { e.stopPropagation(); });

@@ -152,15 +152,25 @@ try {
     }
     return "unknown";
   }
+  // The web's own version: its latest tag, and how far past it (git describe); dev when it has none.
+  function resolveWebVersion(): string {
+    const proc = Bun.spawnSync(["git", "describe", "--tags", "--match", "v*", "--always"], { cwd: sourceDir });
+    if (proc.exitCode === 0) {
+      const out = proc.stdout.toString().trim();
+      if (out.startsWith("v")) return out;
+    }
+    return "dev";
+  }
   const buildCommit = resolveCommit();
   const webCommit = resolveWebCommit();
+  const webVersion = resolveWebVersion();
   const buildTime = new Date().toISOString();
-  console.log(`${lightPeach}Stamping web build: web ${webCommit.slice(0, 7)} via ${buildCommit.slice(0, 7)} @ ${buildTime}${reset}`);
+  console.log(`${lightPeach}Stamping web build: ${webVersion}, web ${webCommit.slice(0, 7)} via ${buildCommit.slice(0, 7)} @ ${buildTime}${reset}`);
   // commit stays first: consumers find it by cutting on the literal `commit: "`.
   updatedHtml = updatedHtml.replace(
     "</head>",
     `<script>
-        window.__QNTX_WEB_BUILD__ = { commit: "${buildCommit}", build_time: "${buildTime}", web: "${webCommit}" };
+        window.__QNTX_WEB_BUILD__ = { commit: "${buildCommit}", build_time: "${buildTime}", web: "${webCommit}", version: "${webVersion}" };
       </script>
       </head>`
   );

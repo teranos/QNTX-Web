@@ -145,7 +145,7 @@ function createShakeElement(): Element {
         opensAs: window.matchMedia?.(PHONE).matches ? 'panel' : 'window',
         opensAt: 'end',
         renderContent: () => {
-            body = part('div', 'content-area claude claude-brand shake-body');
+            body = part('div', 'content-area chat shake-body');
             if (current) draw(body, current);
             else body.textContent = 'Shake the phone with an element on screen.';
             return body;

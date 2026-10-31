@@ -252,11 +252,13 @@ export function userContent(): HTMLDivElement {
 
 /** Opens one User as its own element. Called from Users. */
 export function openUserElement(u: UserRecord): void {
+    tray.open(restUserElement(u));
+}
+
+/** Puts one User's element in the tray without opening it, and gives its id. */
+export function restUserElement(u: UserRecord): string {
     const elementId = `user-element-${u.id}`;
-    if (tray.has(elementId)) {
-        tray.open(elementId);
-        return;
-    }
+    if (tray.has(elementId)) return elementId;
 
     tray.add({
         id: elementId,
@@ -270,6 +272,13 @@ export function openUserElement(u: UserRecord): void {
             return content;
         },
     } satisfies Element);
+    return elementId;
+}
 
-    tray.open(elementId);
+/** After a restart: the User the id names, asked of the node, rests in the tray again. */
+export async function restUserElementById(id: string): Promise<void> {
+    const users = await apiJson<UserRecord[]>('/auth/users');
+    const u = users.find(candidate => candidate.id === id);
+    if (!u) throw new Error(`the node holds no User ${id}`);
+    restUserElement(u);
 }

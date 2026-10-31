@@ -135,6 +135,21 @@ function renderAm(): void {
         `);
     }
 
+    // "give web a version" / "make it so we track web version": the web's own, as its build stamped it.
+    const web = (window as unknown as { __QNTX_WEB_BUILD__?: { version?: string; web?: string; commit?: string; build_time?: string } }).__QNTX_WEB_BUILD__;
+    if (web) {
+        const builtWeb = formatBuildTime(web.build_time ?? '') || web.build_time || 'unknown';
+        sections.push(`
+            <div class="element-section">
+                <h3 class="element-section-title">QNTX Web</h3>
+                ${row('Version:', escapeHtml(web.version || 'dev'))}
+                ${row('Commit:', escapeHtml((web.web ?? 'unknown').substring(0, 7)))}
+                ${row('Built:', escapeHtml(builtWeb))}
+                ${web.commit && web.commit !== web.web ? row('Via:', escapeHtml(web.commit.substring(0, 7))) : ''}
+            </div>
+        `);
+    }
+
     if (amVersion) {
         const built = formatBuildTime(amVersion.build_time) || amVersion.build_time || 'unknown';
         const commit = amVersion.commit?.substring(0, 7) || 'unknown';

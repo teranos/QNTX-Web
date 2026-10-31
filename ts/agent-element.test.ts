@@ -51,7 +51,8 @@ describe('Agent - Tim', () => {
         const log: string[] = [];
         drawAgent(body, 'pond', node(false, log));
         await settled();
-        expect(body.querySelector('.agent-head')?.textContent).toBe('the agent of pond');
+        // The Agents element names the agent; nothing heads the chat but the titlebar.
+        expect(body.querySelector<HTMLElement>('.agent-head')!.hidden).toBe(true);
         const begin = body.querySelector<HTMLButtonElement>('.agent-begin')!;
         expect(begin).not.toBeNull();
         expect(body.querySelector('.claude-say')).toBeNull();

@@ -7,7 +7,7 @@ import { defineBddConfig } from 'playwright-bdd';
 const PORT = 8839;
 
 const testDir = defineBddConfig({
-    features: 'stories/12-user-connects-anthropic.feature',
+    features: ['stories/12-user-connects-anthropic.feature', 'stories/32-the-session-streams-in.feature'],
     steps: 'stories/steps/*.ts',
     outputDir: '.features-gen',
 });
@@ -24,5 +24,9 @@ export default defineConfig({
         reuseExistingServer: false,
         timeout: 120_000,
     },
-    projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } }],
+    projects: [
+        { name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
+        // Firefox is walked where it is installed (STORIES_FIREFOX=1, after `bunx playwright install firefox`); CI holds Chromium.
+        ...(process.env.STORIES_FIREFOX === '1' ? [{ name: 'firefox', use: { ...devices['Desktop Firefox'], viewport: { width: 1440, height: 900 } } }] : []),
+    ],
 });

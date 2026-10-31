@@ -335,6 +335,8 @@
    Re-enable on editable elements so typing still works. */
 .canvas-workspace {
     user-select: none;
+    /* A held finger opens the spawn menu (touch-hold.ts), not iOS's callout. */
+    -webkit-touch-callout: none;
 }
 .canvas-workspace input,
 .canvas-workspace textarea,

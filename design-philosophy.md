@@ -1,52 +1,14 @@
 # QNTX Design Philosophy
 
-Core principles for interface design across [QNTX](https://github.com/teranos/QNTX/blob/main/docs/understanding-qntx.md) CLI and web components. It left QNTX's docs/ for this repository, where the interface is.
-
-## Foundational Principles
-
-### Data-First Hierarchy
+### Data-First 
 
 All interface decisions prioritize data visibility and accessibility over aesthetic concerns.
 
 - Maximize meaningful information density per screen
 - Present information in scannable, structured formats
 - Visual hierarchy emphasizes content over navigation or decoration
-
-### Performance as Constraint
-
-Fast loading and minimal resource usage are non-negotiable requirements.
-
-- Minimize external dependencies
-- Efficient rendering without complex animations or effects
-- System defaults and progressive enhancement where possible
-
-### Semantic Clarity
-
-Information should be self-describing through consistent use of symbols and semantic markers.
-
 - Use the established symbols (see [Glossary](https://github.com/teranos/QNTX/blob/main/docs/GLOSSARY.md)) for semantic meaning
-- Consistent patterns for entity relationships and operations
-- Clear visual indicators for status, state, and type information
-
-## Context-Aware Design Modes
-
-### CLI Interfaces
-
-Minimal, text-based output optimized for terminal environments.
-
-- Tables for structured data presentation
-- Monospace typography for alignment and scannability
-- No interactivity beyond command input
-- Focus on information density and clarity
-
-### Web UI Interfaces
-
-Interactive visualization interfaces for complex data exploration.
-
-- Real-time updates (WebSocket) where beneficial
-- Graph visualization for relationship-heavy data
 - Interactive filtering and navigation
-- Balance interactivity with performance constraints
 
 ## Design Decision Framework
 
@@ -56,25 +18,17 @@ When making interface decisions, evaluate in this order:
 2. **Does this reduce cognitive load?**
 3. **Does this improve performance?**
 4. **Does this maintain consistency?**
+5. **Does this still work on mobile?**
 
 ## Implementation Standards
 
 - **Semantic HTML**: Use appropriate elements for their intended purpose
 - **System fonts**: Leverage OS defaults for performance and familiarity
 - **Functional color**: Color conveys status or type information, not decoration
-- **Professional text**: No emojis in user-facing UI elements (buttons, labels, headings, notifications) - keep UI text professional and text-only
+- **Professional text**: No emojis in user-facing UI elements (buttons, labels, headings, notifications) - Use symbols
 - **Accessibility**: Meet WCAG guidelines for inclusive access (keyboard navigation, screen-reader compatibility)
 
-## Anti-Patterns
-
-- Visual effects that don't serve functional purpose (shadows, glows, excessive animation)
-- Multi-step navigation for simple tasks
-- Decorative elements that compete with content
-- Color schemes prioritizing aesthetics over readability
-
-## Evolution
-
-This philosophy evolves based on actual usage patterns, performance metrics, and development efficiency. The goal is consistent application of principles that serve users' needs for efficient, data-focused tools.
+The goal is consistent application of principles that serve users' needs for efficient, data-focused tools.
 
 ## Inspiration: The Food Lab Approach
 

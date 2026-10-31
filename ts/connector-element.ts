@@ -15,14 +15,17 @@ import { lightFrom } from './light';
 import { createGitHubElement } from './github-element';
 import { createObsidianElement } from './obsidian-element';
 import { person } from './self-person';
-import { openElement as openStanding } from './sidebar.ts';
+import { openElement as openStanding, restLevelInSidebar, levelRow } from './sidebar.ts';
+import { openAgentElement, ELEMENT_ID as AGENT_CHAT_ID } from './agents-element.ts';
 import { CONNECTOR } from './sym';
 import { createToken, OAUTH, type CreateTokenResponse } from './token-mint-element';
 import type { NamespaceKeys } from './generated/proto/plugin/grpc/protocol/sigil';
 
 export const needs = ['/am/node', '/auth/tokens'] as const;
 
-const ELEMENT_ID = 'connector-element';
+export const ELEMENT_ID = 'connector-element';
+// The Connectors level's own row in the sidebar.
+export const LEVEL_ID = 'connectors';
 
 // Claude sends every connector's code here; q's claude.ai clients name it.
 const CLAUDE_CALLBACK = 'https://claude.ai/api/mcp/auth_callback';
@@ -280,6 +283,18 @@ function rowOf(platform: Platform, at: () => ConnectorsAt | undefined): HTMLElem
         if (platform.opens) { here.open(platform.opens); return; }
         body.hidden = !body.hidden;
         if (body.hidden) return;
+        drawPlatform(body, platform, here);
+    };
+    row.append(pressable(headOf(platform), () => {
+        const here = at();
+        if (here) draw(here);
+    }), body);
+    return row;
+}
+
+/** A platform's own: its story, or its parts, each pressed for its story or what it opens. */
+export function drawPlatform(body: HTMLElement, platform: Platform, here: ConnectorsAt): void {
+    {
         body.replaceChildren();
         // A connection is made in the namespace stood in, and none is picked here.
         if (!here.standing) {
@@ -301,12 +316,43 @@ function rowOf(platform: Platform, at: () => ConnectorsAt | undefined): HTMLElem
             }));
         }
         body.appendChild(opened);
-    };
-    row.append(pressable(headOf(platform), () => {
-        const here = at();
-        if (here) draw(here);
-    }), body);
-    return row;
+    }
+}
+
+/** Connectors as a level of the sidebar: the server's MCP URL first, then each platform a row; a platform opens what it names, or its own window. */
+export function fillConnectorsLevel(into: HTMLElement, where: Promise<ConnectorsAt> = whereAt()): void {
+    let here: ConnectorsAt | undefined;
+    where.then(now => { here = now; }).catch((err: unknown) => log.warn(SEG.SELF, `[connectors] ${err instanceof Error ? err.message : String(err)}`));
+    levelRow(into, { id: 'connectors:mcp', title: 'Server MCP URL', symbol: CONNECTOR }, () => { if (!tray.has(ELEMENT_ID)) tray.add(createConnectorElement()); tray.open(ELEMENT_ID); });
+    for (const platform of PLATFORMS) {
+        const row = levelRow(into, { id: `connect:${platform.name}`, title: platform.name, symbol: CONNECTOR }, () => {
+            if (!here) return;
+            if (platform.opens) { here.open(platform.opens); return; }
+            const id = `connect:${platform.name}`;
+            if (!tray.has(id)) {
+                const at = here;
+                tray.add({
+                    id, title: platform.name, symbol: CONNECTOR,
+                    renderContent: () => {
+                        const body = document.createElement('div');
+                        body.className = 'element-content';
+                        body.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:8px;min-width:320px';
+                        if (!at.standing) { body.appendChild(note('You stand in no namespace: stand in one, and connect there.')); return body; }
+                        drawPlatform(body, platform, at);
+                        return body;
+                    },
+                });
+            }
+            tray.open(id);
+        });
+        row.dataset.platform = platform.name;
+        row.dataset.connect = platform.name;
+    }
+}
+
+/** Connectors rests in the sidebar as a level. */
+export function restConnectorsInSidebar(): void {
+    restLevelInSidebar({ id: LEVEL_ID, title: 'Connectors', symbol: CONNECTOR }, into => fillConnectorsLevel(into));
 }
 
 /** Exported for tests: the server MCP URL, then one row per platform (stories/9). */
@@ -370,6 +416,8 @@ const OPENED: Record<string, () => Element> = {
 
 /** An element a connection is: one of the tray's, added the first time, or one resting in the sidebar. */
 function openElement(id: string): void {
+    // Claude Code is the agent of the namespace stood in, whose chat opens from the Agents level too.
+    if (id === AGENT_CHAT_ID) { openAgentElement(); return; }
     const create = OPENED[id];
     if (!create) { openStanding(id); return; }
     if (!tray.has(id)) tray.add(create());

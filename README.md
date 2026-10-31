@@ -174,4 +174,4 @@ See test files for live examples.
 
 Words an agent wrote stand inside 「 」 with the agent's name first, 「[Fable] …」, and a person's inside double quotes: QNTX ADR-055.
 
-When something lands on main here, the QNTX node reads what an agent wrote in it and puts those words inside the agent's own quotation in a pull request that follows.
+「[Fable 5.1] When something lands on main here, the QNTX node reads what an agent wrote in it and puts those words inside the agent's own quotation in a pull request that follows.」

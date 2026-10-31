@@ -23,6 +23,9 @@ import type { Person } from './self-person';
 
 export const SHAKE_ID = 'shake-element';
 
+/** A phone, as the page tells one (sidebar.ts). */
+const PHONE = '(max-width: 768px)';
+
 /** The DOM event a shake is, whoever felt it. The mock strip dispatches it; so may a test. */
 export const SHAKE_EVENT = 'qntx-shake';
 
@@ -138,10 +141,11 @@ function createShakeElement(): Element {
         id: SHAKE_ID,
         title: 'ROOT SHAKE',
         symbol: Shake,
-        opensAs: 'panel',
+        // From below on a phone; on a desktop a window, not the whole screen.
+        opensAs: window.matchMedia?.(PHONE).matches ? 'panel' : 'window',
         opensAt: 'end',
         renderContent: () => {
-            body = part('div', 'content-area claude claude-brand shake-body');
+            body = part('div', 'content-area chat shake-body');
             if (current) draw(body, current);
             else body.textContent = 'Shake the phone with an element on screen.';
             return body;
@@ -156,6 +160,26 @@ export async function shaken(): Promise<void> {
         log.info(SEG.ELEMENT, '[Shake] nothing is on screen to talk to');
         return;
     }
+    await shake(on);
+}
+
+// > right click symbol -> ROOT SHAKE
+
+/** The element whose symbol was right-clicked, or null when the click was on no element's symbol. */
+export function elementOfSymbol(target: EventTarget | null): { id: string; symbol: string } | null {
+    if (!(target instanceof HTMLElement) || !target.closest('.symbol')) return null;
+    // ROOT SHAKE's own symbol too: a right-click names the element, the shake chat as well.
+    const element = target.closest<HTMLElement>('[data-element-id]');
+    if (!element) return null;
+    return { id: element.dataset.elementId ?? '', symbol: element.dataset.symbol ?? '' };
+}
+
+/** ROOT SHAKE about the agent named, whatever is on screen: a story's, from the Stories element. */
+export function shakeAbout(id: string, symbol: string): Promise<void> {
+    return shake({ id, symbol });
+}
+
+async function shake(on: { id: string; symbol: string }): Promise<void> {
     let image: Blob | null = null;
     try {
         image = await snapshot();
@@ -174,6 +198,12 @@ export async function shaken(): Promise<void> {
 export function rootShake(who: Person | null): boolean {
     if (who?.level !== 'ROOT') return false;
     window.addEventListener(SHAKE_EVENT, () => { void shaken(); });
+    document.addEventListener('contextmenu', (event) => {
+        const on = elementOfSymbol(event.target);
+        if (!on) return;
+        event.preventDefault();
+        void shake(on);
+    });
     if (window.__TAURI__) {
         listen(SHELL_EVENT, () => { void shaken(); }).catch((err: unknown) => {
             log.error(SEG.UI, `[Shake] the shell's shake was not listened to: ${err instanceof Error ? err.message : String(err)}`);

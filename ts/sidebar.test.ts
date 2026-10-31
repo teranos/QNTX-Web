@@ -98,6 +98,26 @@ describe('Tim: the sidebar stands beside the page', () => {
         expect(sidebarOpen()).toBe(true);
     });
 
+    test('a window stands beside the column, never under it', () => {
+        initSidebar();
+        openSidebar();
+        expect(document.documentElement.style.getPropertyValue('--elements-safe-area-left')).toBe('240px');
+        // Folded away, the screen's own inset is the edge again.
+        closeSidebar();
+        expect(document.documentElement.style.getPropertyValue('--elements-safe-area-left')).toBe('');
+    });
+
+    test('a window already open steps aside as the column opens', () => {
+        initSidebar();
+        closeSidebar();
+        let told = 0;
+        const heard = () => { told++; };
+        window.addEventListener('resize', heard);
+        openSidebar();
+        window.removeEventListener('resize', heard);
+        expect(told).toBeGreaterThan(0);
+    });
+
     test('a press on the latch does not reach the system bar header', () => {
         initSidebar();
         let reached = 0;

@@ -12,7 +12,7 @@ import { build, setupWatcher, findAvailablePort, reloadStream, RELOAD_PATH, RELO
 import { Tablet, LEVELS, type Level } from "./reach";
 import { PEOPLE, authStatus, canvases, canvasElements, compositions, minimizedWindows } from "./world";
 import { Agent, Files, type Transcript } from "./agents";
-import { CodexAgents, codexDocument } from "./codex";
+import { CodexAgents } from "./codex";
 
 const here = import.meta.dir;
 const web = join(here, "..");
@@ -65,6 +65,9 @@ function json(body: unknown, status = 200): Response {
 }
 
 function fixtureFile(path: string): string | null {
+    // A path that names its own file, as /.well-known/did.json does, is that file.
+    const named = join(FIXTURES, path);
+    if (path.endsWith(".json") && existsSync(named)) return named;
     const exact = join(FIXTURES, `${path}.json`);
     if (existsSync(exact)) return exact;
     const index = join(FIXTURES, path, "index.json");
@@ -78,7 +81,6 @@ function fixture(name: string): unknown {
 
 /** The answers that depend on who is asking. Null hands the request to the fixtures. */
 function worldAnswer(level: Level, method: string, path: string, url: URL): Response | null {
-    if (path === "/openapi.json") return json(codexDocument);
     const who = PEOPLE[level];
     if (path === "/setup") return json({ claimed: true });
     if (path === "/auth/status") return json(authStatus(level));
@@ -106,10 +108,7 @@ function worldAnswer(level: Level, method: string, path: string, url: URL): Resp
 }
 
 // The agents, each with its seeded session where a fixture gives one.
-const nodeSeed = fixtureFile("api/claude/session");
-const theNodeAgent = new Agent("the Node Agent", "did:key:mock-node-agent", nodeSeed
-    ? (JSON.parse(readFileSync(nodeSeed, "utf8")) as { transcript: Transcript }).transcript
-    : undefined);
+const theNodeAgent = new Agent("the Node Agent", "did:key:mock-node-agent", (fixture("api/claude/session") as { transcript: Transcript }).transcript);
 const namespaceAgents = new Map<string, Agent>();
 function agentOf(namespace: string): Agent {
     let held = namespaceAgents.get(namespace);
@@ -161,10 +160,28 @@ async function agentAnswer(level: Level, method: string, path: string, _url: URL
         const transcript = agent.read("");
         return transcript ? json({ transcript }) : json({ error: `${agent.of} has no session yet` }, 404);
     }
+    if (rest === "/live" && method === "GET") {
+        const going = agent.live("");
+        if (!going) return json({ error: `${agent.of} is not in a turn, so there is no stream to tail` }, 404);
+        const mark = parseInt(_url.searchParams.get("mark") ?? "0", 10) || 0;
+        let stop = () => {};
+        const stream = new ReadableStream<Uint8Array>({
+            start(controller) {
+                const out = new TextEncoder();
+                stop = going.listen(mark, event => {
+                    if (event) { controller.enqueue(out.encode(`data: ${JSON.stringify(event)}\n\n`)); return; }
+                    controller.enqueue(out.encode(`event: end\ndata: ${JSON.stringify({ events: [], live: false, mark: String(going.events.length) })}\n\n`));
+                    controller.close();
+                });
+            },
+            cancel() { stop(); },
+        });
+        return new Response(stream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" } });
+    }
     if (rest === "/say" && method === "POST") {
         const sent = (await req.json()) as Record<string, string>;
         if (!sent.says) return json({ error: "says is required" }, 400);
-        const said = agent.say(sent.says, "", sent.file_id ?? "", sent.permission_mode ?? "");
+        const said = await agent.say(sent.says, "", sent.file_id ?? "", sent.permission_mode ?? "");
         console.log(`${pink}${level} said to ${agent.of}${sent.file_id ? ` with ${sent.file_id}` : ""}: ${sent.says}${reset}`);
         return json({ claude: said });
     }
@@ -186,6 +203,86 @@ async function filesAnswer(method: string, path: string, req: Request): Promise<
         const held = files.get(path.slice("/api/files/".length));
         if (!held) return json({ error: `${path}: the mock holds no such file` }, 404);
         return new Response(held.bytes, { headers: { "Content-Type": held.type } });
+    }
+    return null;
+}
+
+// A namespace's keys, kept in memory. The mock's providers issued every key
+// ending in -issued, and answer 401 to any other.
+const PROVIDERS = ["anthropic", "openai", "openrouter"];
+const keptKeys = new Map<string, Map<string, { set_by: string; at: string; value: string }>>();
+
+function keysOf(namespace: string) {
+    const held = keptKeys.get(namespace) ?? new Map();
+    const keys = Array.from(held, ([name, key]) => {
+        const asked = PROVIDERS.includes(name);
+        const accepted = asked && key.value.endsWith("-issued");
+        return { name, set_by: key.set_by, at: key.at, asked, accepted, why: asked && !accepted ? `${name} answered 401: invalid x-api-key` : "" };
+    });
+    return { namespace, keys: keys.sort((a, b) => a.name.localeCompare(b.name)) };
+}
+
+// The node at Anthropic (server/node_anthropic.go), kept in memory. The mock's
+// Anthropic accepts the node at any fdrl_ rule but fdrl_refused.
+const atAnthropic: Record<string, string> = {};
+// What ROOT's agents spend first, and whether the other follows (server/anthropic_spend.go).
+const spending = { first: "session", then: false };
+// The session's windows, as ug's status line reads them.
+const SESSION_WINDOWS = [
+    { window: "five_hour", used_percentage: 88, resets_at: 1900000000, at: "2026-10-27T17:00:00Z" },
+    { window: "seven_day", used_percentage: 41, resets_at: 1900400000, at: "2026-10-27T17:00:00Z" },
+];
+const ANTHROPIC_KINDS: [string, string][] = [["fdis_", "issuer_id"], ["svac_", "service_account_id"], ["fdrl_", "federation_rule_id"], ["wrkspc_", "workspace_id"]];
+
+function anthropicKindOf(word: string): string | undefined {
+    for (const [prefix, kind] of ANTHROPIC_KINDS) if (word.startsWith(prefix) && word.length > prefix.length) return kind;
+    if (word.length === 36 && word.split("-").map((part) => part.length).join(",") === "8,4,4,4,12") return "organization_id";
+    return undefined;
+}
+
+function anthropicAm() {
+    const ready = !!(atAnthropic.organization_id && atAnthropic.service_account_id && atAnthropic.federation_rule_id);
+    const accepted = ready && atAnthropic.federation_rule_id !== "fdrl_refused";
+    return {
+        issuer: "https://l.example", subject: "did:key:z6MkmockNode", ...atAnthropic,
+        asked: ready, accepted, first: spending.first, then: spending.then, session: SESSION_WINDOWS, in_use: "",
+        why: ready && !accepted ? `Anthropic at https://api.anthropic.com did not accept the identity of did:key:z6MkmockNode at rule ${atAnthropic.federation_rule_id}: oauth token request failed (status 401); {"error":{"message":"Authentication failed","type":"authentication_error"}}` : "",
+    };
+}
+
+async function anthropicAnswer(method: string, path: string, req: Request): Promise<Response | null> {
+    if (path === "/api/anthropic/order" && method === "POST") {
+        const { first = "", then = "false" } = (await req.json()) as { first?: string; then?: string };
+        if (first !== "session" && first !== "console") return json({ error: `first is session or console, not ${first}` }, 400);
+        spending.first = first;
+        spending.then = then === "true";
+        return json(anthropicAm());
+    }
+    if (path !== "/api/anthropic") return null;
+    if (method === "POST") {
+        const { given = "" } = (await req.json()) as { given?: string };
+        let found = 0;
+        for (const word of given.split(/[\s"'`,:;{}]+/)) {
+            const kind = anthropicKindOf(word);
+            if (kind) { atAnthropic[kind] = word; found++; }
+        }
+        if (found === 0) return json({ error: `no id of Anthropic's in ${given.trim()}: an organization's is a UUID, an issuer's starts fdis_, a service account's svac_, a rule's fdrl_` }, 400);
+    }
+    return json(anthropicAm());
+}
+
+async function keysAnswer(level: Level, method: string, path: string, req: Request): Promise<Response | null> {
+    if (!path.startsWith("/api/keys/")) return null;
+    const namespace = decodeURIComponent(path.slice("/api/keys/".length));
+    if (method === "GET") return json(keysOf(namespace));
+    if (method === "POST") {
+        const sent = (await req.json()) as Record<string, string>;
+        if (!sent.name || !sent.value) return json({ error: "name and value are required" }, 400);
+        const held = keptKeys.get(namespace) ?? new Map();
+        held.set(sent.name, { set_by: PEOPLE[level].user, at: new Date().toISOString(), value: sent.value });
+        keptKeys.set(namespace, held);
+        console.log(`${pink}${level} kept the ${sent.name} key of ${namespace}${reset}`);
+        return json(keysOf(namespace));
     }
     return null;
 }
@@ -219,7 +316,9 @@ async function answer(req: Request, url: URL): Promise<Response> {
     const said = worldAnswer(level, method, path, url)
         ?? await codexAgents.answer(req)
         ?? await agentAnswer(level, method, path, url, req)
-        ?? await filesAnswer(method, path, req);
+        ?? await filesAnswer(method, path, req)
+        ?? await keysAnswer(level, method, path, req)
+        ?? await anthropicAnswer(method, path, req);
     if (said) return said;
 
     if (method !== "GET" && method !== "HEAD") {
@@ -284,7 +383,7 @@ Bun.serve({
         }
         if (path === "/__mock__/") return json({ as: whoIs(req) ?? "nobody", levels: LEVELS });
 
-        if (isBackendPath(path)) return answer(req, url);
+        if (isBackendPath(path) || path.startsWith("/.well-known/")) return answer(req, url);
 
         if (path === "/" || path === "") {
             const level = whoIs(req);

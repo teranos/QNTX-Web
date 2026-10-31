@@ -6,19 +6,15 @@ An element is exactly ONE DOM element for its entire lifetime (@teranos/elements
 
 All tray creation via `tray.add`; canvas via `canvasPlaced`. Register new types in `components/element/element-registry.ts`.
 
+## Stories
+
+[BDD.md](BDD.md)
+
 ## Sidebar and tray
 
 "they're still elements. But from now on we say that the tray is for things that are more temporal. Like individual chats, or an individual User. While Users, or Integrations, Vault, etc, etc will be leftside"
 
 A standing element (what the node offers: Users, Mail, GitHub, Pulse, ≡, ⍟…) rests in the sidebar on the left, in Button Form (`restInSidebar`, `ts/sidebar.ts`). A temporal one (one chat, one User, one result, one transcript) rests in the tray (`tray.add`). The canvas alone of the standing elements rests in the tray: it opens as the workspace, which a button cannot become. Open an element by id with `openElement(id)` and ask `hasElement(id)`, never `tray.open`/`tray.has` for a standing one: a standing element minimized is a dot in the tray, and `openElement` finds it wherever it is.
-
-## Tables
-
-**A table is @teranos/elements'.** "The elements package should own Tables" "TABLES BEING MAX 4 col". Build one with `createTable(name, heads, rows)`: one to four heads, every row as wide, or it does not compile. A cell may be the host's own `td`.
-
-## Controls
-
-**A control is @teranos/elements'.** A button is `pressFrom`: the same size at every stage, white at rest, red armed only when its second press cannot be undone (`irrevocable`), green and shimmering armed only when it creates (`creates`); no colour, size or variant to choose, and misuse does not compile. The rules: the QNTX Design System's Press component.
 
 ## WASM
 

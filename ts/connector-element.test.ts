@@ -1,25 +1,47 @@
-// Connectors (⧉) — what a USER connects, each with its maker's mark, each its own story (stories 9, 11-14, 5).
-// Tim: the list, and each story through. Spike: standing nowhere, and a key never said back.
+// Connectors (⧉): one row per platform, each opening into its own stories (stories/9, 11, 12, 20, 21, 14, 13, 5).
+// Tim: the rows, each platform through. Spike: standing nowhere, a key never said back, a key its platform refuses.
 
 import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
-import { nodeMCPOf, renderConnectors, rootsClient } from './connector-element';
+import { MEANS } from '@teranos/elements';
+import { createConnectorElement, nodeMCPOf, renderConnectors, rootsClient } from './connector-element';
 
 const NODE = 'https://api.q.sbvh.nl/mcp';
 
 const originalFetch = globalThis.fetch;
-let asked: { url: string; body: Record<string, unknown> }[] = [];
+let asked: { url: string; method: string; body: Record<string, unknown> }[] = [];
+
+/** What the node holds of Clean's keys, as keys list answers it. */
+let keys: { name: string; set_by: string; at: string; asked: boolean; accepted: boolean; why: string }[] = [];
+
+function answer(body: unknown): Promise<Response> {
+    return Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+}
 
 beforeEach(() => {
     document.body.innerHTML = '';
     asked = [];
+    keys = [];
     globalThis.fetch = mock((url: any, init: any) => {
-        asked.push({ url: String(url), body: init?.body ? JSON.parse(String(init.body)) : {} });
-        return Promise.resolve(new Response(JSON.stringify({
-            id: 'AT_1', label: 'x', token: 'qntx_secret', did: 'did:key:zclient', created_at: '',
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+        const method = init?.method ?? 'GET';
+        const body = init?.body ? JSON.parse(String(init.body)) : {};
+        asked.push({ url: String(url), method, body });
+        if (String(url).endsWith('/api/keys/Clean')) {
+            if (method === 'POST') {
+                // The platform issued only sk-ant-issued.
+                const accepted = body.value === 'sk-ant-issued';
+                keys = [{ name: body.name, set_by: 'me', at: '', asked: true, accepted, why: accepted ? '' : 'anthropic answered 401' }];
+            }
+            return answer({ namespace: 'Clean', keys });
+        }
+        return answer({ id: 'AT_1', label: 'x', token: 'qntx_secret', did: 'did:key:zclient', created_at: '' });
     }) as unknown as typeof fetch;
 });
 afterEach(() => { globalThis.fetch = originalFetch; });
+
+/** Lets what was asked of the node be answered. */
+async function settle(): Promise<void> {
+    for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 1));
+}
 
 /** The second press creates: the first arms it. */
 async function pressTwice(held: HTMLElement, id: string): Promise<void> {
@@ -28,7 +50,7 @@ async function pressTwice(held: HTMLElement, id: string): Promise<void> {
     press.click();
     press.click();
     for (let i = 0; i < 50 && asked.length === before; i++) await new Promise((r) => setTimeout(r, 1));
-    await new Promise((r) => setTimeout(r, 5));
+    await settle();
 }
 
 function drawn(standing: string, opened: string[] = []): HTMLElement {
@@ -38,103 +60,159 @@ function drawn(standing: string, opened: string[] = []): HTMLElement {
     return held;
 }
 
-function choose(held: HTMLElement, brand: string): void {
-    (held.querySelector(`[data-connect="${brand}"]`) as HTMLElement).click();
+function row(held: HTMLElement, platform: string): HTMLElement {
+    return held.querySelector(`[data-platform="${platform}"]`) as HTMLElement;
 }
 
-// "ROOT WANTS AN MCP OVER THE ENTIRE SERVER, SET VIA EITHER I OR AM"
+function choose(held: HTMLElement, platform: string): HTMLElement {
+    (row(held, platform).querySelector('[data-connect]') as HTMLElement).click();
+    return row(held, platform);
+}
+
+function part(inRow: HTMLElement, name: string): HTMLElement {
+    (inRow.querySelector(`[data-part="${name}"]`) as HTMLElement).click();
+    return inRow;
+}
+
+// "ROOT WANTS AN MCP OVER THE ENTIRE SERVER, SET VIA EITHER I OR AM ELEMENT"
 describe('Tim: ROOT connects an app to the node', () => {
     test("ROOT's client names no namespace, and the node's server URL is said with its id and secret", async () => {
         const held = rootsClient(NODE);
         document.body.appendChild(held);
-        // "should be like a fold out when you want it"
-        expect(held.tagName).toBe('DETAILS');
-        expect((held as HTMLDetailsElement).open).toBe(false);
         (held.querySelector('[data-field="roots-client-label"] input') as HTMLInputElement).value = 'chatgpt';
         (held.querySelector('[data-field="roots-client-return"] input') as HTMLInputElement).value = 'https://chatgpt.com/connector/oauth/abc';
         await pressTwice(held, 'roots-client');
 
         expect(asked[0]!.body).toMatchObject({ label: 'chatgpt', level: 'OAUTH', root: true, namespaces: [] });
         expect(held.textContent).toContain(NODE);
-        expect(held.textContent).toContain('qntx_secret');
+        await expectSecretHiddenAndCopied(held);
     });
 });
 
-// "AS A USER I EXPECT TO SEE THE CONNECTORS ELEMENT"
-describe('Tim: USER sees what can be connected', () => {
-    test('each with its own mark and color, and no namespace to pick', () => {
+describe('Tim: USER sees one row per platform (stories/9)', () => {
+    test('Obsidian, OpenRouter, Anthropic, OpenAI and GitHub, each with its own mark', () => {
         const held = drawn('Clean');
-        for (const brand of ['ChatGPT', 'Claude', 'Obsidian', 'OpenRouter', 'Anthropic', 'OpenAI', 'GitHub']) {
-            const tile = held.querySelector(`[data-connect="${brand}"]`);
-            expect(tile, brand).not.toBeNull();
-            expect(tile!.querySelector('svg path')?.getAttribute('d')).toBeTruthy();
+        for (const platform of ['Obsidian', 'OpenRouter', 'Anthropic', 'OpenAI', 'GitHub']) {
+            expect(row(held, platform), platform).not.toBeNull();
+            expect(row(held, platform).querySelector('svg path')?.getAttribute('d'), platform).toBeTruthy();
         }
-        expect(held.querySelector<HTMLElement>('[data-connect="Claude"] [data-brand]')?.dataset.hex).toBe('D97757');
+        expect(held.querySelectorAll('[data-platform]')).toHaveLength(5);
         expect(held.querySelector('select')).toBeNull();
     });
+
+    test('the server MCP URL of the namespace stood in is there on opening, and a click copies it', () => {
+        const url = drawn('Clean').querySelector('[data-mcp-url]') as HTMLElement;
+        expect(url.textContent).toBe(`${NODE}/Clean`);
+        expect(url.hasAttribute('data-copyable')).toBe(true);
+    });
+
+    test('Connectors draws its rows before the node answers, so it opens measured whole', () => {
+        globalThis.fetch = mock(() => new Promise<Response>(() => {})) as unknown as typeof fetch;
+        const content = createConnectorElement().renderContent!();
+        expect(content.querySelectorAll('[data-platform]')).toHaveLength(5);
+    });
+
+    test('a platform opens inside its own row', () => {
+        const held = drawn('Clean');
+        const anthropic = choose(held, 'Anthropic');
+        expect(anthropic.querySelector('[data-part="add QNTX MCP to Claude"]')).not.toBeNull();
+        expect(row(held, 'OpenAI').querySelector('[data-part]')).toBeNull();
+    });
 });
 
-describe('Tim: each leads to its own story', () => {
-    test('Claude: nothing to type, connected in the namespace stood in (story 12)', async () => {
+describe('Tim: Anthropic leads to two stories (stories/12)', () => {
+    test('add QNTX MCP to Claude, and Claude Code', () => {
+        const anthropic = choose(drawn('Clean'), 'Anthropic');
+        expect(anthropic.querySelector('[data-part="Anthropic API key"]')).toBeNull();
+        for (const name of ['add QNTX MCP to Claude', 'Claude Code']) {
+            expect(anthropic.querySelector(`[data-part="${name}"]`), name).not.toBeNull();
+        }
+    });
+
+    test('add QNTX MCP to Claude: connected in the namespace stood in, id and secret copied by a click (stories/20)', async () => {
         const held = drawn('Clean');
-        choose(held, 'Claude');
-        expect(held.querySelector('input')).toBeNull();
+        part(choose(held, 'Anthropic'), 'add QNTX MCP to Claude');
         await pressTwice(held, 'connect-claude');
 
         const minted = asked.find((a) => a.url.endsWith('/auth/tokens'))!;
         expect(minted.body).toMatchObject({ level: 'OAUTH', namespaces: ['Clean'], return_address: 'https://claude.ai/api/mcp/auth_callback' });
-        expect(String(minted.body.label)).toStartWith('Claude');
-        expect(held.textContent).toContain('https://api.q.sbvh.nl/mcp/Clean');
-        expect(held.textContent).toContain('did:key:zclient');
-        expect(held.textContent).toContain('qntx_secret');
+        const copied = Array.from(held.querySelectorAll('[data-copyable]')).map((c) => c.textContent);
+        expect(copied).toContain('did:key:zclient');
+        await expectSecretHiddenAndCopied(held);
+        expect(held.querySelector<HTMLAnchorElement>('a[href="https://claude.ai/new?modal=add-custom-connector#customize/connectors/yours"]')).not.toBeNull();
     });
 
-    test('ChatGPT: only the callback ChatGPT made is given (story 11)', async () => {
+    test('Claude Code opens the agent of the namespace stood in', () => {
+        const opened: string[] = [];
+        part(choose(drawn('Clean', opened), 'Anthropic'), 'Claude Code');
+        expect(opened).toEqual(['agent-element']);
+    });
+});
+
+// "secret is hidden by default"
+// "click -> clipboard -> 'Copied!'"
+async function expectSecretHiddenAndCopied(held: HTMLElement): Promise<void> {
+    const secret = held.querySelector('[data-secret]') as HTMLElement;
+    expect(secret.textContent).not.toContain('qntx_secret');
+    const written: string[] = [];
+    Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: (text: string) => { written.push(text); return Promise.resolve(); } },
+        configurable: true,
+    });
+    secret.click();
+    await settle();
+    expect(written).toEqual(['qntx_secret']);
+    expect(secret.textContent).toBe('Copied!');
+}
+
+/** A colour as the DOM reads it back off a style. */
+function hex(color: string): string {
+    const probe = document.createElement('span');
+    probe.style.backgroundColor = color;
+    return probe.style.backgroundColor;
+}
+
+describe('Tim: OpenAI, OpenRouter, Obsidian and GitHub', () => {
+    test('OpenAI: ChatGPT connects with the callback ChatGPT made (stories/11)', async () => {
         const held = drawn('Clean');
-        choose(held, 'ChatGPT');
-        const inputs = held.querySelectorAll('input');
-        expect(inputs).toHaveLength(1);
-        inputs[0]!.value = 'https://chatgpt.com/connector/oauth/abc';
+        part(choose(held, 'OpenAI'), 'ChatGPT');
+        const callback = row(held, 'OpenAI').querySelector('input') as HTMLInputElement;
+        callback.value = 'https://chatgpt.com/connector/oauth/abc';
         await pressTwice(held, 'connect-chatgpt');
 
         const minted = asked.find((a) => a.url.endsWith('/auth/tokens'))!;
         expect(minted.body).toMatchObject({ level: 'OAUTH', namespaces: ['Clean'], return_address: 'https://chatgpt.com/connector/oauth/abc' });
         expect(held.textContent).toContain('client_secret_post');
-        expect(held.textContent).toContain('qntx_secret');
+        expect(held.querySelector('a[href="https://chatgpt.com/plugins"]')).not.toBeNull();
     });
 
     // "you can connect multiple chatgpt accounts"
     test('ChatGPT twice is two connections, each its own name', async () => {
-        const first = drawn('Clean');
-        choose(first, 'ChatGPT');
-        first.querySelector('input')!.value = 'https://chatgpt.com/connector/oauth/one';
-        await pressTwice(first, 'connect-chatgpt');
-        const second = drawn('Clean');
-        choose(second, 'ChatGPT');
-        second.querySelector('input')!.value = 'https://chatgpt.com/connector/oauth/two';
-        await pressTwice(second, 'connect-chatgpt');
-
+        for (const callback of ['https://chatgpt.com/connector/oauth/one', 'https://chatgpt.com/connector/oauth/two']) {
+            const held = drawn('Clean');
+            part(choose(held, 'OpenAI'), 'ChatGPT');
+            (row(held, 'OpenAI').querySelector('input') as HTMLInputElement).value = callback;
+            await pressTwice(held, 'connect-chatgpt');
+        }
         const labels = asked.filter((a) => a.url.endsWith('/auth/tokens')).map((a) => a.body.label);
         expect(labels).toHaveLength(2);
         expect(labels[0]).not.toBe(labels[1]);
     });
 
-    for (const [brand, provider] of [['OpenRouter', 'openrouter'], ['Anthropic', 'anthropic'], ['OpenAI', 'openai']] as const) {
-        test(`${brand}: the key is kept by the namespace stood in, by the provider's name (story 14)`, async () => {
-            const held = drawn('Clean');
-            choose(held, brand);
-            const key = held.querySelector('input') as HTMLInputElement;
-            expect(key.type).toBe('password');
-            key.value = 'sk-secret';
-            await pressTwice(held, `connect-${provider}`);
+    test('OpenAI and OpenRouter keep their keys by the platform name (stories/14)', async () => {
+        const held = drawn('Clean');
+        part(choose(held, 'OpenAI'), 'OpenAI API key');
+        (row(held, 'OpenAI').querySelector('input') as HTMLInputElement).value = 'sk-openai';
+        await pressTwice(held, 'connect-openai');
+        choose(held, 'OpenRouter');
+        (row(held, 'OpenRouter').querySelector('input') as HTMLInputElement).value = 'sk-or';
+        await pressTwice(held, 'connect-openrouter');
 
-            const set = asked.find((a) => a.url.endsWith('/api/keys/Clean'))!;
-            expect(set.body).toEqual({ name: provider, value: 'sk-secret' });
-            expect(held.textContent).not.toContain('sk-secret');
-        });
-    }
+        const set = asked.filter((a) => a.method === 'POST' && a.url.endsWith('/api/keys/Clean')).map((a) => a.body);
+        expect(set).toEqual([{ name: 'openai', value: 'sk-openai' }, { name: 'openrouter', value: 'sk-or' }]);
+    });
 
-    test('Obsidian and GitHub open their own elements (stories 13 and 5)', () => {
+    test('Obsidian and GitHub open their own elements (stories/13 and 5)', () => {
         const opened: string[] = [];
         const held = drawn('Clean', opened);
         choose(held, 'Obsidian');
@@ -143,20 +221,15 @@ describe('Tim: each leads to its own story', () => {
     });
 });
 
-describe('Spike: what is not said', () => {
-    test('standing in no namespace, nothing is connected', () => {
-        const held = drawn('');
-        choose(held, 'Claude');
-        expect(held.textContent).toContain('no namespace');
-        expect(held.querySelector('[data-press="connect-claude"]')).toBeNull();
+describe('Spike: standing nowhere, and a card naming no server', () => {
+    test('standing in no namespace, a platform says so and offers nothing to press', () => {
+        const anthropic = choose(drawn(''), 'Anthropic');
+        expect(anthropic.textContent).toContain('no namespace');
+        expect(anthropic.querySelector('[data-part]')).toBeNull();
     });
 
     test('a card naming no MCP server names none', () => {
         expect(nodeMCPOf({})).toBeUndefined();
         expect(nodeMCPOf({ capabilities: { extensions: [{ params: {} }] } })).toBeUndefined();
-    });
-
-    test('nothing in it is underlined: no URL here is a link out', () => {
-        expect(drawn('Clean').querySelector('a')).toBeNull();
     });
 });

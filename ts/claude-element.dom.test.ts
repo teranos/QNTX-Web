@@ -7,9 +7,8 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { createPiElement } from './pi-element';
-import { createClaudeElement, drawClaude, type ClaudeAm, type ClaudeSaid, type NodeAgent } from './claude-element';
-import type { TranscriptRead } from './components/element/transcript-element';
+import { drawClaude, type ClaudeAm, type ClaudeSaid, type LiveEvent, type NodeAgent } from './claude-element';
+import type { SessionRead } from './chat';
 
 const USE_JSDOM = process.env.USE_JSDOM === '1';
 
@@ -44,7 +43,7 @@ const answered: ClaudeSaid = {
     unwritten: '',
 };
 
-const session: TranscriptRead = {
+const session: SessionRead = {
     session: SESSION,
     subjects: ['qntx/root-agent'],
     started: '2026-10-05T09:00:00Z',
@@ -100,17 +99,41 @@ describe('Claude - Tim', () => {
         stop();
     });
 
-    // "I WANT THE CLAUDE ELEMENT TO FEEL MORE DISTINCTLY CLAUDE"
-    test('the Claude element is headed by the Spark, and the Pi element is not', () => {
-        const claude = createClaudeElement().renderContent!() as HTMLElement;
-        const head = claude.querySelector('.claude-head')!;
-        expect(head.querySelector('.claude-spark')).not.toBeNull();
-        expect(head.querySelector('.claude-who')).not.toBeNull();
-        expect(claude.classList.contains('claude-brand')).toBe(true);
+    // "would like ability to pick model as well"
+    test('the models the node offers are picked from, its own chosen, and the one picked is what is said with', async () => {
+        const body = document.createElement('div');
+        const models: string[] = [];
+        const stop = drawClaude(body, node({
+            say: (_says, _mode, _carried, model) => { models.push(model ?? ''); return Promise.resolve(answered); },
+        }, { ...am, models: ['claude-opus-5-5', 'claude-sonnet-5-5'] }));
+        await settled();
+        const pick = body.querySelector<HTMLSelectElement>('.claude-model')!;
+        expect(pick.hidden).toBe(false);
+        expect(Array.from(pick.options).map(o => o.value)).toEqual(['claude-opus-5-5', 'claude-sonnet-5-5']);
+        expect(pick.value).toBe('claude-opus-5-5');
+        pick.value = 'claude-sonnet-5-5';
+        say(body, 'how long has the box been up?');
+        await settled();
+        expect(models).toEqual(['claude-sonnet-5-5']);
+        stop();
+    });
 
-        const pi = createPiElement().renderContent!() as HTMLElement;
-        expect(pi.querySelector('.claude-spark')).toBeNull();
-        expect(pi.classList.contains('claude-brand')).toBe(false);
+    test('a node that offers no models shows no model to pick', async () => {
+        const body = document.createElement('div');
+        const stop = drawClaude(body, node());
+        await settled();
+        expect(body.querySelector<HTMLSelectElement>('.claude-model')!.hidden).toBe(true);
+        stop();
+    });
+
+    // "make sure we only use titlebar, so red part should not exist"
+    test('nothing heads the chat, and who answers is hidden once it answered', async () => {
+        const body = document.createElement('div');
+        const stop = drawClaude(body, node());
+        await settled();
+        expect(body.querySelector('.claude-head')).toBeNull();
+        expect(body.querySelector<HTMLElement>('.claude-who')!.hidden).toBe(true);
+        stop();
     });
 
     // "make sure --permission-mode is configurable in the Claude Element"
@@ -136,8 +159,8 @@ describe('Claude - Tim', () => {
         await settled();
 
         expect(asked.sent).toEqual([['how long has the box been up?', 'plan']]);
-        const rows = [...body.querySelectorAll('.tr-turn')].map(t => t.querySelector('.tr-text')?.textContent?.trim());
-        expect(rows).toEqual(['how long has the box been up?', 'Up 3 days.']);
+        const rows = [...body.querySelectorAll('.chat-row')].map(t => t.textContent?.trim());
+        expect(rows).toEqual(['last talked Oct 5 09:00', 'how long has the box been up?', '$ uptime', 'Up 3 days.']);
         expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('');
         stop();
     });
@@ -147,7 +170,7 @@ describe('Claude - Tim', () => {
         const body = document.createElement('div');
         const stop = drawClaude(body, node({}, { ...am, session: SESSION }));
         await settled();
-        expect(body.querySelectorAll('.tr-turn')).toHaveLength(2);
+        expect(body.querySelectorAll('.chat-row')).toHaveLength(4);
         stop();
     });
 });
@@ -275,5 +298,178 @@ describe('Claude - Jenny', () => {
         await settled();
         expect(body.querySelector<HTMLButtonElement>('.claude-send')!.disabled).toBe(false);
         stop();
+    });
+});
+
+describe('Claude - the session while it runs', () => {
+    if (!USE_JSDOM) {
+        test.skip('Skipped locally (run with USE_JSDOM=1 to enable)', () => {});
+        return;
+    }
+
+    const event = (kind: string, text: string, tool = ''): LiveEvent => ({ kind, text, tool, tool_use_id: '', at: '2026-10-28T22:35:16Z', mark: '1' });
+
+    // "it doesnt stream in, only the [tool] and [mcp] pieces fly in."
+    // The words are drawn as the stream hands them, while say has not answered.
+    test('the words of a turn going are drawn before say answers, and the live view empties when it has', async () => {
+        const body = document.createElement('div');
+        let landed: ((e: LiveEvent) => void) | null = null;
+        let ended: (() => void) | null = null;
+        let answer: ((said: ClaudeSaid) => void) | null = null;
+        const stop = drawClaude(body, node({
+            say: () => new Promise(resolve => { answer = resolve; }),
+            live: (onEvent, onEnd) => { landed = onEvent; ended = onEnd; return () => {}; },
+        }));
+        await settled();
+        say(body, 'how long has the box been up?');
+        await settled();
+        expect(landed).not.toBeNull();
+        const live = body.querySelector<HTMLElement>('.chat-live')!;
+        // What was said is the transcript's to show, written down before the turn: not drawn twice.
+        expect(live.textContent).not.toContain('[human]');
+        expect(live.querySelector('.chat-you')?.textContent).toBe('how long has the box been up?');
+
+        landed!({ ...event('tool_use', 'Bash', 'Bash'), input: '{"command":"uptime"}' });
+        landed!(event('tool_result', 'up 3 days, 2 users'));
+        landed!(event('delta', 'Up 3'));
+        landed!(event('delta', ' days.'));
+        // The thing itself, no speaker in front of it.
+        const rows = Array.from(live.querySelectorAll('.chat-row')).map(r => r.textContent?.trim());
+        expect(rows).toEqual(['how long has the box been up?', '$ uptime', 'up 3 days, 2 users', 'Up 3 days.']);
+        expect(live.textContent).not.toContain('[tool]');
+        // Still answering: say has not come back.
+        expect(body.querySelector<HTMLButtonElement>('.claude-send')!.disabled).toBe(true);
+
+        landed!(event('text', 'Up 3 days.'));
+        expect(live.querySelectorAll('.chat-said').length).toBe(1);
+        landed!(event('ended', 'Up 3 days.'));
+        ended!();
+        answer!(answered);
+        await settled();
+        // The transcript has it now, and the live view is empty.
+        expect(live.childElementCount).toBe(0);
+        expect(body.querySelector('.claude-session')!.textContent).toContain('Up 3 days.');
+        expect(body.querySelector<HTMLButtonElement>('.claude-send')!.disabled).toBe(false);
+        stop();
+    });
+
+    // "including +/- diffs fly by"
+    test('an edit flies by as what was and what is, a write as what is, and a tool with no shape as its input whole', async () => {
+        const { toolUseShown } = await import('./chat');
+        const edit = toolUseShown('Edit', JSON.stringify({ file_path: 'a.go', old_string: 'x := 1\ny := 2', new_string: 'x := 3' }));
+        expect(Array.from(edit.children).map(c => c.textContent)).toEqual(['edited a.go', '- x := 1', '- y := 2', '+ x := 3']);
+        expect(edit.querySelectorAll('.chat-del').length).toBe(2);
+        expect(edit.querySelectorAll('.chat-add').length).toBe(1);
+        const write = toolUseShown('Write', JSON.stringify({ file_path: 'b.md', content: 'hi' }));
+        expect(Array.from(write.children).map(c => c.textContent)).toEqual(['wrote b.md', '+ hi']);
+        const mcp = toolUseShown('mcp__qntx__reach_list', '{"path":"/api/agent"}');
+        expect(mcp.textContent).toContain('asked qntx: reach_list');
+        expect(mcp.textContent).not.toContain('mcp__');
+        expect(mcp.textContent).toContain('"path": "/api/agent"');
+        expect(toolUseShown('Read', '{"file_path":"c.ts"}').textContent).toBe('read c.ts');
+    });
+
+    // "I WANT A CHAT, I DONT WANT A READER": the session is drawn as the chat, never by the reader.
+    test('the session is the chat: text to select, no row to press, no label, no chip, no spacer', async () => {
+        const body = document.createElement('div');
+        const stop = drawClaude(body, node({}, { ...am, session: SESSION }));
+        await settled();
+        const chat = body.querySelector<HTMLElement>('.claude-session')!;
+        expect(chat.querySelector('.tr-turn')).toBeNull();
+        expect(chat.querySelector('.tr-chip')).toBeNull();
+        expect(chat.querySelector('.tr-spacer')).toBeNull();
+        expect(chat.textContent).not.toContain('[human]');
+        expect(chat.textContent).not.toContain('[assistant]');
+        expect(chat.textContent).not.toContain('[tool]');
+        const rows = Array.from(chat.querySelectorAll('.chat-row')).map(r => r.textContent?.trim());
+        expect(rows).toEqual(['last talked Oct 5 09:00', 'how long has the box been up?', '$ uptime', 'Up 3 days.']);
+        expect(chat.querySelector('.chat-you')).not.toBeNull();
+        // It has been a while since 2026-10-05: the chat says when we last talked, once, at the top.
+        expect(chat.querySelector('.chat-row')!.textContent).toContain('last talked');
+        stop();
+    });
+
+    test('the harness starting or resuming is not a line of the conversation', async () => {
+        const { renderChat } = await import('./chat');
+        const body = document.createElement('div');
+        renderChat(body, { ...session, turns: [...session.turns, { at: '2026-10-05T09:00:05Z', speaker: 'session', text: 'Start resume', of: 'x-1' }] });
+        expect(body.textContent).not.toContain('Start resume');
+        expect(body.textContent).not.toContain('session');
+    });
+
+    test('after the fact a tool says what it did, a compaction says it happened, and nothing hovers', async () => {
+        const { renderChat } = await import('./chat');
+        const body = document.createElement('div');
+        renderChat(body, { ...session, turns: [
+            { at: '2026-10-05T09:00:01Z', speaker: 'edit', text: 'server/a.go', of: 'e-1' },
+            { at: '2026-10-05T09:00:02Z', speaker: 'mcp', text: 'mcp__qntx__reach_list', of: 'm-1' },
+            { at: '2026-10-05T09:00:03Z', speaker: 'compaction', text: 'compacted', of: 'c-1' },
+        ] });
+        const rows = Array.from(body.querySelectorAll('.chat-row')).map(r => r.textContent?.trim());
+        expect(rows.slice(-3)).toEqual(['edited server/a.go', 'asked qntx: reach_list', 'the context was compacted here']);
+        expect(body.textContent).not.toContain('[');
+        expect(body.querySelector('[title]')).toBeNull();
+    });
+
+    // A node from before live has no stream: the element reads the session as it did.
+    test('a node with no live still answers through the transcript', async () => {
+        const body = document.createElement('div');
+        const stop = drawClaude(body, node());
+        await settled();
+        say(body, 'how long has the box been up?');
+        await settled();
+        expect(body.querySelector('.claude-session')!.textContent).toContain('Up 3 days.');
+        expect(body.querySelector('.chat-live')!.childElementCount).toBe(0);
+        stop();
+    });
+});
+
+
+describe('Claude - live read off fetch', () => {
+    if (!USE_JSDOM) {
+        test.skip('Skipped locally (run with USE_JSDOM=1 to enable)', () => {});
+        return;
+    }
+
+    const sse = (chunks: string[], status = 200) => {
+        const utf8 = new TextEncoder();
+        const body = new ReadableStream<Uint8Array>({
+            start(controller) { for (const chunk of chunks) controller.enqueue(utf8.encode(chunk)); controller.close(); },
+        });
+        return new Response(status === 200 ? body : 'the Node Agent is not in a turn', { status, headers: { 'Content-Type': 'text/event-stream' } });
+    };
+
+    // An event split across chunks is one event, and end ends it once.
+    test('events are read whole across chunks, and end is the end', async () => {
+        const { readLive } = await import('./claude-element');
+        const original = globalThis.fetch;
+        const asked: string[] = [];
+        globalThis.fetch = ((url: string) => { asked.push(url); return Promise.resolve(sse([
+            'data: {"kind":"delta","text":"Up","tool":"","tool_use_id":"","at":"","mark":"1"}\n\n',
+            'data: {"kind":"delta","text":" 3 da',
+            'ys.","tool":"","tool_use_id":"","at":"","mark":"2"}\n\nevent: end\ndata: {"events":[],"live":false,"mark":"3"}\n\n',
+        ])); }) as typeof fetch;
+        try {
+            const got: string[] = [];
+            let ends = 0;
+            readLive('/api/agent/live?harness=claude', e => got.push(e.text), () => { ends++; });
+            await settled();
+            expect(asked).toEqual(['/api/agent/live?harness=claude']);
+            expect(got).toEqual(['Up', ' 3 days.']);
+            expect(ends).toBe(1);
+        } finally { globalThis.fetch = original; }
+    });
+
+    // Nothing answers between turns: that ends it, and whoever listens asks again.
+    test('a refusal ends the read', async () => {
+        const { readLive } = await import('./claude-element');
+        const original = globalThis.fetch;
+        globalThis.fetch = (() => Promise.resolve(sse([], 404))) as typeof fetch;
+        try {
+            let ends = 0;
+            readLive('/api/agent/live?harness=claude', () => {}, () => { ends++; });
+            await settled();
+            expect(ends).toBe(1);
+        } finally { globalThis.fetch = original; }
     });
 });

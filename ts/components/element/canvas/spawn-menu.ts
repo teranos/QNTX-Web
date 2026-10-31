@@ -459,9 +459,12 @@ function persistElement(
     entry: ElementTypeEntry,
     canvasId: string
 ): void {
-    const rect = elementElement.getBoundingClientRect();
-    const width = Math.round(rect.width);
-    const height = Math.round(rect.height);
+    // Layout size, not getBoundingClientRect: the rect carries every transform on
+    // the element and above it. Persisted during the cursor morph it is the
+    // cursor's 44x44 (the morph's first keyframe scales the element down to the
+    // cursor), and on a zoomed canvas it is the zoomed size.
+    const width = elementElement.offsetWidth;
+    const height = elementElement.offsetHeight;
 
     uiState.addCanvasElement({
         id: item.id,

@@ -152,15 +152,25 @@ try {
     }
     return "unknown";
   }
+  // The web's own version: its latest tag, and how far past it (git describe); dev when it has none.
+  function resolveWebVersion(): string {
+    const proc = Bun.spawnSync(["git", "describe", "--tags", "--match", "v*", "--always"], { cwd: sourceDir });
+    if (proc.exitCode === 0) {
+      const out = proc.stdout.toString().trim();
+      if (out.startsWith("v")) return out;
+    }
+    return "dev";
+  }
   const buildCommit = resolveCommit();
   const webCommit = resolveWebCommit();
+  const webVersion = resolveWebVersion();
   const buildTime = new Date().toISOString();
-  console.log(`${lightPeach}Stamping web build: web ${webCommit.slice(0, 7)} via ${buildCommit.slice(0, 7)} @ ${buildTime}${reset}`);
+  console.log(`${lightPeach}Stamping web build: ${webVersion}, web ${webCommit.slice(0, 7)} via ${buildCommit.slice(0, 7)} @ ${buildTime}${reset}`);
   // commit stays first: consumers find it by cutting on the literal `commit: "`.
   updatedHtml = updatedHtml.replace(
     "</head>",
     `<script>
-        window.__QNTX_WEB_BUILD__ = { commit: "${buildCommit}", build_time: "${buildTime}", web: "${webCommit}" };
+        window.__QNTX_WEB_BUILD__ = { commit: "${buildCommit}", build_time: "${buildTime}", web: "${webCommit}", version: "${webVersion}" };
       </script>
       </head>`
   );
@@ -174,6 +184,16 @@ try {
   // Copy static assets
   console.log(`${darkPeach}Copying static assets...${reset}`);
   await cp(join(sourceDir, "qntx.jpg"), join(outputDir, "qntx.jpg"));
+  // The screenshots a story shows, where the page asks for them.
+  await cp(join(sourceDir, "img"), join(outputDir, "img"), { recursive: true });
+  // "ROOT or developer oriented Stories Element should exist": what it lists, each story by its file and its Feature line.
+  const stories = [];
+  for (const file of (await readdir(join(sourceDir, "stories"))).filter((f) => f.endsWith(".feature")).sort((a, b) => parseInt(a) - parseInt(b))) {
+    const text = await Bun.file(join(sourceDir, "stories", file)).text();
+    const feature = text.split("\n").find((line) => line.startsWith("Feature:")) ?? file;
+    stories.push({ name: file.replace(/\.feature$/, ""), feature: feature.replace(/^Feature:\s*/, "") });
+  }
+  await Bun.write(join(outputDir, "stories.json"), JSON.stringify(stories));
 
   // Copy WASM files for browser IndexedDB storage
   // WASM binaries must be in /js/ alongside bundled JS (import.meta.url resolution)

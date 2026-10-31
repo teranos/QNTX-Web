@@ -1,7 +1,7 @@
 // ROOT SHAKE picks the element in front; say carries the element and the picture.
 
 import { describe, expect, test } from 'bun:test';
-import { elementOnScreen, SHAKE_ID } from './shake';
+import { elementOfSymbol, elementOnScreen, SHAKE_ID } from './shake';
 import { sayBody } from './claude-element';
 
 function placed(id: string, form: string, z: string, symbol = ''): HTMLElement {
@@ -59,6 +59,34 @@ describe('the element on screen', () => {
         const root = document.createElement('div');
         root.append(placed('note', 'canvasPlaced', '2'), placed(SHAKE_ID, 'panel', '10003'));
         expect(elementOnScreen(root)?.id).toBe('note');
+    });
+});
+
+// > right click symbol -> ROOT SHAKE
+describe('a right-clicked symbol', () => {
+    test("is its element's, whichever element is in front", () => {
+        const el = placed('behind', 'window', '10003', '⊔');
+        const symbol = document.createElement('span');
+        symbol.className = 'symbol';
+        const glyph = document.createElement('span');
+        symbol.append(glyph);
+        el.append(symbol);
+        expect(elementOfSymbol(glyph)).toEqual({ id: 'behind', symbol: '⊔' });
+    });
+
+    test('anywhere else on the element is no shake', () => {
+        const el = placed('a', 'window', '1');
+        const title = document.createElement('span');
+        el.append(title);
+        expect(elementOfSymbol(title)).toBeNull();
+    });
+
+    test('the shake chat itself, right-clicked, is shaken about', () => {
+        const el = placed(SHAKE_ID, 'window', '1');
+        const symbol = document.createElement('span');
+        symbol.className = 'symbol';
+        el.append(symbol);
+        expect(elementOfSymbol(symbol)).toEqual({ id: SHAKE_ID, symbol: '' });
     });
 });
 

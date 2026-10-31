@@ -36,6 +36,8 @@
     "mock/world.ts",
     "mock/agents.ts",
     "mock/codex.ts",
+    "stories/steps/*.ts",
+    "playwright.config.ts",
     "ts/**/*.js",
     "types/**/*.ts",
     "types/**/*.d.ts"

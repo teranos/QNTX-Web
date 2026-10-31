@@ -44,6 +44,12 @@ export interface Node {
   name: string;
   description: string;
   signa: Signum[];
+  /**
+   * The media types the node gives, across every signum: JSON, everywhere.
+   * To A2A these are the card's default output modes, which a skill's own
+   * output modes override.
+   */
+  output_modes: string[];
 }
 
 /**
@@ -100,6 +106,113 @@ export interface SessionTranscript {
    * before anything was said to it.
    */
   transcript: Transcript | undefined;
+}
+
+/**
+ * SessionEvent is one thing a harness's session emitted, as it emitted it:
+ * live, in the order it happened, and no attestation. The transcript is the
+ * session after the fact (Transcript); this is the session while it runs.
+ */
+export interface SessionEvent {
+  /** The session it happened in. */
+  session: string;
+  /** Whose line this is: claude, pi, anthropic. */
+  harness: string;
+  /** When, as the harness stamped it, or when the node read it when it did not. */
+  at: string;
+  /**
+   * What it is, in the words every harness has one of: started, text, delta,
+   * tool_use, tool_result, thinking, ended, failed. A line that is none of
+   * these is "other", and raw still carries it whole.
+   */
+  kind: string;
+  /**
+   * What was said: the text, the delta, a tool's result, the answer on ended,
+   * the error on failed.
+   */
+  text: string;
+  /** On tool_use and tool_result: the tool and the id the harness gave the call. */
+  tool: string;
+  tool_use_id: string;
+  /** On tool_use: the input, as JSON, whole. */
+  input: string;
+  /**
+   * The harness's own line, whole, as it printed it. Nothing above says more
+   * than this; what the fields do not carry is still here.
+   */
+  raw: string;
+  /**
+   * Where in the session's stream this line ends, so a reader asks for what
+   * follows it and nothing is read twice or skipped.
+   */
+  mark: number;
+}
+
+/**
+ * SessionEvents is the events of a turn from a mark on, and whether the turn
+ * is still printing. Over SSE each event travels alone, as one data line.
+ */
+export interface SessionEvents {
+  events: SessionEvent[];
+  /**
+   * Whether the harness is still printing: false is the turn over, and its
+   * last event ended or failed.
+   */
+  live: boolean;
+  /** The mark to ask from next. */
+  mark: number;
+}
+
+/**
+ * ElementAgent is one element whose agent this node holds (ADR-054): named,
+ * and in a session when one was kept.
+ */
+export interface ElementAgent {
+  /** The element, as it is said to. */
+  element: string;
+  /** Its session in Claude Code, or empty before anything was said to it. */
+  session: string;
+  /** Whether it is answering now. */
+  answering: boolean;
+  /** Its Session at Anthropic's Console, when it runs there (ADR-054), or empty. */
+  anthropic_session: string;
+}
+
+/**
+ * ElementAgents is what elements list answers: every element agent this node
+ * holds, the stories' included, each by the element's name.
+ */
+export interface ElementAgents {
+  /** Each element agent held, by the element's name. */
+  agents: ElementAgent[];
+}
+
+/** ElementSession is one Session an element's agent has at Anthropic's Console. */
+export interface ElementSession {
+  /** The Session's id at the Console. */
+  id: string;
+  /** Its title there, when it has one. */
+  title: string;
+  /** Its status there: idle, running, terminated, as the Console says it. */
+  status: string;
+  /** When it was made, RFC 3339. */
+  created_at: string;
+  /** Whether the Console archived it. */
+  archived: boolean;
+  /** Whether it is the one the element's chat goes on in. */
+  current: boolean;
+}
+
+/**
+ * ElementSessions is what elements sessions and elements pick answer: every
+ * Session the element's agent has at the Console, newest first; none when it
+ * runs on the box.
+ */
+export interface ElementSessions {
+  /** The agent's id at the Console, or empty when it runs on the box. */
+  agent: string;
+  /** Each Session, newest first. */
+  sessions: ElementSession[];
 }
 
 /** ClaudeSaid is what claude say answers. */
@@ -176,6 +289,8 @@ export interface ClaudeAm {
   signed_in: boolean;
   /** How it is signed in, as Claude Code names it, or empty when it is not. */
   auth_method: string;
+  /** Every model a turn can be said to answer with. */
+  models: string[];
 }
 
 /**
@@ -188,7 +303,11 @@ export interface NamespaceAgentSaid {
     | ClaudeSaid
     | undefined;
   /** What it answered in Pi. */
-  pi: PiSaid | undefined;
+  pi:
+    | PiSaid
+    | undefined;
+  /** What the namespace agent answered in Codex. */
+  codex: CodexSaid | undefined;
 }
 
 /**
@@ -201,7 +320,11 @@ export interface NodeAgentSaid {
     | ClaudeSaid
     | undefined;
   /** What it answered in Pi. */
-  pi: PiSaid | undefined;
+  pi:
+    | PiSaid
+    | undefined;
+  /** What it answered in codex. */
+  codex: CodexSaid | undefined;
 }
 
 /**
@@ -214,7 +337,105 @@ export interface NodeAgentAm {
     | ClaudeAm
     | undefined;
   /** In Pi. */
-  pi: PiAm | undefined;
+  pi:
+    | PiAm
+    | undefined;
+  /** In codex. */
+  codex: CodexAm | undefined;
+}
+
+/** CodexSaid is what an agent answered in codex. */
+export interface CodexSaid {
+  /** What it answered. */
+  answer: string;
+  /** The session it was said in: the node's, apart from codex's own thread. */
+  session: string;
+  /** The model that answered. */
+  model: string;
+  /** The codex that ran. */
+  codex_version: string;
+  /** What codex says the turn used, in tokens. */
+  input_tokens: number;
+  output_tokens: number;
+  /** How long the turn took. */
+  took_ms: number;
+  /** Why a row of the session was not written down, when one was not. */
+  unwritten: string;
+  /** The CLI thread used to resume, distinct from the transcript session. */
+  thread: string;
+}
+
+/** CodexAm is who an agent is in codex and how the node runs it. */
+export interface CodexAm {
+  /** Its own DID, which signs what it writes down. */
+  did: string;
+  /** The model am.toml names. */
+  model: string;
+  /** The plugin every model call it makes in codex goes through. */
+  gateway: string;
+  /** The sandbox codex runs it in. */
+  sandbox: string;
+  /** The session it continues in codex, or empty before anything was said to it there. */
+  session: string;
+  /** Whether it is in a turn in codex now. */
+  answering: boolean;
+  /** Where the codex it runs is, or empty when the node has none yet. */
+  codex: string;
+  /** The codex this build pins. */
+  codex_version: string;
+  /** Why it cannot be spoken to in codex, when it cannot. */
+  not_ready: string;
+}
+
+/**
+ * NodeAnthropic is what anthropic am and anthropic set answer: the node's
+ * issuer and subject that ROOT registers at Anthropic, the ids of the rule its
+ * identity token is traded at, and whether Anthropic accepted it.
+ */
+export interface NodeAnthropic {
+  /** The node's OIDC issuer, the iss of every identity token it signs. */
+  issuer: string;
+  /** The node's DID, the sub of the node's own identity token. */
+  subject: string;
+  /** The Anthropic organization the rule is in. */
+  organization_id: string;
+  /** The federation rule the node's identity token is traded at. */
+  federation_rule_id: string;
+  /** The service account the traded token acts as. */
+  service_account_id: string;
+  /** Who gave the ids; empty before anybody did. */
+  set_by: string;
+  /** When the ids were given, as RFC 3339. */
+  at: string;
+  /** Whether Anthropic was asked: false before any ids were given. */
+  asked: boolean;
+  /** Whether Anthropic accepted the node's identity at the rule. */
+  accepted: boolean;
+  /** What Anthropic answered when it did not accept it, or why it was not reached. */
+  why: string;
+  /** The node's issuer as Anthropic registered it (fdis_). */
+  issuer_id: string;
+  /** The workspace the traded token is scoped to (wrkspc_), as the wizard's snippet names it. */
+  workspace_id: string;
+  /** What ROOT's agents spend first: "session", the Claude subscription, or "console", the node's OIDC. */
+  first: string;
+  /** Whether the other follows once the first is exhausted. */
+  then: boolean;
+  /** The session's windows, as ug last read each. */
+  session: AnthropicWindow[];
+  /** What ROOT's agents last ran on: "session" or "console"; empty before any turn. */
+  in_use: string;
+}
+
+/** AnthropicWindow is one window of the Claude subscription, as ug's status line read it. */
+export interface AnthropicWindow {
+  /** five_hour or seven_day. */
+  window: string;
+  used_percentage: number;
+  /** When the window resets, in Unix seconds. */
+  resets_at: number;
+  /** When ug read it, as RFC 3339. */
+  at: string;
 }
 
 /**
@@ -236,6 +457,18 @@ export interface NamespaceKey {
   set_by: string;
   /** When it was set, RFC 3339. */
   at: string;
+  /**
+   * Whether the provider it is named after was asked about it as this was
+   * answered.
+   */
+  asked: boolean;
+  /** Whether that provider accepts it: the light in Connectors. */
+  accepted: boolean;
+  /**
+   * What the provider answered when it did not accept it, or why it was not
+   * reached.
+   */
+  why: string;
 }
 
 /** PiAm is what pi am answers. */
@@ -273,7 +506,7 @@ export interface PiAm {
 
 /**
  * NamespaceAgentAm is what agents am and agents set answer: the namespace's
- * agent, who opted the namespace into it, and who it is in Claude Code or in Pi.
+ * agent, who opted the namespace into it, and who it is in a Coding Agent Harness.
  */
 export interface NamespaceAgentAm {
   /** The namespace it stands in. */
@@ -285,7 +518,86 @@ export interface NamespaceAgentAm {
     | ClaudeAm
     | undefined;
   /** Who the agent is and how it runs, in Pi. */
-  pi: PiAm | undefined;
+  pi:
+    | PiAm
+    | undefined;
+  /** Who the namespace agent is in Codex. */
+  codex: CodexAm | undefined;
+}
+
+/**
+ * A Quote is TEI's q: words distinguished from the text around them, and whose
+ * they are. The words are the one who said them's; everything else here is
+ * about the words and never inside them (ADR-055).
+ */
+export interface Quote {
+  /** The words, verbatim: the element's content in TEI. */
+  content: string;
+  /**
+   * Who said them, each a pointer to a person or an agent: TEI's who. An
+   * agent's name is rendered inside the quote, as [Fable].
+   */
+  who: string[];
+  /**
+   * Whether the words were spoken, thought or written, or how else the quote
+   * is to be read: TEI's type, with its values.
+   */
+  type: string;
+  /**
+   * Where the words were taken from: a session, a transcript, a commit, a PR
+   * description, a memory. TEI's source.
+   */
+  source: string[];
+  /**
+   * Who ascribed the words to who said them: the human who reported it after
+   * the fact, or the model that relayed it. TEI's resp.
+   */
+  resp: string[];
+  /** How certain the ascription is: TEI's cert. */
+  cert: string;
+  /**
+   * How the quote was rendered where it was read: a person's quotation marks,
+   * or an agent's notation. TEI's rend.
+   */
+  rend: string[];
+  /**
+   * The interpretations made of the words, each an Interp by its id, apart
+   * from the words and none of them theirs: TEI's ana.
+   */
+  ana: string[];
+  /** The quote's own id, for an Interp to point to: TEI's xml:id. */
+  id: string;
+}
+
+/**
+ * An Interp is TEI's interp: what someone made of a quote, kept apart from
+ * the words and carrying none of their speaker's authority (ADR-055).
+ */
+export interface Interp {
+  /** The interpretation itself: the element's content. */
+  content: string;
+  /**
+   * Whose interpretation it is, each a pointer: TEI's resp. An agent's, when
+   * an agent made it.
+   */
+  resp: string[];
+  /** How certain of it they are: TEI's cert. */
+  cert: string;
+  /** What kind of thing it notes: TEI's type. */
+  type: string;
+  /** The quotes it interprets, each by its id: TEI's inst. */
+  inst: string[];
+  /** Its own id, for a quote's ana to point to: TEI's xml:id. */
+  id: string;
+}
+
+/**
+ * Quotes is what transcripts quoted answers: each span in double quotes of the
+ * text it was given, as a Quote.
+ */
+export interface Quotes {
+  /** One per span, in the order the text has them. */
+  quotes: Quote[];
 }
 
 /**

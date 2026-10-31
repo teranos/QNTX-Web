@@ -1,24 +1,18 @@
-# QNTX Web UI
+# A QNTX Web UI
 
-Web interface for [QNTX](https://github.com/teranos/QNTX), built on [@teranos/elements](https://github.com/teranos/elements). It left QNTX's `web/` with its history:
+A Web User Interface for [QNTX](https://github.com/teranos/QNTX), 
+built on [@teranos/elements](https://github.com/teranos/elements).
 
-> web needs to leave the repo
-
-> the reason would be to separate the work better
-
-Three things consume `dist/`: a static host ([deploy-web](.github/workflows/deploy-web.yml), called by a deployment), [QNTX-App](https://github.com/teranos/QNTX-App) as its `frontendDist`, and `bun run dev` against any node. The node serves no page.
-
-"web/README.md is still refferring to Elements as the Glyphs System, which is outdated, and perhaps partly owned by Elements"
+Three things consume `dist/`: 
+- static host ([deploy-web](.github/workflows/deploy-web.yml), called by a deployment),
+- [QNTX-App](https://github.com/teranos/QNTX-App) as its `frontendDist`,
+- `bun run dev` against any node. The node serves no page.
 
 ## Elements
 
-What an element is, the forms it takes (dot, window, panel, workspace, canvas), the tray, melding and how a press, a table and text are drawn are Elements': its [README](https://github.com/teranos/elements/blob/main/README.md), [VISION](https://github.com/teranos/elements/blob/main/VISION.md) and [AXIOMAS](https://github.com/teranos/elements/blob/main/AXIOMAS.md). QNTX's own elements are in `ts/`, registered in `ts/components/element/element-registry.ts`; what QNTX holds them to is [CLAUDE.md](CLAUDE.md).
+What an element is, the forms it takes (dot, window, panel, workspace, canvas), the tray, melding and how a press, a table and text are drawn are Elements': its [README](https://github.com/teranos/elements/blob/main/README.md), [VISION](https://github.com/teranos/elements/blob/main/VISION.md) and [AXIOMAS](https://github.com/teranos/elements/blob/main/AXIOMAS.md). 
 
-## Why Web UI
-
-The web UI is essential for QNTX's vision of Continuous Intelligence:
-- **Real-time updates** show intelligence evolving as new attestations arrive
-- **Foundation for visions** documented in [time-travel](https://github.com/teranos/QNTX/blob/main/docs/vision/time-travel.md)
+QNTX's own elements are in `ts/`, registered in `ts/components/element/element-registry.ts`;
 
 ## Architecture
 
@@ -27,24 +21,33 @@ Ports come from a node's `am.toml`, named by `QNTX_AM_TOML` (or one in this dire
 - `[server].port` - Backend API port (default: 8770)
 - `[server].frontend_port` - Development server port (default: 8820)
 
-### The mock: no node at all
+### The mock: no node, no ATS, no laye
 
-> There needs to be a backendless, ats-less laye-less web ui, that only has mock data
+> A backend-less, ats-less laye-less, mock web ui.
 
-> so its trivial for future sessions to work with it fast.
+> so its trivial for future sessions to develop on it *fast*.
 
 ```bash
 bun install
 bun run mock      # http://localhost:8830
 ```
 
-`mock/server.ts` stands in for a node. It answers from `mock/world.ts` (who you are, the canvas) and then from `mock/fixtures/<path>.json`; a path with neither is a 404 that names the file to add. Reach is real: `mock/tablet-of-reach` is QNTX's own development tablet, and a path it does not grant your level is a 403, the same as a node. The two WASM modules are not started.
+`mock/server.ts` stands in for a node. 
+It answers from `mock/world.ts` (who you are, the canvas) and then from `mock/fixtures/<path>.json`; 
+Reach is real: `mock/tablet-of-reach` is QNTX's own development tablet, 
+and a path it does not grant your level is a 403, the same as a node. 
 
-Who you are is a strip at the foot of the page: ROOT, USER or PUBLIC_REGISTRATION, each standing in `pond`. The canvas opens with a note that says it is the mock.
+Who you are is a strip at the foot of the page: ROOT, USER or PUBLIC_REGISTRATION, 
+each standing in `pond`. The canvas opens with a note that says it is the mock.
 
-As ROOT the strip has `shake`: the phone's shake, as the mock feels it (`ts/shake.ts`). The element in front gets its chat from below, a drawn stand-in for the shell's snapshot already in the composer, and the mock's agent answers at once naming the element and the picture (`mock/agents.ts`). The agents and `/api/files` are the mock's only writes.
+As ROOT the strip has `shake`: the phone's shake, 
+as the mock feels it (`ts/shake.ts`).
+The element in front gets its chat from below, 
+a drawn stand-in for the shell's snapshot already in the composer, 
+and the mock's agent answers at once naming the element and the picture (`mock/agents.ts`). 
+The agents, `/api/files` and `/api/keys` are the mock's only writes.
 
-> the mock seems like a valid place to develop out user stories as well
+[BDD.md](BDD.md)
 
 ### Running a branch against a deployed node
 
@@ -87,26 +90,8 @@ Each `name=/abs/dir` is served as built, `.js`, `.css` and `.map`, under
 `/api/{name}/`, ahead of the node. The page is told the
 names as `window.__DEV_PLUGINS__` and probes each for its `glyph-module.js`.
 
-### Runtime Dependencies
-- **No NPM required at runtime** - All TypeScript is bundled into `dist/`
-- **No Rust required to develop** - the browser WASM is a dependency, built by QNTX's release
-- WebSocket for real-time updates
-- CodeMirror 6 for the ATS query editor
 
-### Build System: Bun
-
-This project uses **Bun** as a fast bundler and package manager. Bun is chosen because:
-- **Fast builds** - 10x faster than npm/webpack
-- **Integrated tooling** - Single tool for dependencies, bundling, and runtime
-- **Reproducible builds** - Lock file ensures exact versions
-
-## Development Workflow
-
-### Prerequisites
-- **Bun** (v1.3.3 or compatible) - [Install Bun](https://bun.sh)
-- No Node.js required (Bun is a standalone runtime)
-
-### Building the Bundle
+## Building the Bundle
 
 The web assets are bundled into `dist/`:
 
@@ -121,26 +106,6 @@ attached. Moving to a newer QNTX is changing that tag and running `bun install`.
 ### Understanding Dependencies
 
 The `package.json` locks **exact versions** (no `^` or `~`):
-
-```json
-{
-  "devDependencies": {
-    "@codemirror/autocomplete": "6.18.3",    // Exact version
-    "@codemirror/commands": "6.7.1",
-    "@codemirror/language": "6.10.3",
-    "@codemirror/lint": "6.8.2",             // Error/warning linting
-    "@codemirror/state": "6.4.1",
-    "@codemirror/view": "6.34.3",
-    "@lezer/highlight": "1.2.1",
-    "d3": "7.9.0"                             // Graph visualization (Prose relationships)
-  }
-}
-```
-
-**Why exact versions?**
-- Infrastructure is sacred - every version change is a build change
-- Reproducible builds across all developers and CI/CD
-- When upgrading, it's deliberate and documented
 
 ### Adding or Updating Dependencies
 
@@ -178,50 +143,6 @@ The `package.json` locks **exact versions** (no `^` or `~`):
 // 3. Copy HTML, CSS, fonts, assets
 ```
 
-### Testing the Bundle
-
-**After rebuilding, always test:**
-
-```bash
-# Serve dist/ against a node, with live reload
-QNTX_BACKEND=https://api.q.sbvh.nl bun run dev
-
-# Visit the port it prints in a browser
-# Verify:
-# - Page loads
-# - CodeMirror editor appears
-# - Graph visualization loads
-# - Search/query works
-```
-
-## Key Features Enabled
-
-### CodeMirror 6
-- Syntax highlighting (semantic tokens)
-- Autocomplete
-- Error/warning linting (via `@codemirror/lint`)
-- Real-time editing with live updates
-
-## Troubleshooting
-
-### "command not found: bun"
-Install Bun: https://bun.sh
-
-### Bundle too large?
-Check `js/main.js` size after build. If larger than expected:
-- Verify dependencies in package.json are necessary
-- Check for duplicate imports across files
-- Consider lazy-loading less critical features
-
-### Changes not appearing in app
-1. Did you run `bun run build`? (Creates dist/)
-2. Is what you are looking at serving this dist/? (`bun run dev` does; a deployment or QNTX-App carries its own build)
-
-### Outdated versions causing issues
-Check `bun.lock` - if versions don't match package.json:
-```bash
-bun install  # Resync package.json and bun.lock
-```
 
 ## Testing
 
@@ -229,8 +150,8 @@ See [TESTING.md](TESTING.md) for full testing documentation.
 
 ### Running Tests
 ```bash
-bun test              # Fast tests only (~1.5s)
-USE_JSDOM=1 bun test  # All tests including DOM tests (~9s)
+bun test              # Fast tests only
+USE_JSDOM=1 bun test  # All tests including DOM tests 
 ```
 
 ### Writing DOM Tests
@@ -249,4 +170,6 @@ describe('YourComponent', () => {
 });
 ```
 
-See test files for examples.
+See test files for live examples.
+
+Words an agent wrote stand inside 「 」 with the agent's name first, 「[Fable] …」, and a person's inside double quotes: QNTX ADR-055.

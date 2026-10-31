@@ -50,6 +50,14 @@
           },
           "name": "Run tests",
           "run": "bun test"
+        },
+        {
+          "name": "Install Chromium",
+          "run": "bunx playwright install --with-deps chromium"
+        },
+        {
+          "name": "Walk the stories",
+          "run": "bun run stories"
         }
       ]
     }

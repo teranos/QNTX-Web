@@ -19,17 +19,15 @@ import { createLlmProviderElement, needs as llmNeeds } from './llm-provider-elem
 import { createTokensElement, needs as tokensNeeds } from './tokens-element.ts';
 import { createRolesElement, needs as rolesNeeds } from './roles-element.ts';
 import { createUsersElement, needs as usersNeeds } from './users-element.ts';
-import { createMarketElement, needs as marketNeeds } from './market-element.ts';
+import { createMarketElement, needs as marketNeeds, restStandsInSidebar, ELEMENT_ID as MARKET_ID } from './market-element.ts';
 import { createMailElement, needs as mailNeeds } from './mail-element.ts';
 import { createApprovalsElement, needs as approvalsNeeds } from './approvals-element.ts';
 import { createGroundElement, needs as groundNeeds } from './ground-element.ts';
-import { createClaudeElement, needs as claudeNeeds } from './claude-element.ts';
-import { createPiElement, needs as piNeeds } from './pi-element.ts';
-import { createCodexElement, needs as codexNeeds } from './codex-element.ts';
-import { createAgentElement, needs as agentNeeds } from './agent-element.ts';
+import { restAgentsInSidebar, needs as agentsNeeds, ELEMENT_ID as AGENTS_ID } from './agents-element.ts';
+import { Agent } from './sym';
 import { createIElement, needs as iNeeds } from './i-element.ts';
 import { createAmElement, needs as amNeeds } from './am-element.ts';
-import { createConnectorElement, needs as connectorNeeds } from './connector-element.ts';
+import { createConnectorElement, needs as connectorNeeds, restConnectorsInSidebar, ELEMENT_ID as CONNECTOR_ID } from './connector-element.ts';
 import { createParityElement, needs as parityNeeds } from './parity-element.ts';
 import { log, SEG } from './logger.ts';
 
@@ -43,6 +41,9 @@ export { updateAmVersion as updateSelfVersion, updateAmCapabilities as updateSel
 // Register default system elements. A namespace with no canvas has no canvas
 // element either: nothing of it is drawn, not even the dot in the tray.
 // "the ui needs to stop suggesting things that arent possible, needs to stop handing out dead birds"
+// "each element is an agent as well": the elements this viewer was given, each one an agent to talk to (ADR-054).
+export const elementsOfTheViewer: Array<{ id: string; title: string }> = [];
+
 export async function registerDefaultElements(hasCanvas: boolean = true): Promise<void> {
     const offered: Audience[] = [
         // Canvas Element - Fractal container with spatial grid
@@ -73,12 +74,8 @@ export async function registerDefaultElements(hasCanvas: boolean = true): Promis
         { needs: approvalsNeeds, create: createApprovalsElement },
         // Ground Element — aware of anything Ground; the sessions it recorded, each opened as a Transcript
         { needs: groundNeeds, create: createGroundElement },
-        // ✻ — the Node Agent: said to, and read as the session it continues (ADR-048)
-        { needs: claudeNeeds, create: createClaudeElement },
-        { needs: piNeeds, create: createPiElement },
-        { needs: codexNeeds, create: createCodexElement },
-        // ✦ — the agent of the namespace this person stands in, on its own sign-in (ADR-048)
-        { needs: agentNeeds, create: createAgentElement },
+        // ✦ — Agents: a level of the sidebar, every agent this person reaches a row of it, each a chat (ADR-048, ADR-054)
+        { needs: agentsNeeds, create: () => ({ id: AGENTS_ID, title: 'Agents', symbol: Agent, renderContent: () => document.createElement('div') }) },
         // Pulse Panel Element — scheduled jobs dashboard
         { needs: pulseNeeds, create: createPulseElement },
         // Plugin Panel Element — panel manifestation
@@ -95,9 +92,15 @@ export async function registerDefaultElements(hasCanvas: boolean = true): Promis
     // A standing element rests in the sidebar; the tray is for what is put
     // down and for the temporal (sidebar.ts). The canvas opens as the
     // workspace, which a button cannot become, so it alone rests in the tray.
+    elementsOfTheViewer.length = 0;
     for (const each of forThem) {
         const item = each.create();
-        if (item.opensAs === 'workspace') tray.add(item);
+        elementsOfTheViewer.push({ id: item.id, title: item.title });
+        // "and Connectors needs to work the same way" / "and Staands as well": levels of the sidebar, their rows what they list.
+        if (item.id === AGENTS_ID) restAgentsInSidebar();
+        else if (item.id === CONNECTOR_ID) restConnectorsInSidebar();
+        else if (item.id === MARKET_ID) restStandsInSidebar();
+        else if (item.opensAs === 'workspace') tray.add(item);
         else restInSidebar(item);
     }
 

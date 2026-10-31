@@ -222,3 +222,12 @@ body:not(.sidebar-open) #sidebar {
         transition: none;
     }
 }
+
+/* A menu into a menu: the rows above step aside, the way back heads the level. */
+.sidebar-list .sidebar-above { display: none; }
+.sidebar-level { display: block; }
+.sidebar-back[data-form="button"] { color: var(--text-on-dark-secondary); border-bottom: 1px solid var(--border-on-dark); margin-bottom: 4px; }
+.sidebar-level-row[data-form="button"], .sidebar-back[data-form="button"] { text-align: left; }
+.sidebar-level-row[data-form="button"] { padding-left: 24px; }
+.sidebar-level-note { padding: 7px 24px; color: var(--text-on-dark-secondary); }
+.sidebar-level-row.sidebar-row-on[data-form="button"] { color: var(--accent-on-dark); background: var(--bg-dark-hover); }

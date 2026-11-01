@@ -65,14 +65,18 @@ describe('Subcanvas Element - Tim (Happy Path)', () => {
         expect(element.style.top).toBe('300px');
     });
 
-    test('Tim has a dblclick handler wired on the subcanvas element', () => {
+    test('a double-click on the subcanvas element is its own: it does not reach the canvas under it', () => {
         const item = makeElement();
         const element = createSubcanvasElement(item);
+        const canvasUnder = document.createElement('div');
+        canvasUnder.appendChild(element);
+        let reachedCanvas = 0;
+        canvasUnder.addEventListener('dblclick', () => { reachedCanvas++; });
 
-        // Dispatch dblclick — should not throw (morph will fail gracefully in test env)
-        expect(() => {
-            element.dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true }));
-        }).not.toThrow();
+        // The morph to fullscreen cannot run in this DOM (it fails gracefully); that the double-click was taken can.
+        element.dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true }));
+
+        expect(reachedCanvas).toBe(0);
     });
 });
 

@@ -7,14 +7,12 @@
  * and the morph that puts it down are @teranos/elements' (`configureElements({ spawn })`).
  * What is said here is which element types a press offers (`entries`), what becomes
  * of a choice (`place`: its id, its place under the canvas's pan and zoom, its
- * persistence), and the thread, which is built by pressing symbols one after
- * another and so is the host's to carry (`take`).
+ * persistence).
  *
  * Element types and their spawn configuration come from element-registry.ts.
  */
 
 import type { Element, SpawnEntry, SpawnHost } from '@teranos/elements';
-import { putDownCarried } from '@teranos/elements';
 import { log, SEG } from '../../../logger';
 import { uiState } from '../../../state/ui';
 import { getTransform } from './canvas-pan';
@@ -27,12 +25,6 @@ import {
     getMatchingCommandNames,
     getCommandLabel,
 } from '../element-registry';
-import { enterThreadBuildingMode } from './thread-line';
-import { getThreadColor } from '../thread-element';
-import { addSpine } from './spine-renderer';
-
-/** Part Alternation Mark — thread/spine symbol */
-const THREAD_SYMBOL = '\u303D'; // 〽
 
 /** Element descriptions for context reveal */
 const ELEMENT_DESCRIPTIONS: Record<string, { desc: string; hint?: string }> = {
@@ -43,7 +35,6 @@ const ELEMENT_DESCRIPTIONS: Record<string, { desc: string; hint?: string }> = {
     'Prompt':    { desc: 'AI prompt with context', hint: 'Attach attestations as grounding' },
     'Note':      { desc: 'Freeform text note', hint: 'Select text → convert to prompt' },
     'Subcanvas': { desc: 'Nested canvas workspace', hint: 'Infinite depth' },
-    'Thread':    { desc: 'Navigational thread', hint: 'Connect elements into a path' },
 };
 
 /** What the menu says of a type: its symbol is its id, since a symbol finds its type. */
@@ -55,20 +46,6 @@ function entryOf(type: ElementTypeEntry): SpawnEntry {
         title: type.title,
         ...(info && { description: info.desc, ...(info.hint !== undefined && { hint: info.hint }) }),
     };
-}
-
-/** The thread entry shown when pressing an element symbol */
-function symbolContextEntries(): SpawnEntry[] {
-    const type = getElementTypeBySymbol(THREAD_SYMBOL);
-    return type ? [entryOf({ ...type, spawnMenuOrder: 0 })] : [];
-}
-
-/** The actual symbol span: the one pressed, or the one in the element pressed. */
-function symbolOf(target: HTMLElement): HTMLElement | null {
-    const elementEl = target.closest('.canvas-element') as HTMLElement | null;
-    return (target.closest('.symbol') as HTMLElement | null)
-        ?? (elementEl?.querySelector('.symbol') as HTMLElement | null)
-        ?? null;
 }
 
 /** What a canvas workspace holds, as buildCanvasWorkspace makes it. */
@@ -92,21 +69,15 @@ function onCanvas(canvas: HTMLElement, canvasId: string, clientX: number, client
     };
 }
 
-/** The id each placed element was given, by the element, for whoever put it down. */
-const placedIds = new WeakMap<HTMLElement, string>();
-
 export const spawnHost: SpawnHost = {
-    // Right-click on an element symbol: thread actions (〽). On the background: element types.
-    entries({ target }) {
-        const types = symbolOf(target)
-            ? symbolContextEntries()
-            : [
-                ...getSpawnableElements().map(entryOf),
-                ...getAllElementTypes()
-                    .filter(g => g.className.includes('canvas-plugin-element') || g.publishedName !== undefined)
-                    .map(entryOf),
-            ];
-        return types;
+    // What a press on the canvas offers: the element types.
+    entries() {
+        return [
+            ...getSpawnableElements().map(entryOf),
+            ...getAllElementTypes()
+                .filter(g => g.className.includes('canvas-plugin-element') || g.publishedName !== undefined)
+                .map(entryOf),
+        ];
     },
 
     async place({ entry, canvas, at, carried, symbol, content }) {
@@ -115,47 +86,9 @@ export const spawnHost: SpawnHost = {
         const { contentLayer, items, canvasId } = workspaceOf(canvas);
         const { x, y } = onCanvas(canvas, canvasId, at.clientX, at.clientY);
         const placed = await spawnElement(x, y, contentLayer, items, canvasId, type, carried, symbol, content);
-        placedIds.set(placed.el, placed.id);
         return placed.el;
     },
-
-    // Thread building: press symbols to build a path, press empty canvas to finish.
-    take({ entry, canvas, target }) {
-        if (entry.id !== THREAD_SYMBOL) return false;
-        const origin = symbolOf(target);
-        if (!origin) return false;
-        startThread(origin, canvas, entry);
-        return true;
-    },
 };
-
-function startThread(origin: HTMLElement, canvas: HTMLElement, entry: SpawnEntry): void {
-    const { contentLayer, canvasId } = workspaceOf(canvas);
-    const threadColor = getThreadColor(0);
-    enterThreadBuildingMode(origin, threadColor, (result) => {
-        // The cursor 〽 is the element put down: one element, from the cursor to the end of the thread.
-        const carried = result.cursorElement;
-        void putDownCarried({
-            entry,
-            canvas,
-            at: { clientX: result.placeX, clientY: result.placeY },
-            carried,
-            symbol: result.symbolElement,
-        }).then(() => {
-            const threadElementId = placedIds.get(carried);
-            if (!threadElementId) throw new Error('the thread element was not placed');
-            const spine = {
-                id: `spine-${crypto.randomUUID()}`,
-                color: threadColor,
-                nodes: [...result.nodeIds, threadElementId],
-            };
-            addSpine(canvasId, contentLayer, spine);
-            uiState.addCanvasSpine(spine);
-        }).catch((err: unknown) => log.error(SEG.ELEMENT, '[SpawnMenu] thread element spawn failed:', err));
-    }, () => {
-        // Cancelled
-    });
-}
 
 /** Normalize canvasId for storage: 'canvas-workspace' → '' (root) */
 function storageCanvasId(canvasId: string): string {

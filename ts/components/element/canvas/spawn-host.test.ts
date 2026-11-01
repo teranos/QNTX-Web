@@ -5,12 +5,11 @@
  *
  * The menu, the carrying and the morph are @teranos/elements'. What the host
  * says is which element types a press offers, and what becomes of a choice:
- * its id, its persistence, its place under the canvas's pan and zoom, and the
- * thread, which it builds itself.
+ * its id, its persistence and its place under the canvas's pan and zoom.
  *
  * Personas:
  * - Tim: Happy path — what is offered, and what is placed
- * - Spike: Edge cases — a type that is gone, an entry that is not the thread's to take
+ * - Spike: Edge cases — a type that is gone
  * - Jenny: Complex scenarios — right-click to placed, through the package
  */
 
@@ -28,7 +27,6 @@ globalThis.requestAnimationFrame = (_cb: FrameRequestCallback) => 0;
 globalThis.cancelAnimationFrame = () => {};
 
 const PUBLISHED = '◇'; // ◇
-const THREAD = '〽'; // 〽
 
 /** A canvas as buildCanvasWorkspace makes one: data-canvas-id, a content layer, its items. */
 function workspace(canvasId = 'canvas-workspace'): { canvas: HTMLElement; layer: HTMLElement; items: any[] } {
@@ -90,18 +88,6 @@ describe('Spawn host - Tim (Happy Path)', () => {
         expect(ax?.description).toBe('Query the attestation graph');
     });
 
-    test('Tim presses an element symbol and is offered the thread, and only that', () => {
-        const { canvas, layer } = workspace();
-        const element = document.createElement('div');
-        element.className = 'canvas-element';
-        const symbol = document.createElement('span');
-        symbol.className = 'symbol';
-        element.appendChild(symbol);
-        layer.appendChild(element);
-        const offered = spawnHost.entries({ target: symbol, canvas }).map(e => e.symbol);
-        expect(offered).toEqual([THREAD]);
-    });
-
     test('placing renders into the carried element, puts it on the canvas, persists it, and returns it', async () => {
         const { canvas, layer, items } = workspace();
         const carried = document.createElement('div');
@@ -132,35 +118,6 @@ describe('Spawn host - Spike (Edge Cases)', () => {
         await expect(spawnHost.place({
             entry, canvas, at: { clientX: 0, clientY: 0 }, carried: document.createElement('div'), symbol: null,
         })).rejects.toThrow(/no-such-symbol/);
-    });
-
-    test('an entry that is not the thread is the package\'s to carry', () => {
-        const { canvas } = workspace();
-        const taken = spawnHost.take!({ entry: { id: PUBLISHED, symbol: PUBLISHED, title: 'EXAMPLE' }, canvas, target: canvas });
-        expect(taken).toBe(false);
-        expect(document.body.classList.contains('thread-building-active')).toBe(false);
-    });
-
-    test('the thread is the host\'s: taken, and building begins from the symbol pressed', () => {
-        const { canvas, layer } = workspace();
-        const element = document.createElement('div');
-        element.className = 'canvas-element';
-        const symbol = document.createElement('span');
-        symbol.className = 'symbol';
-        element.appendChild(symbol);
-        layer.appendChild(element);
-
-        const taken = spawnHost.take!({ entry: { id: THREAD, symbol: THREAD, title: 'Thread' }, canvas, target: symbol });
-
-        expect(taken).toBe(true);
-        expect(document.body.classList.contains('thread-building-active')).toBe(true);
-        document.dispatchEvent(new (window as any).KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-        expect(document.body.classList.contains('thread-building-active')).toBe(false);
-    });
-
-    test('a thread with no symbol to start from is not taken', () => {
-        const { canvas } = workspace();
-        expect(spawnHost.take!({ entry: { id: THREAD, symbol: THREAD, title: 'Thread' }, canvas, target: canvas })).toBe(false);
     });
 
     test('a placed type is the registry\'s, found by the symbol the entry carries', () => {

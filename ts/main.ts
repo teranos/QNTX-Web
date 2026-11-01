@@ -54,6 +54,7 @@ import { handleStorageEviction } from './websocket-handlers/storage-eviction.ts'
 import { initDebugInterceptor } from './dev-debug-interceptor.ts';
 import { tray } from '@teranos/elements';
 import { configureElements } from '@teranos/elements';
+import { spawnHost } from './components/element/canvas/spawn-host';
 import { MELDABILITY } from './components/element/meld/meldability';
 import { canvasToScreen, screenToCanvas, getTransform } from './components/element/canvas/canvas-pan.ts';
 import { isElementSelected, getSelectedElementIds } from './components/element/canvas/selection.ts';
@@ -447,6 +448,9 @@ async function init(): Promise<void> {
         },
         // Which kinds meld is QNTX's to say since @teranos/elements 1.18.0.
         meldability: MELDABILITY,
+        // What a canvas spawns, and what becomes of it, is QNTX's to say since @teranos/elements
+        // 1.32.0: the menu, a held finger opening it, carrying the choice and putting it down are the package's.
+        spawn: spawnHost,
         // The resting dot's size is the package's own since 1.12.0: 13px on a
         // phone, 15px up to 900px, 10px above, the sizes this passed.
         // Under the sidebar's drawer on a phone (sidebar.css), and tray.css says the same.

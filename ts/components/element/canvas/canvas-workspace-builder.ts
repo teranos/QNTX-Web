@@ -26,16 +26,9 @@ import { unmeldComposition, reconstructMeld, detachElement } from '@teranos/elem
 import { autoMeldResultBelow } from '../meld/auto-meld-result';
 import { makeDraggable, runCleanup } from '@teranos/elements';
 import { showActionBar, hideActionBar } from './action-bar';
-import { showSpawnMenu, isSpawnMenuOpen } from './spawn-menu';
-import { onTouchHold } from './touch-hold';
-import { isPlacementActive } from './placement-mode';
-import { addSpine, removeSpine, getSpineByNode } from './spine-renderer';
-import { enterThreadBuildingMode } from './thread-line';
-import { pinThreadElement, unpinThreadElement } from '../thread-element';
-import { navigateThread } from './thread-navigation';
 import { setupKeyboardShortcuts } from './keyboard-shortcuts';
 import { setupRectangleSelection, didRectangleSelectionJustComplete } from './rectangle-selection';
-import { setupCanvasPan, resetTransform, panToElement, centerOnElementSymbol, screenToCanvas, getTransform } from './canvas-pan';
+import { setupCanvasPan, resetTransform, panToElement, screenToCanvas } from './canvas-pan';
 import { getAllCompositions, removeComposition, extractElementIds } from '../../../state/compositions';
 import { convertNoteToPrompt, convertResultToNote } from '../conversions';
 import {
@@ -225,38 +218,15 @@ function deleteSelectedElements(canvasId: string, container: HTMLElement): void 
     clearSelection(canvasId);
     const duration = getRestDuration();
 
-    // Collect spines that need to be deleted (any selected element is on a spine)
-    const spinesToDelete = new Set<string>();
-    const extraElementsToDelete = new Set<string>();
-    for (const itemId of elementIdsToDelete) {
-        const spine = getSpineByNode(canvasId, itemId);
-        if (spine && !spinesToDelete.has(spine.id)) {
-            spinesToDelete.add(spine.id);
-            // Also delete the 〽 end marker (last node) if it's not already in the delete list
-            const endMarker = spine.nodes[spine.nodes.length - 1];
-            if (!elementIdsToDelete.includes(endMarker)) {
-                extraElementsToDelete.add(endMarker);
-            }
-        }
-    }
-
-    // Remove spines
-    for (const spineId of spinesToDelete) {
-        removeSpine(canvasId, spineId);
-        uiState.removeCanvasSpine(spineId);
-    }
-
-    // Remove selected elements + any extra 〽 end markers
     for (const itemId of elementIdsToDelete) {
         removeElementElement(container, itemId, duration);
     }
-    for (const itemId of extraElementsToDelete) {
-        removeElementElement(container, itemId, duration);
-    }
 
-    const totalDeleted = elementIdsToDelete.length + extraElementsToDelete.size;
-    log.debug(SEG.ELEMENT, `[Canvas] Deleted ${totalDeleted} elements, ${spinesToDelete.size} spines`, { elementIdsToDelete });
+    log.debug(SEG.ELEMENT, `[Canvas] Deleted ${elementIdsToDelete.length} elements`, { elementIdsToDelete });
 }
+
+/** Part Alternation Mark: what the thread's end marker was saved under, before the thread was removed. */
+const RETIRED_THREAD_SYMBOL = '\u303D';
 
 /**
  * Render an element on the canvas.
@@ -319,6 +289,13 @@ export async function renderElement(item: Element): Promise<HTMLElement> {
     // Stream elements: skip if no saved content (orphaned empty stream)
     if (item.symbol === 'stream' && !item.content) {
         log.debug(SEG.ELEMENT, `[Canvas] Skipping empty stream element ${item.id}`);
+        uiState.removeCanvasElement(item.id);
+        return document.createElement('div'); // invisible placeholder
+    }
+
+    // A thread's end marker (〽): the thread is gone, and so is what a canvas saved of it.
+    if (item.symbol === RETIRED_THREAD_SYMBOL) {
+        log.debug(SEG.ELEMENT, `[Canvas] Dropping the saved end marker ${item.id} of a thread that is gone`);
         uiState.removeCanvasElement(item.id);
         return document.createElement('div'); // invisible placeholder
     }
@@ -444,22 +421,8 @@ export function buildCanvasWorkspace(
     contentLayer.style.height = '100%';
     container.appendChild(contentLayer);
 
-    // Right-click opens spawn menu — suppressed if already open or placing
-    // Context-aware: right-click on element symbol shows thread actions, background shows element types
-    const openSpawnMenu = (clientX: number, clientY: number, target: HTMLElement) => {
-        if (isPlacementActive() || isSpawnMenuOpen()) return;
-        // Find the actual symbol span — walk up from click target or search within element
-        const elementEl = target.closest('.canvas-element') as HTMLElement | null;
-        const symbolEl = target.closest('.symbol') as HTMLElement | null
-            ?? elementEl?.querySelector('.symbol') as HTMLElement | null;
-        showSpawnMenu(clientX, clientY, contentLayer, items, canvasId, symbolEl);
-    };
-    container.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        openSpawnMenu(e.clientX, e.clientY, e.target as HTMLElement);
-    });
-    // On a phone a finger held still is the right-click (touch-hold.ts).
-    onTouchHold(container, openSpawnMenu);
+    // The spawn menu is @teranos/elements': a right-click or a finger held still on this
+    // element, which carries data-canvas-id, opens it (spawn-host.ts says what it offers).
 
     // Prevent dblclick from bubbling past workspace boundary (stops re-morph on parent subcanvas)
     container.addEventListener('dblclick', (e) => { e.stopPropagation(); });
@@ -599,64 +562,11 @@ export function buildCanvasWorkspace(
     container.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
 
-        // Close spawn menu if it exists
-        const spawnMenu = document.querySelector('.canvas-spawn-menu');
-        if (spawnMenu && !spawnMenu.contains(target)) spawnMenu.remove();
-
         // Ignore clicks on action bar, buttons, inputs, textareas, contenteditable,
         // and elements marked as interactive via preventDrag (e.g. xterm terminals)
         if (target.closest('.canvas-action-bar')) return;
         if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
         if (target.isContentEditable || target.closest('[contenteditable="true"]')) return;
-
-        // Pick up 〽: left-click on a thread end marker resumes threading from its spine.
-        // The same DOM element becomes the cursor and gets re-pinned at the new endpoint —
-        // one element across the entire pickup → drop cycle (element axiom).
-        const threadElementEl = target.closest('.canvas-thread-element') as HTMLElement | null;
-        if (threadElementEl && container.contains(threadElementEl)) {
-            const threadElementId = threadElementEl.dataset.elementId;
-            const spine = threadElementId ? getSpineByNode(canvasId, threadElementId) : null;
-            if (spine && threadElementId) {
-                e.stopPropagation();
-                const symbolEl = threadElementEl.querySelector('.symbol') as HTMLElement | null;
-                if (!symbolEl) return;
-                const existingNodeIds = spine.nodes.slice(0, -1);
-                const originPos = uiState.getCanvasElements().find(g => g.id === threadElementId);
-
-                // Take down the old spine and lift the 〽 into cursor mode (same DOM element)
-                removeSpine(canvasId, spine.id);
-                unpinThreadElement(threadElementEl);
-
-                enterThreadBuildingMode(symbolEl, spine.color, (result) => {
-                    // The cursor handed back IS threadElementEl — pin it at the new position
-                    uiState.removeCanvasSpine(spine.id);
-
-                    const cont = contentLayer.parentElement!;
-                    const contRect = cont.getBoundingClientRect();
-                    const t = getTransform(canvasId);
-                    const px = Math.round((result.placeX - contRect.left - t.panX) / t.scale);
-                    const py = Math.round((result.placeY - contRect.top - t.panY) / t.scale);
-                    pinThreadElement(threadElementEl, contentLayer, px, py, spine.color, threadElementId);
-
-                    const existing = uiState.getCanvasElements().find(g => g.id === threadElementId);
-                    if (existing) uiState.addCanvasElement({ ...existing, x: px, y: py });
-
-                    const newSpine = {
-                        id: `spine-${crypto.randomUUID()}`,
-                        color: spine.color,
-                        nodes: [...result.nodeIds, threadElementId],
-                    };
-                    addSpine(canvasId, contentLayer, newSpine);
-                    uiState.addCanvasSpine(newSpine);
-                }, () => {
-                    // Cancel: pin the 〽 back at its original position and restore the spine
-                    pinThreadElement(threadElementEl, contentLayer, originPos?.x ?? 0, originPos?.y ?? 0, spine.color, threadElementId);
-                    addSpine(canvasId, contentLayer, spine);
-                }, existingNodeIds, threadElementEl);
-                return;
-            }
-            // Orphan 〽 (spine gone) — fall through to normal select
-        }
 
         if (target.closest('[data-prevent-drag]')) return;
 
@@ -682,33 +592,6 @@ export function buildCanvasWorkspace(
 
     // Drill-in state: when inside a melded composition, hjkl navigates children only
     let drilledComposition: HTMLElement | null = null;
-
-    // Per-element "active thread" — which spine ←/→ follows when the element is on multiple.
-    // Set by ↑/↓ (rotate) and by ←/→ (carry the active spine to the next element).
-    const activeSpinePerElement = new Map<string, string>();
-
-    /**
-     * Arrow-key thread navigation. Delegates the decision to the pure
-     * `navigateThread` function and applies any resulting side effects
-     * (select target, pan camera).
-     */
-    function onThreadNavigate(direction: 'left' | 'down' | 'up' | 'right'): boolean {
-        const selected = getSelectedElementIds(canvasId);
-        const result = navigateThread(direction, {
-            canvasId,
-            currentElementId: selected.length > 0 ? selected[0] : null,
-            activeSpinePerElement,
-        });
-
-        if (result.targetElementId) {
-            const targetEl = contentLayer.querySelector(`[data-element-id="${result.targetElementId}"]`) as HTMLElement | null;
-            if (targetEl) {
-                selectElement(canvasId, result.targetElementId, container, false);
-                centerOnElementSymbol(container, canvasId, targetEl);
-            }
-        }
-        return result.handled;
-    }
 
     function getNavigationCandidates(): HTMLElement[] {
         if (drilledComposition) {
@@ -834,8 +717,7 @@ export function buildCanvasWorkspace(
             if (textarea) {
                 textarea.focus();
             }
-        },
-        onThreadNavigate
+        }
     );
 
     // Setup canvas pan (two-finger scroll on desktop, single finger drag on mobile)
@@ -900,22 +782,6 @@ export function buildCanvasWorkspace(
             } catch (err) {
                 log.error(SEG.ELEMENT, `[Canvas] Failed to restore composition ${comp.id}`, { error: err });
             }
-        }
-
-        // Step 3: Restore navigational threads (spines)
-        const savedSpines = uiState.getCanvasSpines();
-        for (const spine of savedSpines) {
-            // Verify all nodes exist on canvas
-            const allExist = spine.nodes.every(id =>
-                contentLayer.querySelector(`[data-element-id="${id}"]`) !== null
-            );
-            if (!allExist) {
-                log.debug(SEG.ELEMENT, `[Canvas] Removing stale spine ${spine.id} — missing nodes`);
-                uiState.removeCanvasSpine(spine.id);
-                continue;
-            }
-            addSpine(canvasId, contentLayer, spine);
-            log.debug(SEG.ELEMENT, `[Canvas] Restored spine ${spine.id} with ${spine.nodes.length} nodes`);
         }
     })().catch((err: unknown) => log.error(SEG.ELEMENT, `[Canvas] Rendering workspace ${canvasId} failed:`, err));
 

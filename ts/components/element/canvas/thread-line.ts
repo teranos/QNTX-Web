@@ -12,7 +12,7 @@
  */
 
 import { createCursorElement, attachCursorToMouse } from '@teranos/elements';
-import { showMenuScrim, removeScrim } from './placement-mode';
+import { showMenuScrim, removeScrim } from './scrim';
 import { log, SEG } from '../../../logger';
 
 /** Opacity of the thread line during creation */

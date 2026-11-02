@@ -136,6 +136,23 @@ export function registerElementType(entry: ElementTypeEntry): void {
     console.debug(`[ElementRegistry] Registered element type: ${entry.symbol} (${entry.label})`);
 }
 
+/**
+ * Take a type registered at runtime out again: a plugin disabled, a published element withdrawn.
+ *
+ * Refuses a built-in, as replacePluginElementType does: only what a provider registered
+ * can be taken back. Returns whether anything was.
+ */
+export function unregisterElementType(symbol: string): boolean {
+    const existing = _bySymbol.get(symbol);
+    if (!existing || providerOf(existing) === undefined) return false;
+
+    const at = ELEMENT_TYPES.indexOf(existing);
+    if (at !== -1) ELEMENT_TYPES.splice(at, 1);
+    _bySymbol.delete(symbol);
+    _byClassName.delete(existing.className);
+    return true;
+}
+
 /** Get all registered element types */
 export function getAllElementTypes(): readonly ElementTypeEntry[] {
     return ELEMENT_TYPES;

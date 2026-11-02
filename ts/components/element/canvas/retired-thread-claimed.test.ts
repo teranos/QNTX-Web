@@ -11,12 +11,18 @@
  * - Spike: Edge cases — a type claims 〽; a marker is minimized; neither is lost or kept wrongly
  */
 
-import { describe, test, expect, beforeEach } from 'bun:test';
+import { describe, test, expect, beforeEach, afterAll } from 'bun:test';
 import { renderElement, buildCanvasWorkspace } from './canvas-workspace-builder';
-import { registerElementType } from '../element-registry';
+import { getAllElementTypes, registerElementType, unregisterElementType, getElementTypeBySymbol, getElementTypeBySavedSymbol } from '../element-registry';
 import { uiState } from '../../../state/ui';
 
 const MARK = '〽'; // 〽
+
+// The registry is the process's, shared by every test file that runs after this one: what is
+// registered here is taken out again.
+afterAll(() => {
+    unregisterElementType(MARK);
+});
 
 beforeEach(() => {
     document.body.innerHTML = '';
@@ -37,7 +43,6 @@ describe('A retired thread marker - Spike (Edge Cases)', () => {
         expect(uiState.getMinimizedWindows()).not.toContain('thread-m');
     });
 
-    // Last: a type registered stays registered for the rest of this file.
     test('one a type has claimed is that type\'s element, drawn and kept', async () => {
         registerElementType({
             symbol: MARK,
@@ -57,5 +62,37 @@ describe('A retired thread marker - Spike (Edge Cases)', () => {
 
         expect(drawn.getAttribute('data-element-id')).toBe('claimed-1');
         expect(uiState.getCanvasElement('claimed-1')).toBeDefined();
+    });
+});
+
+describe('Taking a type out of the registry - Tim (Happy Path)', () => {
+    test('a type registered at runtime can be taken out, and the symbol is free again', () => {
+        const SYMBOL = 'zz-unregister-me';
+        registerElementType({
+            symbol: SYMBOL,
+            className: 'canvas-published-element element-unregister-me',
+            title: 'GONE SOON',
+            label: 'gonesoon',
+            publishedName: 'gonesoon',
+            render: () => document.createElement('div'),
+        });
+        expect(getElementTypeBySymbol(SYMBOL)).toBeDefined();
+
+        expect(unregisterElementType(SYMBOL)).toBe(true);
+
+        expect(getElementTypeBySymbol(SYMBOL)).toBeUndefined();
+        expect(getElementTypeBySavedSymbol(SYMBOL)).toBeUndefined();
+    });
+});
+
+describe('Taking a type out of the registry - Spike (Edge Cases)', () => {
+    test('a built-in is refused, and stays', () => {
+        const ax = getAllElementTypes().find(t => t.label === 'AX')!;
+        expect(unregisterElementType(ax.symbol)).toBe(false);
+        expect(getElementTypeBySymbol(ax.symbol)).toBe(ax);
+    });
+
+    test('a symbol nothing holds is nothing to take out', () => {
+        expect(unregisterElementType('zz-never-registered')).toBe(false);
     });
 });

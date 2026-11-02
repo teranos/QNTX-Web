@@ -6,12 +6,12 @@ import type { Element } from '@teranos/elements';
 import { fieldFrom, flowFrom, pressFrom, tray, type FlowHandle, type FlowStep } from '@teranos/elements';
 import { apiJson } from './client/http';
 import { log, SEG } from './logger';
-import { ANTHROPIC, markOf } from './brand-marks';
+import { ANTHROPIC, GOOGLE, markOf } from './brand-marks';
 import { copied, goTo, note, valueRow } from './connector-element';
 import { copyable } from './copyable';
 import { lightFrom, type Light } from './light';
 import { CONNECTOR } from './sym';
-import type { NodeAnthropic } from './generated/proto/plugin/grpc/protocol/sigil';
+import type { NodeAnthropic, NodeGoogle } from './generated/proto/plugin/grpc/protocol/sigil';
 
 export const ELEMENT_ID = 'node-connectors-element';
 
@@ -361,9 +361,56 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
     return row;
 }
 
+/** As long as the node asks Google to let it act before mailing ROOT how it ended (server/google_cloud.go). */
+const GOOGLE_CONFIRMS_MS = 15 * 60 * 1000;
+
+/**
+ * The Google Cloud row. Google already knows ROOT, so connecting is one press:
+ * the node says where it goes, and ROOT says yes at Google.
+ * "WHERE I JUST PRESS CONNECT AND WE ARE DONE"
+ */
+function googleRow(go: (url: string) => void): HTMLElement {
+    const row = document.createElement('div');
+    row.dataset.platform = 'Google Cloud';
+    row.style.cssText = 'display:flex;flex-direction:column;gap:10px;padding:8px;border:1px solid var(--border-on-dark);border-radius:var(--border-radius);background:var(--bg-dark-light);color:var(--text-on-dark)';
+    const head = document.createElement('div');
+    head.dataset.connect = 'Google Cloud';
+    head.style.cssText = 'display:flex;align-items:center;gap:8px';
+    const title = document.createElement('span');
+    title.textContent = 'Google Cloud';
+    title.style.flex = '1';
+    const light = lightFrom('google-cloud', 'Not connected');
+    head.append(markOf(GOOGLE), title, light.element);
+    const body = document.createElement('div');
+    body.style.cssText = 'display:flex;flex-direction:column;gap:6px';
+    row.append(head, body);
+    const connect = (am: NodeGoogle) => pressFrom({ id: 'google-connect', title: 'Connect', does: () => go(am.connect) }).element;
+    apiJson<NodeGoogle>('/api/google').then((am) => {
+        if (am.accepted) {
+            light.show('on', 'Connected');
+            body.append(valueRow('Project', copied(am.project_id)), valueRow('Service account', copied(am.service_account)));
+            return;
+        }
+        if (am.asked && Date.now() - Date.parse(am.at) < GOOGLE_CONFIRMS_MS) {
+            light.show('waiting', 'Google is confirming');
+            body.append(note(`Set up in ${am.project_id}. You will get a mail when it is done, or if it does not come through.`));
+            return;
+        }
+        if (am.asked) {
+            light.show('refused', 'Google refused');
+            body.append(errorOf(am.why));
+        }
+        body.append(connect(am));
+    }).catch((err: unknown) => {
+        log.warn(SEG.SELF, `[node connectors] the node's light at Google Cloud was not read: ${err instanceof Error ? err.message : String(err)}`);
+        body.replaceChildren(errorOf(err instanceof Error ? err.message : String(err)));
+    });
+    return row;
+}
+
 /** Exported for tests: the node's connectors, drawn from what the node says of itself. */
-export function renderNodeConnectors(container: HTMLElement, node: NodeIdentity): void {
-    container.appendChild(anthropicRow(node));
+export function renderNodeConnectors(container: HTMLElement, node: NodeIdentity, go: (url: string) => void = (url) => window.location.assign(url)): void {
+    container.append(anthropicRow(node), googleRow(go));
 }
 
 /** What the node says of itself: its name, its issuer, its DID and its namespaces. */

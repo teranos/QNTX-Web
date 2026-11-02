@@ -258,6 +258,9 @@ async function anthropicAnswer(method: string, path: string, req: Request): Prom
         spending.then = then === "true";
         return json(anthropicAm());
     }
+    if (path === "/api/google") {
+        return json({ issuer: new URL(req.url).origin, subject: "did:key:z6MkmockNode", connect: new URL(req.url).origin + "/auth/google/cloud", asked: false, accepted: false, why: "" });
+    }
     if (path !== "/api/anthropic") return null;
     if (method === "POST") {
         const { given = "" } = (await req.json()) as { given?: string };

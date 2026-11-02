@@ -392,6 +392,39 @@ export interface CodexAm {
  * issuer and subject that ROOT registers at Anthropic, the ids of the rule its
  * identity token is traded at, and whether Anthropic accepted it.
  */
+/**
+ * NodeGoogle is what google am answers: the node at Google Cloud, set up on
+ * ROOT's yes, and whether Google trades the node's identity token.
+ */
+export interface NodeGoogle {
+  /** The node's OIDC issuer, which the node's pool at Google trusts. */
+  issuer: string;
+  /** The node's DID, the sub of its identity token. */
+  subject: string;
+  /** Where ROOT goes to connect the node, by saying yes at Google once. */
+  connect: string;
+  /** The project the node is set up in, by its id. */
+  project_id: string;
+  /** The same project by its number, which Google names the pool by. */
+  project_number: string;
+  /** The workload identity pool the node is set up in. */
+  pool: string;
+  /** The provider in the pool that trusts the node's issuer. */
+  provider: string;
+  /** The service account the node's identity acts as. */
+  service_account: string;
+  /** Who connected the node. */
+  set_by: string;
+  /** When the node was connected. */
+  at: string;
+  /** Whether Google was asked to trade the node's identity token. */
+  asked: boolean;
+  /** Whether Google traded it, and the node acted as its service account. */
+  accepted: boolean;
+  /** What Google said when it did not. */
+  why: string;
+}
+
 export interface NodeAnthropic {
   /** The node's OIDC issuer, the iss of every identity token it signs. */
   issuer: string;

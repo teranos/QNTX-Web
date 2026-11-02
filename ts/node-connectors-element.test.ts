@@ -11,6 +11,12 @@ let asked: { url: string; method: string; body: Record<string, string> }[] = [];
 /** What the node answers of itself at Anthropic, as anthropic am answers it. */
 let atAnthropic: Record<string, unknown> = {};
 
+/** What the node answers of itself at Google Cloud, as google am answers it. */
+let atGoogle: Record<string, unknown> = {};
+
+/** Where a press sent ROOT. */
+let wentTo: string[] = [];
+
 /** The Connect workload wizard's snippet, as its copy button gives it. */
 const SNIPPET = `curl -sS https://api.anthropic.com/v1/oauth/token \\
   --data @- <<JSON
@@ -35,10 +41,15 @@ beforeEach(() => {
     document.body.innerHTML = '';
     asked = [];
     atAnthropic = { issuer: NODE.issuer, subject: NODE.did, asked: false, accepted: false, why: '' };
+    atGoogle = { issuer: NODE.issuer, subject: NODE.did, connect: `${NODE.issuer}/auth/google/cloud`, asked: false, accepted: false, why: '' };
+    wentTo = [];
     globalThis.fetch = mock((url: any, init: any) => {
         const method = init?.method ?? 'GET';
         const body = init?.body ? JSON.parse(String(init.body)) : {};
         asked.push({ url: String(url), method, body });
+        if (String(url).endsWith('/api/google')) {
+            return Promise.resolve(new Response(JSON.stringify(atGoogle), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+        }
         if (method === 'POST' && String(url).endsWith('/api/anthropic/order')) {
             atAnthropic = { ...atAnthropic, first: body.first, then: body.then === 'true' };
         } else if (method === 'POST') {
@@ -59,7 +70,7 @@ async function settle(): Promise<void> {
 async function drawn(): Promise<HTMLElement> {
     const held = document.createElement('div');
     document.body.appendChild(held);
-    renderNodeConnectors(held, NODE);
+    renderNodeConnectors(held, NODE, (url) => wentTo.push(url));
     await settle();
     return held;
 }
@@ -233,5 +244,39 @@ describe('Tim: ROOT orders what its agents spend (stories/29)', () => {
         const held = await drawn();
         expect((held.querySelector('[data-light="anthropic-session"]') as HTMLElement).dataset.state).toBe('refused');
         expect(inUse(held)?.dataset.source).toBe('console');
+    });
+});
+
+describe('Tim: ROOT connects the node to Google Cloud', () => {
+    // "WHERE I JUST PRESS CONNECT AND WE ARE DONE"
+    test('a node not connected offers Connect, and the press goes where the node says', async () => {
+        const held = await drawn();
+        const row = held.querySelector('[data-platform="Google Cloud"]') as HTMLElement;
+        expect((row.querySelector('[data-light="google-cloud"]') as HTMLElement).dataset.state).toBe('off');
+        expect(row.querySelector('[data-flow], input, textarea')).toBeNull();
+        await press(held, 'google-connect');
+        expect(wentTo).toEqual([`${NODE.issuer}/auth/google/cloud`]);
+    });
+
+    test('a connected node says where it is and offers nothing to press', async () => {
+        atGoogle = { ...atGoogle, asked: true, accepted: true, project_id: 'sbvh-q', service_account: 'tim@example.com' };
+        const held = await drawn();
+        const row = held.querySelector('[data-platform="Google Cloud"]') as HTMLElement;
+        expect((row.querySelector('[data-light="google-cloud"]') as HTMLElement).dataset.state).toBe('on');
+        expect(row.textContent).toContain('sbvh-q');
+        expect(row.textContent).toContain('tim@example.com');
+        expect(row.querySelector('[data-press="google-connect"]')).toBeNull();
+    });
+});
+
+describe('Spike: Google Cloud does not accept the node', () => {
+    test('what Google said is shown as an error, and Connect is there again', async () => {
+        atGoogle = { ...atGoogle, asked: true, accepted: false, why: "Google's token exchange did not trade the identity" };
+        const held = await drawn();
+        const row = held.querySelector('[data-platform="Google Cloud"]') as HTMLElement;
+        expect((row.querySelector('[data-light="google-cloud"]') as HTMLElement).dataset.state).toBe('refused');
+        expect((row.querySelector('[data-error]') as HTMLElement).textContent).toContain("Google's token exchange");
+        await press(held, 'google-connect');
+        expect(wentTo).toEqual([`${NODE.issuer}/auth/google/cloud`]);
     });
 });

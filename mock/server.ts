@@ -250,6 +250,11 @@ function anthropicAm() {
     };
 }
 
+/** The limit ROOT set on the mock's node. */
+let googleLimit = 0;
+/** The day's limit ROOT set on the mock's node. */
+let googleDayLimit = 0;
+
 async function anthropicAnswer(method: string, path: string, req: Request): Promise<Response | null> {
     if (path === "/api/anthropic/order" && method === "POST") {
         const { first = "", then = "false" } = (await req.json()) as { first?: string; then?: string };
@@ -258,8 +263,22 @@ async function anthropicAnswer(method: string, path: string, req: Request): Prom
         spending.then = then === "true";
         return json(anthropicAm());
     }
-    if (path === "/api/google") {
-        return json({ issuer: new URL(req.url).origin, subject: "did:key:z6MkmockNode", connect: new URL(req.url).origin + "/auth/google/cloud", asked: false, accepted: false, why: "" });
+    if (path === "/api/google" || path === "/api/google/limit") {
+        if (method === "POST") {
+            const sent = (await req.json()) as { amount?: string; per?: string };
+            if (sent.per === "day") googleDayLimit = Number(sent.amount ?? 0);
+            else googleLimit = Number(sent.amount ?? 0);
+        }
+        const origin = new URL(req.url).origin;
+        const budget = { name: "monthly", cost: 3.5, budget: 20, currency: "EUR", since: "2026-11-01T00:00:00Z", at: "2026-11-02T12:00:00Z", period: "MONTH" };
+        const against = googleLimit > 0 && googleLimit < budget.budget ? googleLimit : budget.budget;
+        const halted = budget.cost >= against * 0.8;
+        return json({
+            issuer: origin, subject: "did:key:z6MkmockNode", connect: origin + "/auth/google/cloud", asked: true, accepted: true, why: "",
+            project_id: "mock-project", project_number: "123", pool: "qntx", provider: "node", service_account: "qntx-node@mock-project", set_by: "google:root", at: budget.at,
+            costs_wired: true, costs_connect: origin + "/auth/google/cloud?project=mock-project&thing=costs", budgets: [budget], limit: googleLimit, day_limit: googleDayLimit, spent_today: 0.25,
+            halted, halted_why: halted ? `monthly has reached 3.50 EUR of ${against.toFixed(2)}, and what costs halts at 80% of it` : "",
+        });
     }
     if (path !== "/api/anthropic") return null;
     if (method === "POST") {

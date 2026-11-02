@@ -423,6 +423,40 @@ export interface NodeGoogle {
   accepted: boolean;
   /** What Google said when it did not. */
   why: string;
+  /** Whether ROOT connected the node's costs. */
+  costs_wired: boolean;
+  /** Where ROOT goes to connect them, by saying yes at Google once. */
+  costs_connect: string;
+  /** What each budget last reported. */
+  budgets: GoogleBudget[];
+  /** The limit ROOT set on this node; zero is none. */
+  limit: number;
+  /** Whether what costs at Google is halted: 80% of the lower of budget and limit. */
+  halted: boolean;
+  /** Why it is. */
+  halted_why: string;
+  /** The most ROOT lets the node spend in a day; zero is none. */
+  day_limit: number;
+  /** What it has spent today, as far as Google has reported. */
+  spent_today: number;
+}
+
+/** GoogleBudget is what a budget at Google Cloud last reported. */
+export interface GoogleBudget {
+  /** Its name at Google. */
+  name: string;
+  /** What it has cost so far this period. */
+  cost: number;
+  /** The budget's amount. */
+  budget: number;
+  /** The currency of both. */
+  currency: string;
+  /** When the period began. */
+  since: string;
+  /** When Google published this; empty until it first reports. */
+  at: string;
+  /** How often it starts over: MONTH, QUARTER, YEAR, or CUSTOM. */
+  period: string;
 }
 
 export interface NodeAnthropic {

@@ -307,6 +307,24 @@ describe('Tim: agy shows in the Google Cloud row', () => {
     });
 });
 
+describe('Tim: agy is its own yes at Google', () => {
+    const connected = { asked: true, accepted: true, project_id: 'qntx-506807', service_account: 'qntx-node', agy_connect: `${NODE.issuer}/auth/google/cloud?project=qntx-506807&thing=agy` };
+
+    test('a connected node not yet let offers Connect agy, which goes where the node says', async () => {
+        atGoogle = { ...atGoogle, ...connected };
+        const held = await drawn();
+        await press(held, 'google-agy-connect');
+        expect(wentTo).toEqual([`${NODE.issuer}/auth/google/cloud?project=qntx-506807&thing=agy`]);
+    });
+
+    test('a node let, or not yet connected, offers no Connect agy', async () => {
+        expect((await drawn()).querySelector('[data-press="google-agy-connect"]')).toBeNull();
+        document.body.innerHTML = '';
+        atGoogle = { ...atGoogle, ...connected, agy_wired: true };
+        expect((await drawn()).querySelector('[data-press="google-agy-connect"]')).toBeNull();
+    });
+});
+
 describe('Tim: the Costs line under Google Cloud', () => {
     const connected = { asked: true, accepted: true, project_id: 'qntx-506807', service_account: 'qntx-node', costs_connect: `${NODE.issuer}/auth/google/cloud?project=qntx-506807&thing=costs` };
 

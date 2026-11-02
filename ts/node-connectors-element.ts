@@ -454,6 +454,8 @@ function googleRow(go: (url: string) => void): HTMLElement {
         if (am.accepted) {
             light.show('on', 'Connected');
             body.append(valueRow('Project', copied(am.project_id)), valueRow('Service account', copied(am.service_account)), costsLine(am));
+            // A yes of its own, for it is what spends.
+            if (!am.agy_wired) body.append(pressFrom({ id: 'google-agy-connect', title: 'Connect agy', does: () => go(am.agy_connect) }).element);
             return;
         }
         if (am.asked && Date.now() - Date.parse(am.at) < GOOGLE_CONFIRMS_MS) {

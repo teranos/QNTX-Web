@@ -272,6 +272,7 @@ async function anthropicAnswer(method: string, path: string, req: Request): Prom
         return json({
             issuer: origin, subject: "did:key:z6MkmockNode", connect: origin + "/auth/google/cloud", asked: true, accepted: true, why: "",
             project_id: "mock-project", project_number: "123", pool: "qntx", provider: "node", service_account: "qntx-node@mock-project", set_by: "google:root", at: budget.at,
+            agy_wired: false, agy_connect: origin + "/auth/google/cloud?project=mock-project&thing=agy",
             costs_wired: true, costs_connect: origin + "/auth/google/cloud?project=mock-project&thing=costs", budgets: [budget], limit: googleLimit,
             halted, halted_why: halted ? `monthly has reached 3.50 EUR of ${against.toFixed(2)}, and what costs halts at 80% of it` : "",
         });

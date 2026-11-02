@@ -1,33 +1,54 @@
 /**
- * Dropping a retired thread marker is not dropping what a type registered under its symbol.
+ * 〽 is the thread's, and the thread is gone: nothing may claim it.
  *
- * "The whole thread line thing can entirely go, in ui and api"
+ * "I don't want threads"
  *
- * The thread is not a registered type any more, so a plugin or a published element may
- * register under 〽. A canvas that holds an element of that type must still draw it:
- * only a saved 〽 that nothing is registered for is the thread's end marker.
+ * A canvas saved before the thread was removed holds end markers, records with the
+ * symbol 〽. Plugins and published elements register after the canvas has opened, so
+ * "nothing is registered for it yet" cannot say a saved 〽 is a marker. The symbol is
+ * reserved instead: refused at registration, said, and every saved 〽 is a marker.
  *
  * Personas:
- * - Spike: Edge cases — a type claims 〽; a marker is minimized; neither is lost or kept wrongly
+ * - Tim: Happy path — a type that asks for 〽 is refused, said
+ * - Spike: Edge cases — a minimized marker is dropped too; one that a type tried to claim is still a marker
  */
 
-import { describe, test, expect, beforeEach, afterAll } from 'bun:test';
+import { describe, test, expect, beforeEach, spyOn } from 'bun:test';
 import { renderElement, buildCanvasWorkspace } from './canvas-workspace-builder';
-import { getAllElementTypes, registerElementType, unregisterElementType, getElementTypeBySymbol, getElementTypeBySavedSymbol } from '../element-registry';
+import { registerElementType, getElementTypeBySymbol } from '../element-registry';
 import { uiState } from '../../../state/ui';
 
-const MARK = '〽'; // 〽
+const MARK = '\u303D'; // 〽
 
-// The registry is the process's, shared by every test file that runs after this one: what is
-// registered here is taken out again.
-afterAll(() => {
-    unregisterElementType(MARK);
+const claimant = () => ({
+    symbol: MARK,
+    className: 'canvas-published-element element-claimant',
+    title: 'CLAIMANT',
+    label: 'claimant',
+    publishedName: 'claimant',
+    render: (item: { id: string }) => {
+        const el = document.createElement('div');
+        el.setAttribute('data-element-id', item.id);
+        return el;
+    },
 });
 
 beforeEach(() => {
     document.body.innerHTML = '';
     uiState.setCanvasElements([]);
     uiState.setMinimizedWindows([]);
+});
+
+describe('The symbol of a thread - Tim (Happy Path)', () => {
+    test('a type that asks for it is refused, and it says so', () => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        registerElementType(claimant());
+
+        expect(getElementTypeBySymbol(MARK)).toBeUndefined();
+        expect(warn).toHaveBeenCalled();
+        expect(String(warn.mock.calls[0]?.[0])).toContain(MARK);
+        warn.mockRestore();
+    });
 });
 
 describe('A retired thread marker - Spike (Edge Cases)', () => {
@@ -43,56 +64,15 @@ describe('A retired thread marker - Spike (Edge Cases)', () => {
         expect(uiState.getMinimizedWindows()).not.toContain('thread-m');
     });
 
-    test('one a type has claimed is that type\'s element, drawn and kept', async () => {
-        registerElementType({
-            symbol: MARK,
-            className: 'canvas-published-element element-claimed',
-            title: 'CLAIMED',
-            label: 'claimed',
-            publishedName: 'claimed',
-            render: (item) => {
-                const el = document.createElement('div');
-                el.setAttribute('data-element-id', item.id);
-                return el;
-            },
-        });
+    test('one a type tried to claim is still the thread\'s marker: dropped, not drawn', async () => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => {});
+        registerElementType(claimant());
+        warn.mockRestore();
         uiState.addCanvasElement({ id: 'claimed-1', symbol: MARK, x: 1, y: 2, canvas_id: '' });
 
-        const drawn = await renderElement({ id: 'claimed-1', symbol: MARK, title: 'CLAIMED', x: 1, y: 2 } as any);
+        const drawn = await renderElement({ id: 'claimed-1', symbol: MARK, title: 'CLAIMANT', x: 1, y: 2 } as any);
 
-        expect(drawn.getAttribute('data-element-id')).toBe('claimed-1');
-        expect(uiState.getCanvasElement('claimed-1')).toBeDefined();
-    });
-});
-
-describe('Taking a type out of the registry - Tim (Happy Path)', () => {
-    test('a type registered at runtime can be taken out, and the symbol is free again', () => {
-        const SYMBOL = 'zz-unregister-me';
-        registerElementType({
-            symbol: SYMBOL,
-            className: 'canvas-published-element element-unregister-me',
-            title: 'GONE SOON',
-            label: 'gonesoon',
-            publishedName: 'gonesoon',
-            render: () => document.createElement('div'),
-        });
-        expect(getElementTypeBySymbol(SYMBOL)).toBeDefined();
-
-        expect(unregisterElementType(SYMBOL)).toBe(true);
-
-        expect(getElementTypeBySymbol(SYMBOL)).toBeUndefined();
-        expect(getElementTypeBySavedSymbol(SYMBOL)).toBeUndefined();
-    });
-});
-
-describe('Taking a type out of the registry - Spike (Edge Cases)', () => {
-    test('a built-in is refused, and stays', () => {
-        const ax = getAllElementTypes().find(t => t.label === 'AX')!;
-        expect(unregisterElementType(ax.symbol)).toBe(false);
-        expect(getElementTypeBySymbol(ax.symbol)).toBe(ax);
-    });
-
-    test('a symbol nothing holds is nothing to take out', () => {
-        expect(unregisterElementType('zz-never-registered')).toBe(false);
+        expect(drawn.hasAttribute('data-element-id')).toBe(false);
+        expect(uiState.getCanvasElement('claimed-1')).toBeUndefined();
     });
 });

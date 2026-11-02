@@ -103,6 +103,14 @@ export function replacePluginElementType(entry: ElementTypeEntry): boolean {
     return true;
 }
 
+/**
+ * Symbols no type may take. 〽 (Part Alternation Mark) was the thread's end marker, and canvases
+ * saved before the thread was removed still hold records under it: a saved 〽 is that marker,
+ * whatever has registered by the time it is read (plugins and published elements register after
+ * the canvas has opened), so nothing may claim it.
+ */
+export const RESERVED_SYMBOLS: readonly string[] = ['\u303D'];
+
 /** What an entry is, said the way a refusal names it. */
 function nameOf(entry: ElementTypeEntry | undefined): string {
     if (!entry) return 'nothing';
@@ -118,6 +126,11 @@ export function holderOf(symbol: string): string {
 
 /** Register a new element type at runtime (for plugin elements) */
 export function registerElementType(entry: ElementTypeEntry): void {
+    if (RESERVED_SYMBOLS.includes(entry.symbol)) {
+        console.warn(`[ElementRegistry] ${nameOf(entry)} is not registered: ${entry.symbol} is reserved, it was the thread's`);
+        return;
+    }
+
     if (_bySymbol.has(entry.symbol)) {
         console.warn(`[ElementRegistry] ${nameOf(entry)} is not registered: ${entry.symbol} is held by ${holderOf(entry.symbol)}`);
         return;
@@ -134,23 +147,6 @@ export function registerElementType(entry: ElementTypeEntry): void {
     _byClassName.set(entry.className, entry);
 
     console.debug(`[ElementRegistry] Registered element type: ${entry.symbol} (${entry.label})`);
-}
-
-/**
- * Take a type registered at runtime out again: a plugin disabled, a published element withdrawn.
- *
- * Refuses a built-in, as replacePluginElementType does: only what a provider registered
- * can be taken back. Returns whether anything was.
- */
-export function unregisterElementType(symbol: string): boolean {
-    const existing = _bySymbol.get(symbol);
-    if (!existing || providerOf(existing) === undefined) return false;
-
-    const at = ELEMENT_TYPES.indexOf(existing);
-    if (at !== -1) ELEMENT_TYPES.splice(at, 1);
-    _bySymbol.delete(symbol);
-    _byClassName.delete(existing.className);
-    return true;
 }
 
 /** Get all registered element types */

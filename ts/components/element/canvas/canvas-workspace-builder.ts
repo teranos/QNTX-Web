@@ -11,7 +11,7 @@ import type { Element } from '@teranos/elements';
 import { Doc } from '../../../sym';
 import { log, SEG } from '../../../logger';
 import { toast } from '../../../toast';
-import { getElementTypeBySymbol, getElementTypeBySavedSymbol, getElementTypeByElement } from '../element-registry';
+import { getElementTypeBySymbol, getElementTypeBySavedSymbol, getElementTypeByElement, RESERVED_SYMBOLS } from '../element-registry';
 import { createErrorElement } from '../error-element';
 import { setResponseState } from '../response-state';
 import { createAbsentElement, askAbsentAgain } from '../absent-element';
@@ -225,17 +225,9 @@ function deleteSelectedElements(canvasId: string, container: HTMLElement): void 
     log.debug(SEG.ELEMENT, `[Canvas] Deleted ${elementIdsToDelete.length} elements`, { elementIdsToDelete });
 }
 
-/** Part Alternation Mark: what the thread's end marker was saved under, before the thread was removed. */
-const RETIRED_THREAD_SYMBOL = '\u303D';
-
-/**
- * A saved 〽 that nothing is registered for is the end marker of a thread that is gone.
- * The thread is not a type any more, so a plugin or a published element may register
- * under 〽; an element of that type is that type's, and is kept.
- */
-function isRetiredThreadMarker(item: { symbol?: string; content?: string }): boolean {
-    return item.symbol === RETIRED_THREAD_SYMBOL
-        && getElementTypeBySavedSymbol(item.symbol, item.content) === undefined;
+/** What a saved record is when its symbol is the one the thread's end marker was saved under (reserved: element-registry.ts). */
+function isRetiredThreadMarker(item: { symbol?: string }): boolean {
+    return item.symbol !== undefined && RESERVED_SYMBOLS.includes(item.symbol);
 }
 
 /**

@@ -229,6 +229,16 @@ function deleteSelectedElements(canvasId: string, container: HTMLElement): void 
 const RETIRED_THREAD_SYMBOL = '\u303D';
 
 /**
+ * A saved 〽 that nothing is registered for is the end marker of a thread that is gone.
+ * The thread is not a type any more, so a plugin or a published element may register
+ * under 〽; an element of that type is that type's, and is kept.
+ */
+function isRetiredThreadMarker(item: { symbol?: string; content?: string }): boolean {
+    return item.symbol === RETIRED_THREAD_SYMBOL
+        && getElementTypeBySavedSymbol(item.symbol, item.content) === undefined;
+}
+
+/**
  * Render an element on the canvas.
  * Uses element-registry for dispatch instead of per-type if/else.
  */
@@ -294,7 +304,7 @@ export async function renderElement(item: Element): Promise<HTMLElement> {
     }
 
     // A thread's end marker (〽): the thread is gone, and so is what a canvas saved of it.
-    if (item.symbol === RETIRED_THREAD_SYMBOL) {
+    if (isRetiredThreadMarker(item)) {
         log.debug(SEG.ELEMENT, `[Canvas] Dropping the saved end marker ${item.id} of a thread that is gone`);
         uiState.removeCanvasElement(item.id);
         return document.createElement('div'); // invisible placeholder
@@ -739,6 +749,17 @@ export function buildCanvasWorkspace(
 
     // Render existing elements in parallel then append in original order
     (async () => {
+        // The thread's end markers go whether or not they are minimized: a minimized one is
+        // never rendered, so it would keep its record, and its place in the tray.
+        for (const item of [...items]) {
+            if (!isRetiredThreadMarker(item)) continue;
+            log.debug(SEG.ELEMENT, `[Canvas] Dropping the saved end marker ${item.id} of a thread that is gone`);
+            uiState.removeCanvasElement(item.id);
+            uiState.removeMinimizedWindow(item.id);
+            const at = items.indexOf(item);
+            if (at !== -1) items.splice(at, 1);
+        }
+
         // Step 1: Render all individual elements (skip minimized — they live in the tray)
         const minimizedIds = new Set(uiState.getMinimizedWindows());
         const visible = items.filter(g => !minimizedIds.has(g.id));

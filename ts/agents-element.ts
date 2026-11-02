@@ -73,7 +73,7 @@ export function agyAsAm(is: AgyAm): ClaudeAm {
         did: is.did ?? '', model: is.model, effort: '',
         permission_mode: '', permission_modes: [], allow: [],
         session: is.session ?? '', answering: is.answering ?? false, claude_code: is.agy ?? '',
-        not_ready: is.not_ready ?? '', signed_in: true, auth_method: 'Gemini API key',
+        not_ready: is.not_ready ?? '', signed_in: true, auth_method: 'Google Cloud',
     };
 }
 

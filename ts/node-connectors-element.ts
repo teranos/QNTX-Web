@@ -361,6 +361,9 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
     return row;
 }
 
+/** As long as the node asks Google to let it act before mailing ROOT how it ended (server/google_cloud.go). */
+const GOOGLE_CONFIRMS_MS = 15 * 60 * 1000;
+
 /**
  * The Google Cloud row. Google already knows ROOT, so connecting is one press:
  * the node says where it goes, and ROOT says yes at Google.
@@ -386,6 +389,11 @@ function googleRow(go: (url: string) => void): HTMLElement {
         if (am.accepted) {
             light.show('on', 'Connected');
             body.append(valueRow('Project', copied(am.project_id)), valueRow('Service account', copied(am.service_account)));
+            return;
+        }
+        if (am.asked && Date.now() - Date.parse(am.at) < GOOGLE_CONFIRMS_MS) {
+            light.show('waiting', 'Google is confirming');
+            body.append(note(`Set up in ${am.project_id}. You will get a mail when it is done, or if it does not come through.`));
             return;
         }
         if (am.asked) {

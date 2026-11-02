@@ -269,9 +269,24 @@ describe('Tim: ROOT connects the node to Google Cloud', () => {
     });
 });
 
+describe('Tim: Google is still confirming the node', () => {
+    // A binding just made does not hold at once, and ROOT is mailed how it ends.
+    test('a connection just made says it is being confirmed, and offers nothing to press', async () => {
+        atGoogle = { ...atGoogle, asked: true, accepted: false, at: new Date().toISOString(), project_id: 'qntx-506807', why: 'Permission denied' };
+        const held = await drawn();
+        const row = held.querySelector('[data-platform="Google Cloud"]') as HTMLElement;
+        const light = row.querySelector('[data-light="google-cloud"]') as HTMLElement;
+        expect(light.dataset.state).toBe('waiting');
+        expect(light.textContent).toContain('Google is confirming');
+        expect(row.textContent).toContain('You will get a mail');
+        expect(row.querySelector('[data-error]')).toBeNull();
+        expect(row.querySelector('[data-press="google-connect"]')).toBeNull();
+    });
+});
+
 describe('Spike: Google Cloud does not accept the node', () => {
     test('what Google said is shown as an error, and Connect is there again', async () => {
-        atGoogle = { ...atGoogle, asked: true, accepted: false, why: "Google's token exchange did not trade the identity" };
+        atGoogle = { ...atGoogle, asked: true, accepted: false, at: '2026-01-01T00:00:00Z', why: "Google's token exchange did not trade the identity" };
         const held = await drawn();
         const row = held.querySelector('[data-platform="Google Cloud"]') as HTMLElement;
         expect((row.querySelector('[data-light="google-cloud"]') as HTMLElement).dataset.state).toBe('refused');

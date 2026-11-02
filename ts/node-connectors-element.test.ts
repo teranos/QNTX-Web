@@ -14,6 +14,9 @@ let atAnthropic: Record<string, unknown> = {};
 /** What the node answers of itself at Google Cloud, as google am answers it. */
 let atGoogle: Record<string, unknown> = {};
 
+/** What the Node Agent answers in agy, or null when am.toml names no agy for it. */
+let inAgy: Record<string, unknown> | null = null;
+
 /** Where a press sent ROOT. */
 let wentTo: string[] = [];
 
@@ -43,10 +46,16 @@ beforeEach(() => {
     atAnthropic = { issuer: NODE.issuer, subject: NODE.did, asked: false, accepted: false, why: '' };
     atGoogle = { issuer: NODE.issuer, subject: NODE.did, connect: `${NODE.issuer}/auth/google/cloud`, asked: false, accepted: false, why: '' };
     wentTo = [];
+    inAgy = null;
     globalThis.fetch = mock((url: any, init: any) => {
         const method = init?.method ?? 'GET';
         const body = init?.body ? JSON.parse(String(init.body)) : {};
         asked.push({ url: String(url), method, body });
+        if (String(url).endsWith('/api/agent?harness=agy')) {
+            return Promise.resolve(inAgy
+                ? new Response(JSON.stringify({ agy: inAgy }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+                : new Response(JSON.stringify({ error: "this node's am.toml names no agy for the Node Agent" }), { status: 404, headers: { 'Content-Type': 'application/json' } }));
+        }
         if (String(url).endsWith('/api/google')) {
             return Promise.resolve(new Response(JSON.stringify(atGoogle), { status: 200, headers: { 'Content-Type': 'application/json' } }));
         }
@@ -266,6 +275,31 @@ describe('Tim: ROOT connects the node to Google Cloud', () => {
         expect(row.textContent).toContain('sbvh-q');
         expect(row.textContent).toContain('tim@example.com');
         expect(row.querySelector('[data-press="google-connect"]')).toBeNull();
+    });
+});
+
+describe('Tim: agy shows in the Google Cloud row', () => {
+    // "make sure there is for agy some kind of visual indication in the connector"
+    test('agy lit, with its model, when the Node Agent runs in it', async () => {
+        inAgy = { model: 'gemini-3.8-flash', agy: '/bin/agy', agy_version: '1.4.12', not_ready: '' };
+        const held = await drawn();
+        const row = held.querySelector('[data-platform="Google Cloud"]') as HTMLElement;
+        const light = row.querySelector('[data-light="google-agy"]') as HTMLElement;
+        expect(light.dataset.state).toBe('on');
+        expect(light.textContent).toBe('Agy gemini-3.8-flash');
+    });
+
+    test('agy unlit when the node names none, and red with why when it cannot run', async () => {
+        const off = (await drawn()).querySelector('[data-light="google-agy"]') as HTMLElement;
+        expect(off.dataset.state).toBe('off');
+        expect(off.textContent).toBe('Agy not set up');
+
+        document.body.innerHTML = '';
+        inAgy = { model: 'gemini-3.8-flash', agy: '', agy_version: '1.4.12', not_ready: 'this node holds no agy' };
+        const held = await drawn();
+        const row = held.querySelector('[data-platform="Google Cloud"]') as HTMLElement;
+        expect((row.querySelector('[data-light="google-agy"]') as HTMLElement).dataset.state).toBe('refused');
+        expect(row.textContent).toContain('this node holds no agy');
     });
 });
 

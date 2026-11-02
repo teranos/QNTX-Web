@@ -12,6 +12,7 @@ import { build, setupWatcher, findAvailablePort, reloadStream, RELOAD_PATH, RELO
 import { Tablet, LEVELS, type Level } from "./reach";
 import { PEOPLE, authStatus, canvases, canvasElements, compositions, minimizedWindows } from "./world";
 import { Agent, Files, type Transcript } from "./agents";
+import { AgyAgents } from "./agy";
 import { CodexAgents } from "./codex";
 
 const here = import.meta.dir;
@@ -132,6 +133,7 @@ function elementAgent(element: string): Agent {
 }
 const files = new Files();
 const codexAgents = new CodexAgents();
+const agyAgents = new AgyAgents();
 
 /** The agent paths, answered live: am, session and say, the picture carried along. */
 async function agentAnswer(level: Level, method: string, path: string, _url: URL, req: Request): Promise<Response | null> {
@@ -318,6 +320,7 @@ async function answer(req: Request, url: URL): Promise<Response> {
 
     const said = worldAnswer(level, method, path, url)
         ?? await codexAgents.answer(req)
+        ?? await agyAgents.answer(req)
         ?? await agentAnswer(level, method, path, url, req)
         ?? await filesAnswer(method, path, req)
         ?? await keysAnswer(level, method, path, req)

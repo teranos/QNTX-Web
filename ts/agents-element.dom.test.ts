@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { piAsAm, piAsSaid, type Reachable, type Harness } from './agents-element';
+import { agyAsAm, agyAsSaid, harnessesOf, piAsAm, piAsSaid, type Reachable, type Harness } from './agents-element';
 import type { ClaudeAm, ClaudeSaid, NodeAgent } from './claude-element';
 
 const USE_JSDOM = process.env.USE_JSDOM === '1';
@@ -62,7 +62,7 @@ describe('Agents', () => {
         const stop = drawAgentChat(body, reached[0]!, chatOf);
         await settled();
         const tabs = Array.from(body.querySelectorAll('.agents-tab')).map(t => t.textContent);
-        expect(tabs).toEqual(['claude', 'pi', 'codex']);
+        expect(tabs).toEqual(['claude', 'pi', 'codex', 'agy']);
         expect(body.querySelector('.agents-tab-on')?.textContent).toBe('claude');
         expect(body.querySelector('.claude-says')).not.toBeNull();
         body.querySelectorAll<HTMLButtonElement>('.agents-tab')[1]!.click();
@@ -87,6 +87,25 @@ describe('Agents', () => {
         const elements = found.filter(a => a.kind === 'element').map(a => a.called);
         expect(elements).toEqual(['Database', 'Ground', 'shaken-thing']);
         expect(found.filter(a => a.kind === 'element').map(a => a.at)).toContain('/api/elements/shaken-thing');
+    });
+
+    // "make sure agy is an option for Node Agent talks": the namespace's agent in
+    // agy is its own PR, and the node refuses it until then.
+    test('agy is a tab on the Node Agent, and on nothing else yet', () => {
+        expect(harnessesOf({ id: 'node', called: 'Node Agent', at: '/api/agent', kind: 'node' })).toContain('agy');
+        for (const kind of ['namespace', 'element', 'story'] as const) {
+            expect(harnessesOf({ id: kind, called: kind, at: `/api/x`, kind })).not.toContain('agy');
+        }
+    });
+
+    test('agy am and agy say are drawn as the chat draws any harness', () => {
+        const am = agyAsAm({ did: 'did:key:z', model: 'gemini-3.8-flash', session: 's', answering: false, agy: '/bin/agy', agy_version: '1.4.12', not_ready: 'no agy' });
+        expect(am.model).toBe('gemini-3.8-flash');
+        expect(am.not_ready).toBe('no agy');
+        expect(am.signed_in).toBe(true);
+        const said = agyAsSaid({ answer: 'hello', session: 's', conversation: 'c', model: 'gemini-3.8-flash', agy_version: '1.4.12', context_used: 10, context_size: 100, took_ms: 5, unwritten: '' });
+        expect(said.answer).toBe('hello');
+        expect(said.took_ms).toBe(5);
     });
 
     test('pi am and pi say are drawn as the chat draws any harness', () => {

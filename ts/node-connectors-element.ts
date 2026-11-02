@@ -6,6 +6,7 @@ import type { Element } from '@teranos/elements';
 import { fieldFrom, flowFrom, pressFrom, tray, type FlowHandle, type FlowStep } from '@teranos/elements';
 import { apiJson } from './client/http';
 import { log, SEG } from './logger';
+import type { AgyAm } from './agents-element';
 import { ANTHROPIC, GOOGLE, markOf } from './brand-marks';
 import { copied, goTo, note, valueRow } from './connector-element';
 import { copyable } from './copyable';
@@ -361,6 +362,31 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
     return row;
 }
 
+/**
+ * Whether the Node Agent runs in agy, Google's harness: its light under the Google Cloud row.
+ * "make sure there is for agy some kind of visual indication in the connector"
+ */
+function agyLine(): HTMLElement {
+    const line = document.createElement('div');
+    line.dataset.harness = 'agy';
+    line.style.cssText = 'display:flex;flex-direction:column;gap:4px';
+    const light = lightFrom('google-agy', 'Agy not set up');
+    line.append(light.element);
+    apiJson<{ agy?: AgyAm }>('/api/agent?harness=agy').then(({ agy }) => {
+        if (!agy) return;
+        if (agy.not_ready) {
+            light.show('refused', 'Agy cannot run');
+            line.append(errorOf(agy.not_ready));
+            return;
+        }
+        light.show('on', `Agy ${agy.model}`);
+    }).catch((err: unknown) => {
+        // Named by no am.toml, it is not set up, and the light as drawn says so.
+        log.info(SEG.SELF, `[node connectors] agy: ${err instanceof Error ? err.message : String(err)}`);
+    });
+    return line;
+}
+
 /** As long as the node asks Google to let it act before mailing ROOT how it ended (server/google_cloud.go). */
 const GOOGLE_CONFIRMS_MS = 15 * 60 * 1000;
 
@@ -383,7 +409,7 @@ function googleRow(go: (url: string) => void): HTMLElement {
     head.append(markOf(GOOGLE), title, light.element);
     const body = document.createElement('div');
     body.style.cssText = 'display:flex;flex-direction:column;gap:6px';
-    row.append(head, body);
+    row.append(head, body, agyLine());
     const connect = (am: NodeGoogle) => pressFrom({ id: 'google-connect', title: 'Connect', does: () => go(am.connect) }).element;
     apiJson<NodeGoogle>('/api/google').then((am) => {
         if (am.accepted) {

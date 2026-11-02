@@ -48,7 +48,9 @@ beforeEach(() => {
         const body = init?.body ? JSON.parse(String(init.body)) : {};
         asked.push({ url: String(url), method, body });
         if (String(url).endsWith('/api/google/limit')) {
-            atGoogle = { ...atGoogle, limit: Number(body.amount), halted: Number(body.amount) > 0 && Number(body.amount) <= 10 };
+            atGoogle = body.per === 'day'
+                ? { ...atGoogle, day_limit: Number(body.amount) }
+                : { ...atGoogle, limit: Number(body.amount), halted: Number(body.amount) > 0 && Number(body.amount) <= 10 };
             return Promise.resolve(new Response(JSON.stringify(atGoogle), { status: 200, headers: { 'Content-Type': 'application/json' } }));
         }
         if (String(url).endsWith('/api/google')) {
@@ -259,7 +261,7 @@ describe('Tim: ROOT connects the node to Google Cloud', () => {
         expect((row.querySelector('[data-light="google-cloud"]') as HTMLElement).dataset.state).toBe('off');
         expect(row.querySelector('[data-flow], input, textarea')).toBeNull();
         await press(held, 'google-connect');
-        expect(wentTo).toEqual([`${NODE.issuer}/auth/google/cloud`]);
+        expect(wentTo).toEqual([`${NODE.issuer}/auth/google/cloud?page=${encodeURIComponent(window.location.pathname)}`]);
     });
 
     test('a connected node says where it is and offers nothing to press', async () => {
@@ -281,7 +283,7 @@ describe('Tim: the Costs line under Google Cloud', () => {
         const held = await drawn();
         expect((held.querySelector('[data-light="google-costs"]') as HTMLElement).dataset.state).toBe('off');
         await press(held, 'google-costs-connect');
-        expect(wentTo).toEqual([`${NODE.issuer}/auth/google/cloud?project=qntx-506807&thing=costs`]);
+        expect(wentTo).toEqual([`${NODE.issuer}/auth/google/cloud?project=qntx-506807&thing=costs&page=${encodeURIComponent(window.location.pathname)}`]);
     });
 
     test('a node not yet connected to Google offers no Costs', async () => {
@@ -305,6 +307,17 @@ describe('Tim: the Costs line under Google Cloud', () => {
         expect(line.textContent).toContain('3.50');
         expect(line.textContent).toContain('20.00');
         expect(line.textContent).toContain('EUR');
+        expect(held.querySelector('[data-costs]')?.textContent).toContain('Max per budget period, EUR');
+        expect(held.querySelector('[data-costs]')?.textContent).toContain('80%');
+    });
+
+    test('what a budget is in, and when it resets, shows before Google first reports', async () => {
+        atGoogle = { ...atGoogle, ...connected, costs_wired: true, budgets: [{ name: 'monthly', cost: 0, budget: 20, currency: 'EUR', since: '', at: '', period: 'MONTH' }] };
+        const held = await drawn();
+        expect((held.querySelector('[data-light="google-costs"]') as HTMLElement).dataset.state).toBe('waiting');
+        expect(held.querySelector('[data-budget="monthly"]')?.textContent).toContain('this month');
+        expect(held.querySelector('[data-costs]')?.textContent).toContain('Max per month, EUR');
+        expect(held.querySelector('[data-costs]')?.textContent).toContain('Max per day, EUR');
     });
 
     test('halted says so, and why, and that the node stays connected', async () => {
@@ -320,9 +333,14 @@ describe('Tim: the Costs line under Google Cloud', () => {
         atGoogle = { ...atGoogle, ...connected, costs_wired: true, budgets: [{ name: 'monthly', cost: 8, budget: 20, currency: 'EUR', since: '', at: '' }] };
         const held = await drawn();
         (held.querySelector('[data-ask="google-limit"]') as HTMLInputElement).value = '10';
+        (held.querySelector('[data-ask="google-day-limit"]') as HTMLInputElement).value = '1';
         await press(held, 'google-limit-set');
-        expect(asked.some(a => a.url.endsWith('/api/google/limit') && a.method === 'POST' && a.body.amount === '10')).toBe(true);
+        expect(asked.some(a => a.url.endsWith('/api/google/limit') && a.method === 'POST' && a.body.amount === '10' && a.body.per === 'period')).toBe(true);
+        expect(asked.some(a => a.url.endsWith('/api/google/limit') && a.body.amount === '1' && a.body.per === 'day')).toBe(true);
         expect((held.querySelector('[data-light="google-costs"]') as HTMLElement).dataset.state).toBe('refused');
+        // "click does nothing": the row says what it now holds.
+        expect(held.querySelector('[data-limit-held]')?.textContent).toContain('Today: 0.00 EUR');
+        expect((held.querySelector('[data-ask="google-limit"]') as HTMLInputElement).value).toBe('10');
     });
 });
 
@@ -349,6 +367,6 @@ describe('Spike: Google Cloud does not accept the node', () => {
         expect((row.querySelector('[data-light="google-cloud"]') as HTMLElement).dataset.state).toBe('refused');
         expect((row.querySelector('[data-error]') as HTMLElement).textContent).toContain("Google's token exchange");
         await press(held, 'google-connect');
-        expect(wentTo).toEqual([`${NODE.issuer}/auth/google/cloud`]);
+        expect(wentTo).toEqual([`${NODE.issuer}/auth/google/cloud?page=${encodeURIComponent(window.location.pathname)}`]);
     });
 });

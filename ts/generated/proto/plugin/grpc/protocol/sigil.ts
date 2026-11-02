@@ -435,6 +435,10 @@ export interface NodeGoogle {
   halted: boolean;
   /** Why it is. */
   halted_why: string;
+  /** The most ROOT lets the node spend in a day; zero is none. */
+  day_limit: number;
+  /** What it has spent today, as far as Google has reported. */
+  spent_today: number;
 }
 
 /** GoogleBudget is what a budget at Google Cloud last reported. */
@@ -449,8 +453,10 @@ export interface GoogleBudget {
   currency: string;
   /** When the period began. */
   since: string;
-  /** When Google published this. */
+  /** When Google published this; empty until it first reports. */
   at: string;
+  /** How often it starts over: MONTH, QUARTER, YEAR, or CUSTOM. */
+  period: string;
 }
 
 export interface NodeAnthropic {

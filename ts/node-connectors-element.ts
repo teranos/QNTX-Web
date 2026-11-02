@@ -370,6 +370,8 @@ const GOOGLE_CONFIRMS_MS = 15 * 60 * 1000;
  * "WHERE I JUST PRESS CONNECT AND WE ARE DONE"
  */
 function googleRow(go: (url: string) => void): HTMLElement {
+    // The node offers the way back to the page a connecting began on.
+    const goFromHere = (url: string) => go(`${url}${url.includes('?') ? '&' : '?'}page=${encodeURIComponent(window.location.pathname)}`);
     const row = document.createElement('div');
     row.dataset.platform = 'Google Cloud';
     row.style.cssText = 'display:flex;flex-direction:column;gap:10px;padding:8px;border:1px solid var(--border-on-dark);border-radius:var(--border-radius);background:var(--bg-dark-light);color:var(--text-on-dark)';
@@ -392,38 +394,53 @@ function googleRow(go: (url: string) => void): HTMLElement {
         const costLight = lightFrom('google-costs', 'Costs not connected');
         costs.append(costLight.element);
         if (!am.costs_wired) {
-            costs.append(pressFrom({ id: 'google-costs-connect', title: 'Connect costs', does: () => go(am.costs_connect) }).element);
+            costs.append(pressFrom({ id: 'google-costs-connect', title: 'Connect costs', does: () => goFromHere(am.costs_connect) }).element);
             return costs;
         }
         const budgets = am.budgets ?? [];
+        const every = budgets[0]?.period ? budgets[0].period.toLowerCase() : 'budget period';
+        const currency = budgets[0]?.currency ?? "the budget's currency";
         if (am.halted) costLight.show('refused', 'What costs is halted');
-        else if (budgets.length === 0) costLight.show('waiting', "Waiting on Google's first report, which can take hours");
+        else if (!budgets.some((budget) => budget.at)) costLight.show('waiting', "Waiting on Google's first report, which can take hours");
         else costLight.show('on', 'Costs');
         for (const budget of budgets) {
-            const line = note(`${budget.name}: ${budget.cost.toFixed(2)} of ${budget.budget.toFixed(2)} ${budget.currency}`);
+            const line = note(`${budget.name}: ${budget.cost.toFixed(2)} of ${budget.budget.toFixed(2)} ${budget.currency} this ${every}`);
             line.dataset.budget = budget.name;
             costs.append(line);
         }
         if (am.halted) costs.append(errorOf(am.halted_why), note('The node stays connected. It resumes when the budget frees up.'));
-        const limit = fieldFrom({ id: 'google-limit', label: 'Limit on this node', placeholder: 'None' });
-        limit.input.dataset.ask = 'google-limit';
-        if (am.limit) limit.input.value = String(am.limit);
-        costs.append(limit.element, pressFrom({
+        const holding = note(`Today: ${(am.spent_today ?? 0).toFixed(2)} ${currency}. What costs halts at 80% of the lowest limit.`);
+        holding.dataset.limitHeld = '';
+        const limitField = (id: string, label: string, held: number) => {
+            const field = fieldFrom({ id, label, placeholder: 'None' });
+            field.input.dataset.ask = id;
+            field.element.style.cssText = 'width:11em';
+            field.input.style.width = '100%';
+            if (held) field.input.value = String(held);
+            return field;
+        };
+        const limit = limitField('google-limit', `Max per ${every}, ${currency}`, am.limit);
+        const dayLimit = limitField('google-day-limit', `Max per day, ${currency}`, am.day_limit);
+        const fields = document.createElement('div');
+        fields.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end';
+        const setLimit = (per: string, amount: string) => apiJson<NodeGoogle>('/api/google/limit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: amount.trim() || '0', per }),
+        });
+        fields.append(limit.element, dayLimit.element, pressFrom({
             id: 'google-limit-set',
-            title: 'Set limit',
+            title: 'Set limits',
             does: () => {
-                apiJson<NodeGoogle>('/api/google/limit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ amount: limit.input.value.trim() || '0' }),
-                }).then((answered) => costs.replaceWith(costsLine(answered))).catch((err: unknown) => {
+                setLimit('day', dayLimit.input.value).then(() => setLimit('period', limit.input.value)).then((answered) => costs.replaceWith(costsLine(answered))).catch((err: unknown) => {
                     costs.appendChild(errorOf(err instanceof Error ? err.message : String(err)));
                 });
             },
         }).element);
+        costs.append(holding, fields);
         return costs;
     };
-    const connect = (am: NodeGoogle) => pressFrom({ id: 'google-connect', title: 'Connect', does: () => go(am.connect) }).element;
+    const connect = (am: NodeGoogle) => pressFrom({ id: 'google-connect', title: 'Connect', does: () => goFromHere(am.connect) }).element;
     apiJson<NodeGoogle>('/api/google').then((am) => {
         if (am.accepted) {
             light.show('on', 'Connected');

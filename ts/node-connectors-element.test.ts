@@ -56,6 +56,10 @@ beforeEach(() => {
                 ? new Response(JSON.stringify({ agy: inAgy }), { status: 200, headers: { 'Content-Type': 'application/json' } })
                 : new Response(JSON.stringify({ error: "this node's am.toml names no agy for the Node Agent" }), { status: 404, headers: { 'Content-Type': 'application/json' } }));
         }
+        if (String(url).endsWith('/api/google/limit')) {
+            atGoogle = { ...atGoogle, limit: Number(body.amount), halted: Number(body.amount) > 0 && Number(body.amount) <= 10 };
+            return Promise.resolve(new Response(JSON.stringify(atGoogle), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+        }
         if (String(url).endsWith('/api/google')) {
             return Promise.resolve(new Response(JSON.stringify(atGoogle), { status: 200, headers: { 'Content-Type': 'application/json' } }));
         }
@@ -300,6 +304,59 @@ describe('Tim: agy shows in the Google Cloud row', () => {
         const row = held.querySelector('[data-platform="Google Cloud"]') as HTMLElement;
         expect((row.querySelector('[data-light="google-agy"]') as HTMLElement).dataset.state).toBe('refused');
         expect(row.textContent).toContain('this node holds no agy');
+    });
+});
+
+describe('Tim: the Costs line under Google Cloud', () => {
+    const connected = { asked: true, accepted: true, project_id: 'qntx-506807', service_account: 'qntx-node', costs_connect: `${NODE.issuer}/auth/google/cloud?project=qntx-506807&thing=costs` };
+
+    test('a node not wired offers its own Connect, which goes where the node says', async () => {
+        atGoogle = { ...atGoogle, ...connected };
+        const held = await drawn();
+        expect((held.querySelector('[data-light="google-costs"]') as HTMLElement).dataset.state).toBe('off');
+        await press(held, 'google-costs-connect');
+        expect(wentTo).toEqual([`${NODE.issuer}/auth/google/cloud?project=qntx-506807&thing=costs`]);
+    });
+
+    test('a node not yet connected to Google offers no Costs', async () => {
+        const held = await drawn();
+        expect(held.querySelector('[data-light="google-costs"]')).toBeNull();
+    });
+
+    test('wired, with no report yet, says one is coming', async () => {
+        atGoogle = { ...atGoogle, ...connected, costs_wired: true, budgets: [] };
+        const held = await drawn();
+        const light = held.querySelector('[data-light="google-costs"]') as HTMLElement;
+        expect(light.dataset.state).toBe('waiting');
+        expect(light.textContent).toContain('first report');
+    });
+
+    test('what a budget reported is shown against it', async () => {
+        atGoogle = { ...atGoogle, ...connected, costs_wired: true, budgets: [{ name: 'monthly', cost: 3.5, budget: 20, currency: 'EUR', since: '2026-11-01', at: '2026-11-02T12:00:00Z' }] };
+        const held = await drawn();
+        expect((held.querySelector('[data-light="google-costs"]') as HTMLElement).dataset.state).toBe('on');
+        const line = held.querySelector('[data-budget="monthly"]') as HTMLElement;
+        expect(line.textContent).toContain('3.50');
+        expect(line.textContent).toContain('20.00');
+        expect(line.textContent).toContain('EUR');
+    });
+
+    test('halted says so, and why, and that the node stays connected', async () => {
+        atGoogle = { ...atGoogle, ...connected, costs_wired: true, halted: true, halted_why: 'monthly has reached 16.00 EUR of 20.00', budgets: [{ name: 'monthly', cost: 16, budget: 20, currency: 'EUR', since: '', at: '' }] };
+        const held = await drawn();
+        const costs = held.querySelector('[data-costs]') as HTMLElement;
+        expect((held.querySelector('[data-light="google-costs"]') as HTMLElement).dataset.state).toBe('refused');
+        expect(costs.textContent).toContain('monthly has reached 16.00');
+        expect(held.querySelector('[data-platform="Google Cloud"] [data-light="google-cloud"]')?.textContent).toBe('Connected');
+    });
+
+    test('ROOT sets the limit here, and the row answers', async () => {
+        atGoogle = { ...atGoogle, ...connected, costs_wired: true, budgets: [{ name: 'monthly', cost: 8, budget: 20, currency: 'EUR', since: '', at: '' }] };
+        const held = await drawn();
+        (held.querySelector('[data-ask="google-limit"]') as HTMLInputElement).value = '10';
+        await press(held, 'google-limit-set');
+        expect(asked.some(a => a.url.endsWith('/api/google/limit') && a.method === 'POST' && a.body.amount === '10')).toBe(true);
+        expect((held.querySelector('[data-light="google-costs"]') as HTMLElement).dataset.state).toBe('refused');
     });
 });
 

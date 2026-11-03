@@ -341,7 +341,9 @@ async function init(): Promise<void> {
     installCopyable();
 
     const synced = !hasCanvas ? Promise.resolve() : (async () => {
-        const { loadCanvasState, dropDroppedRecords, mergeCanvasState, upsertCanvasElement, upsertComposition, addMinimizedWindow } = await import('./api/canvas.ts');
+        const { loadCanvasState, dropDroppedRecords, dropDroppedLocally, mergeCanvasState, upsertCanvasElement, upsertComposition, addMinimizedWindow } = await import('./api/canvas.ts');
+
+        dropDroppedLocally(uiState);
 
         let backendReachable = false;
         try {

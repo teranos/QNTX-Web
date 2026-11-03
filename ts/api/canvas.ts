@@ -166,11 +166,30 @@ export function dropDroppedRecords<S extends { elements: CanvasElementState[]; m
     if (retired.length === 0) return state;
     const ids = new Set(retired.map(e => e.id));
     for (const id of ids) deleteCanvasElement(id);
+    for (const id of state.minimizedWindows) if (ids.has(id)) deleteMinimizedWindow(id);
     return {
         ...state,
         elements: state.elements.filter(e => !ids.has(e.id)),
         minimizedWindows: state.minimizedWindows.filter(id => !ids.has(id)),
     };
+}
+
+/**
+ * What the browser itself holds under a dropped symbol goes too, in every canvas, opened or not
+ * (drawing a canvas drops its own). The store removes the record from what it keeps, and that
+ * syncs to the node.
+ */
+export function dropDroppedLocally(ui: {
+    getCanvasElements(): CanvasElementState[];
+    getMinimizedWindows(): string[];
+    removeCanvasElement(id: string): void;
+    removeMinimizedWindow(id: string): void;
+}): void {
+    const ids = new Set(ui.getCanvasElements().filter(isDropped).map(e => e.id));
+    for (const id of ids) {
+        ui.removeCanvasElement(id);
+        if (ui.getMinimizedWindows().includes(id)) ui.removeMinimizedWindow(id);
+    }
 }
 
 /**

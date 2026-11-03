@@ -7,7 +7,7 @@ import { declareSay, preventDrag } from '@teranos/elements';
 import { apiJson } from './client';
 import { log, SEG } from './logger.ts';
 import { apiError, sacredEntry } from './components/sacred';
-import { renderAssistant, renderChat, chatRow, chatText, toolUseShown, contextOf, atBottom, keepingBottom, scrollToBottom, type SessionRead } from './chat';
+import { renderAssistant, renderChat, chatRow, chatText, toolUseShown, contextOf, atBottom, keepingBottom, jumpToBottom, scrollToBottom, type SessionRead } from './chat';
 import { spark } from './claude-spark';
 import { uploadFile } from './api/files';
 import { backendPath } from './client/url';
@@ -327,7 +327,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             const follow = !drawn || atBottom(scroller);
             const stood = scroller.scrollTop;
             renderChat(session, answer);
-            if (follow) scrollToBottom(scroller); else scroller.scrollTop = stood;
+            if (!drawn) jumpToBottom(scroller); else if (follow) scrollToBottom(scroller); else scroller.scrollTop = stood;
         })
         .catch((err: unknown) => fails('read', err));
 

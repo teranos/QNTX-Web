@@ -6,12 +6,13 @@ import type { Element } from '@teranos/elements';
 import { fieldFrom, flowFrom, pressFrom, tray, type FlowHandle, type FlowStep } from '@teranos/elements';
 import { apiJson } from './client/http';
 import { log, SEG } from './logger';
-import { ANTHROPIC, markOf } from './brand-marks';
+import type { AgyAm } from './agents-element';
+import { ANTHROPIC, GOOGLE, markOf } from './brand-marks';
 import { copied, goTo, note, valueRow } from './connector-element';
 import { copyable } from './copyable';
 import { lightFrom, type Light } from './light';
 import { CONNECTOR } from './sym';
-import type { NodeAnthropic } from './generated/proto/plugin/grpc/protocol/sigil';
+import type { NodeAnthropic, NodeGoogle } from './generated/proto/plugin/grpc/protocol/sigil';
 
 export const ELEMENT_ID = 'node-connectors-element';
 
@@ -361,9 +362,139 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
     return row;
 }
 
+/**
+ * Whether the Node Agent runs in agy, Google's harness: its light under the Google Cloud row.
+ * "make sure there is for agy some kind of visual indication in the connector"
+ */
+function agyLine(): HTMLElement {
+    const line = document.createElement('div');
+    line.dataset.harness = 'agy';
+    line.style.cssText = 'display:flex;flex-direction:column;gap:4px';
+    const light = lightFrom('google-agy', 'Agy not set up');
+    line.append(light.element);
+    apiJson<{ agy?: AgyAm }>('/api/agent?harness=agy').then(({ agy }) => {
+        if (!agy) return;
+        if (agy.not_ready) {
+            light.show('refused', 'Agy cannot run');
+            line.append(errorOf(agy.not_ready));
+            return;
+        }
+        light.show('on', `Agy ${agy.model}`);
+    }).catch((err: unknown) => {
+        // Named by no am.toml, it is not set up, and the light as drawn says so.
+        log.info(SEG.SELF, `[node connectors] agy: ${err instanceof Error ? err.message : String(err)}`);
+    });
+    return line;
+}
+
+/** As long as the node asks Google to let it act before mailing ROOT how it ended (server/google_cloud.go). */
+const GOOGLE_CONFIRMS_MS = 15 * 60 * 1000;
+
+/**
+ * The Google Cloud row. Google already knows ROOT, so connecting is one press:
+ * the node says where it goes, and ROOT says yes at Google.
+ * "WHERE I JUST PRESS CONNECT AND WE ARE DONE"
+ */
+function googleRow(go: (url: string) => void): HTMLElement {
+    // The node offers the way back to the page a connecting began on.
+    const goFromHere = (url: string) => go(`${url}${url.includes('?') ? '&' : '?'}page=${encodeURIComponent(window.location.pathname)}`);
+    const row = document.createElement('div');
+    row.dataset.platform = 'Google Cloud';
+    row.style.cssText = 'display:flex;flex-direction:column;gap:10px;padding:8px;border:1px solid var(--border-on-dark);border-radius:var(--border-radius);background:var(--bg-dark-light);color:var(--text-on-dark)';
+    const head = document.createElement('div');
+    head.dataset.connect = 'Google Cloud';
+    head.style.cssText = 'display:flex;align-items:center;gap:8px';
+    const title = document.createElement('span');
+    title.textContent = 'Google Cloud';
+    title.style.flex = '1';
+    const light = lightFrom('google-cloud', 'Not connected');
+    head.append(markOf(GOOGLE), title, light.element);
+    const body = document.createElement('div');
+    body.style.cssText = 'display:flex;flex-direction:column;gap:6px';
+    row.append(head, body, agyLine());
+    // A yes for what the node's costs need: its own line, and its own press.
+    const costsLine = (am: NodeGoogle): HTMLElement => {
+        const costs = document.createElement('div');
+        costs.dataset.costs = '';
+        costs.style.cssText = 'display:flex;flex-direction:column;gap:4px';
+        const costLight = lightFrom('google-costs', 'Costs not connected');
+        costs.append(costLight.element);
+        if (!am.costs_wired) {
+            costs.append(pressFrom({ id: 'google-costs-connect', title: 'Connect costs', does: () => goFromHere(am.costs_connect) }).element);
+            return costs;
+        }
+        const budgets = am.budgets ?? [];
+        const every = budgets[0]?.period ? budgets[0].period.toLowerCase() : 'budget period';
+        const currency = budgets[0]?.currency ?? "the budget's currency";
+        if (am.halted) costLight.show('refused', 'What costs is halted');
+        else if (!budgets.some((budget) => budget.at)) costLight.show('waiting', "Waiting on Google's first report, which can take hours");
+        else costLight.show('on', 'Costs');
+        for (const budget of budgets) {
+            const line = note(`${budget.name}: ${budget.cost.toFixed(2)} of ${budget.budget.toFixed(2)} ${budget.currency} this ${every}`);
+            line.dataset.budget = budget.name;
+            costs.append(line);
+        }
+        if (am.halted) costs.append(errorOf(am.halted_why), note('The node stays connected. It resumes when the budget frees up.'));
+        const holding = note(`Today: ${(am.spent_today ?? 0).toFixed(2)} ${currency}. What costs halts at 80% of the lowest limit.`);
+        holding.dataset.limitHeld = '';
+        const limitField = (id: string, label: string, held: number) => {
+            const field = fieldFrom({ id, label, placeholder: 'None' });
+            field.input.dataset.ask = id;
+            field.element.style.cssText = 'width:11em';
+            field.input.style.width = '100%';
+            if (held) field.input.value = String(held);
+            return field;
+        };
+        const limit = limitField('google-limit', `Max per ${every}, ${currency}`, am.limit);
+        const dayLimit = limitField('google-day-limit', `Max per day, ${currency}`, am.day_limit);
+        const fields = document.createElement('div');
+        fields.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end';
+        const setLimit = (per: string, amount: string) => apiJson<NodeGoogle>('/api/google/limit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: amount.trim() || '0', per }),
+        });
+        fields.append(limit.element, dayLimit.element, pressFrom({
+            id: 'google-limit-set',
+            title: 'Set limits',
+            does: () => {
+                setLimit('day', dayLimit.input.value).then(() => setLimit('period', limit.input.value)).then((answered) => costs.replaceWith(costsLine(answered))).catch((err: unknown) => {
+                    costs.appendChild(errorOf(err instanceof Error ? err.message : String(err)));
+                });
+            },
+        }).element);
+        costs.append(holding, fields);
+        return costs;
+    };
+    const connect = (am: NodeGoogle) => pressFrom({ id: 'google-connect', title: 'Connect', does: () => goFromHere(am.connect) }).element;
+    apiJson<NodeGoogle>('/api/google').then((am) => {
+        if (am.accepted) {
+            light.show('on', 'Connected');
+            body.append(valueRow('Project', copied(am.project_id)), valueRow('Service account', copied(am.service_account)), costsLine(am));
+            // A yes of its own, for it is what spends.
+            if (!am.agy_wired) body.append(pressFrom({ id: 'google-agy-connect', title: 'Connect agy', does: () => goFromHere(am.agy_connect) }).element);
+            return;
+        }
+        if (am.asked && Date.now() - Date.parse(am.at) < GOOGLE_CONFIRMS_MS) {
+            light.show('waiting', 'Google is confirming');
+            body.append(note(`Set up in ${am.project_id}. You will get a mail when it is done, or if it does not come through.`));
+            return;
+        }
+        if (am.asked) {
+            light.show('refused', 'Google refused');
+            body.append(errorOf(am.why));
+        }
+        body.append(connect(am));
+    }).catch((err: unknown) => {
+        log.warn(SEG.SELF, `[node connectors] the node's light at Google Cloud was not read: ${err instanceof Error ? err.message : String(err)}`);
+        body.replaceChildren(errorOf(err instanceof Error ? err.message : String(err)));
+    });
+    return row;
+}
+
 /** Exported for tests: the node's connectors, drawn from what the node says of itself. */
-export function renderNodeConnectors(container: HTMLElement, node: NodeIdentity): void {
-    container.appendChild(anthropicRow(node));
+export function renderNodeConnectors(container: HTMLElement, node: NodeIdentity, go: (url: string) => void = (url) => window.location.assign(url)): void {
+    container.append(anthropicRow(node), googleRow(go));
 }
 
 /** What the node says of itself: its name, its issuer, its DID and its namespaces. */

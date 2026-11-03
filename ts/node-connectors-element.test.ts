@@ -11,6 +11,15 @@ let asked: { url: string; method: string; body: Record<string, string> }[] = [];
 /** What the node answers of itself at Anthropic, as anthropic am answers it. */
 let atAnthropic: Record<string, unknown> = {};
 
+/** What the node answers of itself at Google Cloud, as google am answers it. */
+let atGoogle: Record<string, unknown> = {};
+
+/** What the Node Agent answers in agy, or null when am.toml names no agy for it. */
+let inAgy: Record<string, unknown> | null = null;
+
+/** Where a press sent ROOT. */
+let wentTo: string[] = [];
+
 /** The Connect workload wizard's snippet, as its copy button gives it. */
 const SNIPPET = `curl -sS https://api.anthropic.com/v1/oauth/token \\
   --data @- <<JSON
@@ -35,10 +44,27 @@ beforeEach(() => {
     document.body.innerHTML = '';
     asked = [];
     atAnthropic = { issuer: NODE.issuer, subject: NODE.did, asked: false, accepted: false, why: '' };
+    atGoogle = { issuer: NODE.issuer, subject: NODE.did, connect: `${NODE.issuer}/auth/google/cloud`, asked: false, accepted: false, why: '' };
+    wentTo = [];
+    inAgy = null;
     globalThis.fetch = mock((url: any, init: any) => {
         const method = init?.method ?? 'GET';
         const body = init?.body ? JSON.parse(String(init.body)) : {};
         asked.push({ url: String(url), method, body });
+        if (String(url).endsWith('/api/agent?harness=agy')) {
+            return Promise.resolve(inAgy
+                ? new Response(JSON.stringify({ agy: inAgy }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+                : new Response(JSON.stringify({ error: "this node's am.toml names no agy for the Node Agent" }), { status: 404, headers: { 'Content-Type': 'application/json' } }));
+        }
+        if (String(url).endsWith('/api/google/limit')) {
+            atGoogle = body.per === 'day'
+                ? { ...atGoogle, day_limit: Number(body.amount) }
+                : { ...atGoogle, limit: Number(body.amount), halted: Number(body.amount) > 0 && Number(body.amount) <= 10 };
+            return Promise.resolve(new Response(JSON.stringify(atGoogle), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+        }
+        if (String(url).endsWith('/api/google')) {
+            return Promise.resolve(new Response(JSON.stringify(atGoogle), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+        }
         if (method === 'POST' && String(url).endsWith('/api/anthropic/order')) {
             atAnthropic = { ...atAnthropic, first: body.first, then: body.then === 'true' };
         } else if (method === 'POST') {
@@ -59,7 +85,7 @@ async function settle(): Promise<void> {
 async function drawn(): Promise<HTMLElement> {
     const held = document.createElement('div');
     document.body.appendChild(held);
-    renderNodeConnectors(held, NODE);
+    renderNodeConnectors(held, NODE, (url) => wentTo.push(url));
     await settle();
     return held;
 }
@@ -233,5 +259,166 @@ describe('Tim: ROOT orders what its agents spend (stories/29)', () => {
         const held = await drawn();
         expect((held.querySelector('[data-light="anthropic-session"]') as HTMLElement).dataset.state).toBe('refused');
         expect(inUse(held)?.dataset.source).toBe('console');
+    });
+});
+
+describe('Tim: ROOT connects the node to Google Cloud', () => {
+    // "WHERE I JUST PRESS CONNECT AND WE ARE DONE"
+    test('a node not connected offers Connect, and the press goes where the node says', async () => {
+        const held = await drawn();
+        const row = held.querySelector('[data-platform="Google Cloud"]') as HTMLElement;
+        expect((row.querySelector('[data-light="google-cloud"]') as HTMLElement).dataset.state).toBe('off');
+        expect(row.querySelector('[data-flow], input, textarea')).toBeNull();
+        await press(held, 'google-connect');
+        expect(wentTo).toEqual([`${NODE.issuer}/auth/google/cloud?page=${encodeURIComponent(window.location.pathname)}`]);
+    });
+
+    test('a connected node says where it is and offers nothing to press', async () => {
+        atGoogle = { ...atGoogle, asked: true, accepted: true, project_id: 'sbvh-q', service_account: 'tim@example.com' };
+        const held = await drawn();
+        const row = held.querySelector('[data-platform="Google Cloud"]') as HTMLElement;
+        expect((row.querySelector('[data-light="google-cloud"]') as HTMLElement).dataset.state).toBe('on');
+        expect(row.textContent).toContain('sbvh-q');
+        expect(row.textContent).toContain('tim@example.com');
+        expect(row.querySelector('[data-press="google-connect"]')).toBeNull();
+    });
+});
+
+describe('Tim: agy shows in the Google Cloud row', () => {
+    // "make sure there is for agy some kind of visual indication in the connector"
+    test('agy lit, with its model, when the Node Agent runs in it', async () => {
+        inAgy = { model: 'gemini-3.8-flash', agy: '/bin/agy', agy_version: '1.4.12', not_ready: '' };
+        const held = await drawn();
+        const row = held.querySelector('[data-platform="Google Cloud"]') as HTMLElement;
+        const light = row.querySelector('[data-light="google-agy"]') as HTMLElement;
+        expect(light.dataset.state).toBe('on');
+        expect(light.textContent).toBe('Agy gemini-3.8-flash');
+    });
+
+    test('agy unlit when the node names none, and red with why when it cannot run', async () => {
+        const off = (await drawn()).querySelector('[data-light="google-agy"]') as HTMLElement;
+        expect(off.dataset.state).toBe('off');
+        expect(off.textContent).toBe('Agy not set up');
+
+        document.body.innerHTML = '';
+        inAgy = { model: 'gemini-3.8-flash', agy: '', agy_version: '1.4.12', not_ready: 'this node holds no agy' };
+        const held = await drawn();
+        const row = held.querySelector('[data-platform="Google Cloud"]') as HTMLElement;
+        expect((row.querySelector('[data-light="google-agy"]') as HTMLElement).dataset.state).toBe('refused');
+        expect(row.textContent).toContain('this node holds no agy');
+    });
+});
+
+describe('Tim: agy is its own yes at Google', () => {
+    const connected = { asked: true, accepted: true, project_id: 'qntx-506807', service_account: 'qntx-node', agy_connect: `${NODE.issuer}/auth/google/cloud?project=qntx-506807&thing=agy` };
+
+    test('a connected node not yet let offers Connect agy, which goes where the node says', async () => {
+        atGoogle = { ...atGoogle, ...connected };
+        const held = await drawn();
+        await press(held, 'google-agy-connect');
+        expect(wentTo).toEqual([`${NODE.issuer}/auth/google/cloud?project=qntx-506807&thing=agy&page=${encodeURIComponent(window.location.pathname)}`]);
+    });
+
+    test('a node let, or not yet connected, offers no Connect agy', async () => {
+        expect((await drawn()).querySelector('[data-press="google-agy-connect"]')).toBeNull();
+        document.body.innerHTML = '';
+        atGoogle = { ...atGoogle, ...connected, agy_wired: true };
+        expect((await drawn()).querySelector('[data-press="google-agy-connect"]')).toBeNull();
+    });
+});
+
+describe('Tim: the Costs line under Google Cloud', () => {
+    const connected = { asked: true, accepted: true, project_id: 'qntx-506807', service_account: 'qntx-node', costs_connect: `${NODE.issuer}/auth/google/cloud?project=qntx-506807&thing=costs` };
+
+    test('a node not wired offers its own Connect, which goes where the node says', async () => {
+        atGoogle = { ...atGoogle, ...connected };
+        const held = await drawn();
+        expect((held.querySelector('[data-light="google-costs"]') as HTMLElement).dataset.state).toBe('off');
+        await press(held, 'google-costs-connect');
+        expect(wentTo).toEqual([`${NODE.issuer}/auth/google/cloud?project=qntx-506807&thing=costs&page=${encodeURIComponent(window.location.pathname)}`]);
+    });
+
+    test('a node not yet connected to Google offers no Costs', async () => {
+        const held = await drawn();
+        expect(held.querySelector('[data-light="google-costs"]')).toBeNull();
+    });
+
+    test('wired, with no report yet, says one is coming', async () => {
+        atGoogle = { ...atGoogle, ...connected, costs_wired: true, budgets: [] };
+        const held = await drawn();
+        const light = held.querySelector('[data-light="google-costs"]') as HTMLElement;
+        expect(light.dataset.state).toBe('waiting');
+        expect(light.textContent).toContain('first report');
+    });
+
+    test('what a budget reported is shown against it', async () => {
+        atGoogle = { ...atGoogle, ...connected, costs_wired: true, budgets: [{ name: 'monthly', cost: 3.5, budget: 20, currency: 'EUR', since: '2026-11-01', at: '2026-11-02T12:00:00Z' }] };
+        const held = await drawn();
+        expect((held.querySelector('[data-light="google-costs"]') as HTMLElement).dataset.state).toBe('on');
+        const line = held.querySelector('[data-budget="monthly"]') as HTMLElement;
+        expect(line.textContent).toContain('3.50');
+        expect(line.textContent).toContain('20.00');
+        expect(line.textContent).toContain('EUR');
+        expect(held.querySelector('[data-costs]')?.textContent).toContain('Max per budget period, EUR');
+        expect(held.querySelector('[data-costs]')?.textContent).toContain('80%');
+    });
+
+    test('what a budget is in, and when it resets, shows before Google first reports', async () => {
+        atGoogle = { ...atGoogle, ...connected, costs_wired: true, budgets: [{ name: 'monthly', cost: 0, budget: 20, currency: 'EUR', since: '', at: '', period: 'MONTH' }] };
+        const held = await drawn();
+        expect((held.querySelector('[data-light="google-costs"]') as HTMLElement).dataset.state).toBe('waiting');
+        expect(held.querySelector('[data-budget="monthly"]')?.textContent).toContain('this month');
+        expect(held.querySelector('[data-costs]')?.textContent).toContain('Max per month, EUR');
+        expect(held.querySelector('[data-costs]')?.textContent).toContain('Max per day, EUR');
+    });
+
+    test('halted says so, and why, and that the node stays connected', async () => {
+        atGoogle = { ...atGoogle, ...connected, costs_wired: true, halted: true, halted_why: 'monthly has reached 16.00 EUR of 20.00', budgets: [{ name: 'monthly', cost: 16, budget: 20, currency: 'EUR', since: '', at: '' }] };
+        const held = await drawn();
+        const costs = held.querySelector('[data-costs]') as HTMLElement;
+        expect((held.querySelector('[data-light="google-costs"]') as HTMLElement).dataset.state).toBe('refused');
+        expect(costs.textContent).toContain('monthly has reached 16.00');
+        expect(held.querySelector('[data-platform="Google Cloud"] [data-light="google-cloud"]')?.textContent).toBe('Connected');
+    });
+
+    test('ROOT sets the limit here, and the row answers', async () => {
+        atGoogle = { ...atGoogle, ...connected, costs_wired: true, budgets: [{ name: 'monthly', cost: 8, budget: 20, currency: 'EUR', since: '', at: '' }] };
+        const held = await drawn();
+        (held.querySelector('[data-ask="google-limit"]') as HTMLInputElement).value = '10';
+        (held.querySelector('[data-ask="google-day-limit"]') as HTMLInputElement).value = '1';
+        await press(held, 'google-limit-set');
+        expect(asked.some(a => a.url.endsWith('/api/google/limit') && a.method === 'POST' && a.body.amount === '10' && a.body.per === 'period')).toBe(true);
+        expect(asked.some(a => a.url.endsWith('/api/google/limit') && a.body.amount === '1' && a.body.per === 'day')).toBe(true);
+        expect((held.querySelector('[data-light="google-costs"]') as HTMLElement).dataset.state).toBe('refused');
+        // "click does nothing": the row says what it now holds.
+        expect(held.querySelector('[data-limit-held]')?.textContent).toContain('Today: 0.00 EUR');
+        expect((held.querySelector('[data-ask="google-limit"]') as HTMLInputElement).value).toBe('10');
+    });
+});
+
+describe('Tim: Google is still confirming the node', () => {
+    // A binding just made does not hold at once, and ROOT is mailed how it ends.
+    test('a connection just made says it is being confirmed, and offers nothing to press', async () => {
+        atGoogle = { ...atGoogle, asked: true, accepted: false, at: new Date().toISOString(), project_id: 'qntx-506807', why: 'Permission denied' };
+        const held = await drawn();
+        const row = held.querySelector('[data-platform="Google Cloud"]') as HTMLElement;
+        const light = row.querySelector('[data-light="google-cloud"]') as HTMLElement;
+        expect(light.dataset.state).toBe('waiting');
+        expect(light.textContent).toContain('Google is confirming');
+        expect(row.textContent).toContain('You will get a mail');
+        expect(row.querySelector('[data-error]')).toBeNull();
+        expect(row.querySelector('[data-press="google-connect"]')).toBeNull();
+    });
+});
+
+describe('Spike: Google Cloud does not accept the node', () => {
+    test('what Google said is shown as an error, and Connect is there again', async () => {
+        atGoogle = { ...atGoogle, asked: true, accepted: false, at: '2026-01-01T00:00:00Z', why: "Google's token exchange did not trade the identity" };
+        const held = await drawn();
+        const row = held.querySelector('[data-platform="Google Cloud"]') as HTMLElement;
+        expect((row.querySelector('[data-light="google-cloud"]') as HTMLElement).dataset.state).toBe('refused');
+        expect((row.querySelector('[data-error]') as HTMLElement).textContent).toContain("Google's token exchange");
+        await press(held, 'google-connect');
+        expect(wentTo).toEqual([`${NODE.issuer}/auth/google/cloud?page=${encodeURIComponent(window.location.pathname)}`]);
     });
 });

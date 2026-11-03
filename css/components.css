@@ -344,6 +344,9 @@
 .claude, .chat { display: flex; flex-direction: column; box-sizing: border-box; width: 520px; height: 640px; max-width: 100%; max-height: 100%; min-height: 0; padding: 0; text-align: left; font-family: var(--font-mono, monospace); font-size: var(--font-size-sm); color: var(--text-on-dark); }
 /* A content-area scrolls (window.css); Claude's does not: its transcript is its one scroller, declared to the package. */
 .content-area.claude, .content-area.chat { overflow: hidden; }
+/* Dragged to a size, the chat takes it: the window's body holds it, and the transcript scrolls inside. */
+[data-scroller="body"]:has(> .content-area.chat[data-fills]) { display: flex; flex-direction: column; overflow: hidden; }
+.content-area.chat[data-fills] { flex: 1 1 0; }
 .claude-who { padding: 3px 6px; border-bottom: 1px solid var(--border-on-dark); color: var(--text-on-dark-secondary); font-size: var(--font-size-xs); white-space: normal; overflow-wrap: break-word; word-break: break-word; flex-shrink: 0; }
 /* The chat: one conversation that scrolls, yours on the right, the agent's on the left, what it did small between. */
 .chat-scroll { flex: 1; min-height: 0; overflow-y: auto; scroll-behavior: smooth; display: flex; flex-direction: column; padding: 6px 10px; user-select: text; -webkit-user-select: text; cursor: text; font-size: var(--font-size-sm); line-height: 1.45; background: color-mix(in srgb, var(--bg-almost-black) 85%, black); color: color-mix(in srgb, var(--text-on-dark) 80%, white); }
@@ -390,15 +393,18 @@
 /* Ground and Comet wear ground.css. */
 
 /* An agent's chat, opened from the Agents level of the sidebar: its harness a tab above the conversation. */
-.agents-tabs { display: flex; gap: 2px; padding: 4px 6px; border-bottom: 1px solid var(--border-on-dark); flex-shrink: 0; }
+.agents-tabs { position: sticky; top: 0; z-index: 1; background: var(--bg-dark); display: flex; gap: 2px; padding: 4px 6px; border-bottom: 1px solid var(--border-on-dark); flex-shrink: 0; }
+/* The picture a turn carries is a thumbnail: at its own size it takes the whole chat, and what is said to it falls off the screen. */
+.claude-attached { max-height: 96px; flex-shrink: 0; }
+.claude-attached img { max-height: 88px; max-width: 100%; width: auto; height: auto; object-fit: contain; }
 .agents-tab-on { color: var(--accent-on-dark); border-bottom: 2px solid var(--accent-on-dark); }
 .agents-sessions { padding: 4px 8px; border-bottom: 1px solid var(--border-on-dark); font-size: var(--font-size-xs); color: var(--text-on-dark-secondary); flex-shrink: 0; }
 .agents-sessions-head { color: var(--text-on-dark-tertiary); }
 .agents-session { display: block; width: 100%; text-align: left; background: transparent; border: 0; color: inherit; font: inherit; padding: 1px 0; cursor: pointer; }
 .agents-session-current { color: var(--accent-on-dark); cursor: default; }
 .agents-talk { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.agents-talk > .claude-who, .agents-talk > .claude-status, .agents-talk > .claude-say { flex-shrink: 0; }
-.agents-talk > .chat-scroll { flex: 1; }
+.agents-talk > .claude-who, .agents-talk > .claude-status, .agents-talk > .claude-say, .shake-talk > .claude-who, .shake-talk > .claude-status, .shake-talk > .claude-say { flex-shrink: 0; }
+.agents-talk > .chat-scroll, .shake-talk > .chat-scroll { flex: 1; }
 .chat .claude-say { flex-wrap: wrap; }
 .chat .claude-say select { flex: 0 1 auto; min-width: 0; max-width: 46%; font-size: var(--font-size-xs); }
 .chat .claude-says { flex-basis: 100%; }

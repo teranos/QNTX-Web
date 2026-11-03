@@ -7,7 +7,7 @@
  * Add a new element type → add one entry here.
  */
 
-import { RESERVED_SYMBOLS } from '../../retired-thread';
+import { DROPPED_SYMBOLS } from '../../dropped-symbols';
 import type { Element } from '@teranos/elements';
 import { AX, SO, SE, AS, Attestation, Sigma, Type, Triplet, Prose, Subcanvas, Transcript } from '../../sym';
 import { createAxElement } from './ax-element';
@@ -104,8 +104,6 @@ export function replacePluginElementType(entry: ElementTypeEntry): boolean {
     return true;
 }
 
-/** Symbols no type may take: 〽 was the thread's end marker (retired-thread.ts). */
-export { RESERVED_SYMBOLS };
 
 /** What an entry is, said the way a refusal names it. */
 function nameOf(entry: ElementTypeEntry | undefined): string {
@@ -122,8 +120,8 @@ export function holderOf(symbol: string): string {
 
 /** Register a new element type at runtime (for plugin elements) */
 export function registerElementType(entry: ElementTypeEntry): void {
-    if (RESERVED_SYMBOLS.includes(entry.symbol)) {
-        console.warn(`[ElementRegistry] ${nameOf(entry)} is not registered: ${entry.symbol} is reserved, it was the thread's`);
+    if (DROPPED_SYMBOLS.includes(entry.symbol)) {
+        console.warn(`[ElementRegistry] ${nameOf(entry)} is not registered: ${entry.symbol} is dropped`);
         return;
     }
 

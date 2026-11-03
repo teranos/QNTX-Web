@@ -1,16 +1,13 @@
 /**
- * 〽 is the thread's, and the thread is gone: nothing may claim it.
+ * A dropped symbol: nothing may claim it, and a record saved under it is dropped.
  *
- * "I don't want threads"
- *
- * A canvas saved before the thread was removed holds end markers, records with the
- * symbol 〽. Plugins and published elements register after the canvas has opened, so
- * "nothing is registered for it yet" cannot say a saved 〽 is a marker. The symbol is
- * reserved instead: refused at registration, said, and every saved 〽 is a marker.
+ * Plugins and published elements register after the canvas has opened, so "nothing is
+ * registered for it yet" cannot say a saved record is dropped. The symbol is refused at
+ * registration instead.
  *
  * Personas:
- * - Tim: Happy path — a type that asks for 〽 is refused, said
- * - Spike: Edge cases — a minimized marker is dropped too; one that a type tried to claim is still a marker
+ * - Tim: Happy path — a type that asks for it is refused, said
+ * - Spike: Edge cases — a minimized record is dropped too; one a type tried to claim is still dropped
  */
 
 import { describe, test, expect, beforeEach, spyOn } from 'bun:test';
@@ -18,7 +15,7 @@ import { renderElement, buildCanvasWorkspace } from './canvas-workspace-builder'
 import { registerElementType, getElementTypeBySymbol } from '../element-registry';
 import { uiState } from '../../../state/ui';
 
-const MARK = '\u303D'; // 〽
+const MARK = '\u303D';
 
 const claimant = () => ({
     symbol: MARK,
@@ -39,7 +36,7 @@ beforeEach(() => {
     uiState.setMinimizedWindows([]);
 });
 
-describe('The symbol of a thread - Tim (Happy Path)', () => {
+describe('A dropped symbol - Tim (Happy Path)', () => {
     test('a type that asks for it is refused, and it says so', () => {
         const warn = spyOn(console, 'warn').mockImplementation(() => {});
         registerElementType(claimant());
@@ -51,20 +48,20 @@ describe('The symbol of a thread - Tim (Happy Path)', () => {
     });
 });
 
-describe('A retired thread marker - Spike (Edge Cases)', () => {
+describe('A record under a dropped symbol - Spike (Edge Cases)', () => {
     test('a minimized one is dropped too, and is no longer waiting in the tray', async () => {
-        uiState.addCanvasElement({ id: 'thread-m', symbol: MARK, x: 1, y: 2, canvas_id: '' });
-        uiState.setMinimizedWindows(['thread-m']);
-        const items: any[] = [{ id: 'thread-m', symbol: MARK, title: 'Thread', x: 1, y: 2 }];
+        uiState.addCanvasElement({ id: 'dropped-m', symbol: MARK, x: 1, y: 2, canvas_id: '' });
+        uiState.setMinimizedWindows(['dropped-m']);
+        const items: any[] = [{ id: 'dropped-m', symbol: MARK, title: 'Dropped', x: 1, y: 2 }];
 
         buildCanvasWorkspace('canvas-workspace', items);
         for (let i = 0; i < 20; i++) await Promise.resolve();
 
-        expect(uiState.getCanvasElement('thread-m')).toBeUndefined();
-        expect(uiState.getMinimizedWindows()).not.toContain('thread-m');
+        expect(uiState.getCanvasElement('dropped-m')).toBeUndefined();
+        expect(uiState.getMinimizedWindows()).not.toContain('dropped-m');
     });
 
-    test('one a type tried to claim is still the thread\'s marker: dropped, not drawn', async () => {
+    test('one a type tried to claim is still dropped, not drawn', async () => {
         const warn = spyOn(console, 'warn').mockImplementation(() => {});
         registerElementType(claimant());
         warn.mockRestore();

@@ -11,7 +11,7 @@ import type { Element } from '@teranos/elements';
 import { Doc } from '../../../sym';
 import { log, SEG } from '../../../logger';
 import { toast } from '../../../toast';
-import { isRetiredThreadMarker } from '../../../retired-thread';
+import { isDropped } from '../../../dropped-symbols';
 import { getElementTypeBySymbol, getElementTypeBySavedSymbol, getElementTypeByElement } from '../element-registry';
 import { createErrorElement } from '../error-element';
 import { setResponseState } from '../response-state';
@@ -291,9 +291,9 @@ export async function renderElement(item: Element): Promise<HTMLElement> {
         return document.createElement('div'); // invisible placeholder
     }
 
-    // A thread's end marker (〽): the thread is gone, and so is what a canvas saved of it.
-    if (isRetiredThreadMarker(item)) {
-        log.debug(SEG.ELEMENT, `[Canvas] Dropping the saved end marker ${item.id} of a thread that is gone`);
+    // A record saved under a dropped symbol is dropped.
+    if (isDropped(item)) {
+        log.debug(SEG.ELEMENT, `[Canvas] Dropping the record ${item.id} saved under a dropped symbol`);
         uiState.removeCanvasElement(item.id);
         return document.createElement('div'); // invisible placeholder
     }
@@ -737,11 +737,11 @@ export function buildCanvasWorkspace(
 
     // Render existing elements in parallel then append in original order
     (async () => {
-        // The thread's end markers go whether or not they are minimized: a minimized one is
-        // never rendered, so it would keep its record, and its place in the tray.
+        // Dropped records go whether or not they are minimized: a minimized one is never
+        // rendered, so it would keep its record, and its place in the tray.
         for (const item of [...items]) {
-            if (!isRetiredThreadMarker(item)) continue;
-            log.debug(SEG.ELEMENT, `[Canvas] Dropping the saved end marker ${item.id} of a thread that is gone`);
+            if (!isDropped(item)) continue;
+            log.debug(SEG.ELEMENT, `[Canvas] Dropping the record ${item.id} saved under a dropped symbol`);
             uiState.removeCanvasElement(item.id);
             uiState.removeMinimizedWindow(item.id);
             const at = items.indexOf(item);

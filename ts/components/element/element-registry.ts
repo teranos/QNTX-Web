@@ -7,6 +7,7 @@
  * Add a new element type → add one entry here.
  */
 
+import { RESERVED_SYMBOLS } from '../../retired-thread';
 import type { Element } from '@teranos/elements';
 import { AX, SO, SE, AS, Attestation, Sigma, Type, Triplet, Prose, Subcanvas, Transcript } from '../../sym';
 import { createAxElement } from './ax-element';
@@ -103,13 +104,8 @@ export function replacePluginElementType(entry: ElementTypeEntry): boolean {
     return true;
 }
 
-/**
- * Symbols no type may take. 〽 (Part Alternation Mark) was the thread's end marker, and canvases
- * saved before the thread was removed still hold records under it: a saved 〽 is that marker,
- * whatever has registered by the time it is read (plugins and published elements register after
- * the canvas has opened), so nothing may claim it.
- */
-export const RESERVED_SYMBOLS: readonly string[] = ['\u303D'];
+/** Symbols no type may take: 〽 was the thread's end marker (retired-thread.ts). */
+export { RESERVED_SYMBOLS };
 
 /** What an entry is, said the way a refusal names it. */
 function nameOf(entry: ElementTypeEntry | undefined): string {

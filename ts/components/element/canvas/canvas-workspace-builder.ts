@@ -11,7 +11,8 @@ import type { Element } from '@teranos/elements';
 import { Doc } from '../../../sym';
 import { log, SEG } from '../../../logger';
 import { toast } from '../../../toast';
-import { getElementTypeBySymbol, getElementTypeBySavedSymbol, getElementTypeByElement, RESERVED_SYMBOLS } from '../element-registry';
+import { isRetiredThreadMarker } from '../../../retired-thread';
+import { getElementTypeBySymbol, getElementTypeBySavedSymbol, getElementTypeByElement } from '../element-registry';
 import { createErrorElement } from '../error-element';
 import { setResponseState } from '../response-state';
 import { createAbsentElement, askAbsentAgain } from '../absent-element';
@@ -223,11 +224,6 @@ function deleteSelectedElements(canvasId: string, container: HTMLElement): void 
     }
 
     log.debug(SEG.ELEMENT, `[Canvas] Deleted ${elementIdsToDelete.length} elements`, { elementIdsToDelete });
-}
-
-/** What a saved record is when its symbol is the one the thread's end marker was saved under (reserved: element-registry.ts). */
-function isRetiredThreadMarker(item: { symbol?: string }): boolean {
-    return item.symbol !== undefined && RESERVED_SYMBOLS.includes(item.symbol);
 }
 
 /**

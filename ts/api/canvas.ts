@@ -13,6 +13,7 @@ import { assertOk, jsonBody } from '../http-utils';
 import { canvasSyncQueue } from './canvas-sync';
 import { refusal } from '../self-person';
 import { canvasQuery } from '../standing';
+import { isRetiredThreadMarker } from '../retired-thread';
 
 /**
  * The canvas of the namespace this person stands in, by name. Null is a
@@ -154,6 +155,23 @@ export async function loadCanvasState(): Promise<{
         log.error(SEG.ELEMENT, '[CanvasAPI] Failed to load canvas state:', error);
         throw error;
     }
+}
+
+/**
+ * The thread is gone, and so is what the node holds of it. Its end markers are left out of what
+ * was loaded, and the node is told to delete each record, so none is merged in after the canvas
+ * has drawn, and none comes back on the next load.
+ */
+export function dropRetiredThreads<S extends { elements: CanvasElementState[]; minimizedWindows: string[] }>(state: S): S {
+    const retired = state.elements.filter(isRetiredThreadMarker);
+    if (retired.length === 0) return state;
+    const ids = new Set(retired.map(e => e.id));
+    for (const id of ids) deleteCanvasElement(id);
+    return {
+        ...state,
+        elements: state.elements.filter(e => !ids.has(e.id)),
+        minimizedWindows: state.minimizedWindows.filter(id => !ids.has(id)),
+    };
 }
 
 /**

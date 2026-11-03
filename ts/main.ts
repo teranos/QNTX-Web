@@ -341,16 +341,16 @@ async function init(): Promise<void> {
     installCopyable();
 
     const synced = !hasCanvas ? Promise.resolve() : (async () => {
-        const { loadCanvasState, mergeCanvasState, upsertCanvasElement, upsertComposition, addMinimizedWindow } = await import('./api/canvas.ts');
+        const { loadCanvasState, dropRetiredThreads, mergeCanvasState, upsertCanvasElement, upsertComposition, addMinimizedWindow } = await import('./api/canvas.ts');
 
         let backendReachable = false;
         try {
-            const backendState = await Promise.race([
+            const backendState = dropRetiredThreads(await Promise.race([
                 loadCanvasState(),
                 new Promise<never>((_, reject) =>
                     setTimeout(() => reject(new Error('canvas state fetch timed out after 8s')), 8000)
                 ),
-            ]);
+            ]));
             backendReachable = true;
             const local = {
                 elements: uiState.getCanvasElements(),

@@ -390,7 +390,7 @@
 /* Ground and Comet wear ground.css. */
 
 /* An agent's chat, opened from the Agents level of the sidebar: its harness a tab above the conversation. */
-.agents-tabs { display: flex; gap: 2px; padding: 4px 6px; border-bottom: 1px solid var(--border-on-dark); flex-shrink: 0; }
+.agents-tabs { position: sticky; top: 0; z-index: 1; background: var(--bg-dark); display: flex; gap: 2px; padding: 4px 6px; border-bottom: 1px solid var(--border-on-dark); flex-shrink: 0; }
 .agents-tab-on { color: var(--accent-on-dark); border-bottom: 2px solid var(--accent-on-dark); }
 .agents-sessions { padding: 4px 8px; border-bottom: 1px solid var(--border-on-dark); font-size: var(--font-size-xs); color: var(--text-on-dark-secondary); flex-shrink: 0; }
 .agents-sessions-head { color: var(--text-on-dark-tertiary); }

@@ -7,7 +7,7 @@ import { defineBddConfig } from 'playwright-bdd';
 const PORT = 8839;
 
 const testDir = defineBddConfig({
-    features: ['stories/12-user-connects-anthropic.feature', 'stories/32-the-session-streams-in.feature'],
+    features: ['stories/12-user-connects-anthropic.feature', 'stories/32-the-session-streams-in.feature', 'stories/33-root-uses-a-chat.feature'],
     steps: 'stories/steps/*.ts',
     outputDir: '.features-gen',
 });

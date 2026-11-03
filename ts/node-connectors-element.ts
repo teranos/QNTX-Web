@@ -6,6 +6,7 @@ import type { Element } from '@teranos/elements';
 import { fieldFrom, flowFrom, pressFrom, tray, type FlowHandle, type FlowStep } from '@teranos/elements';
 import { apiJson } from './client/http';
 import { log, SEG } from './logger';
+import type { AgyAm } from './agents-element';
 import { ANTHROPIC, GOOGLE, markOf } from './brand-marks';
 import { copied, goTo, note, valueRow } from './connector-element';
 import { copyable } from './copyable';
@@ -361,6 +362,31 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
     return row;
 }
 
+/**
+ * Whether the Node Agent runs in agy, Google's harness: its light under the Google Cloud row.
+ * "make sure there is for agy some kind of visual indication in the connector"
+ */
+function agyLine(): HTMLElement {
+    const line = document.createElement('div');
+    line.dataset.harness = 'agy';
+    line.style.cssText = 'display:flex;flex-direction:column;gap:4px';
+    const light = lightFrom('google-agy', 'Agy not set up');
+    line.append(light.element);
+    apiJson<{ agy?: AgyAm }>('/api/agent?harness=agy').then(({ agy }) => {
+        if (!agy) return;
+        if (agy.not_ready) {
+            light.show('refused', 'Agy cannot run');
+            line.append(errorOf(agy.not_ready));
+            return;
+        }
+        light.show('on', `Agy ${agy.model}`);
+    }).catch((err: unknown) => {
+        // Named by no am.toml, it is not set up, and the light as drawn says so.
+        log.info(SEG.SELF, `[node connectors] agy: ${err instanceof Error ? err.message : String(err)}`);
+    });
+    return line;
+}
+
 /** As long as the node asks Google to let it act before mailing ROOT how it ended (server/google_cloud.go). */
 const GOOGLE_CONFIRMS_MS = 15 * 60 * 1000;
 
@@ -385,7 +411,7 @@ function googleRow(go: (url: string) => void): HTMLElement {
     head.append(markOf(GOOGLE), title, light.element);
     const body = document.createElement('div');
     body.style.cssText = 'display:flex;flex-direction:column;gap:6px';
-    row.append(head, body);
+    row.append(head, body, agyLine());
     // A yes for what the node's costs need: its own line, and its own press.
     const costsLine = (am: NodeGoogle): HTMLElement => {
         const costs = document.createElement('div');
@@ -445,6 +471,8 @@ function googleRow(go: (url: string) => void): HTMLElement {
         if (am.accepted) {
             light.show('on', 'Connected');
             body.append(valueRow('Project', copied(am.project_id)), valueRow('Service account', copied(am.service_account)), costsLine(am));
+            // A yes of its own, for it is what spends.
+            if (!am.agy_wired) body.append(pressFrom({ id: 'google-agy-connect', title: 'Connect agy', does: () => goFromHere(am.agy_connect) }).element);
             return;
         }
         if (am.asked && Date.now() - Date.parse(am.at) < GOOGLE_CONFIRMS_MS) {

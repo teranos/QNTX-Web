@@ -12,6 +12,7 @@ import { build, setupWatcher, findAvailablePort, reloadStream, RELOAD_PATH, RELO
 import { Tablet, LEVELS, type Level } from "./reach";
 import { PEOPLE, authStatus, canvases, canvasElements, compositions, minimizedWindows } from "./world";
 import { Agent, Files, type Transcript } from "./agents";
+import { AgyAgents } from "./agy";
 import { CodexAgents } from "./codex";
 
 const here = import.meta.dir;
@@ -132,6 +133,7 @@ function elementAgent(element: string): Agent {
 }
 const files = new Files();
 const codexAgents = new CodexAgents();
+const agyAgents = new AgyAgents();
 
 /** The agent paths, answered live: am, session and say, the picture carried along. */
 async function agentAnswer(level: Level, method: string, path: string, _url: URL, req: Request): Promise<Response | null> {
@@ -276,6 +278,7 @@ async function anthropicAnswer(method: string, path: string, req: Request): Prom
         return json({
             issuer: origin, subject: "did:key:z6MkmockNode", connect: origin + "/auth/google/cloud", asked: true, accepted: true, why: "",
             project_id: "mock-project", project_number: "123", pool: "qntx", provider: "node", service_account: "qntx-node@mock-project", set_by: "google:root", at: budget.at,
+            agy_wired: false, agy_connect: origin + "/auth/google/cloud?project=mock-project&thing=agy",
             costs_wired: true, costs_connect: origin + "/auth/google/cloud?project=mock-project&thing=costs", budgets: [budget], limit: googleLimit, day_limit: googleDayLimit, spent_today: 0.25,
             halted, halted_why: halted ? `monthly has reached 3.50 EUR of ${against.toFixed(2)}, and what costs halts at 80% of it` : "",
         });
@@ -337,6 +340,7 @@ async function answer(req: Request, url: URL): Promise<Response> {
 
     const said = worldAnswer(level, method, path, url)
         ?? await codexAgents.answer(req)
+        ?? await agyAgents.answer(req)
         ?? await agentAnswer(level, method, path, url, req)
         ?? await filesAnswer(method, path, req)
         ?? await keysAnswer(level, method, path, req)

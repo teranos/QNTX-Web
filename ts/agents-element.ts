@@ -30,8 +30,13 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' };
 const PHONE = '(max-width: 768px)';
 
 /** The harnesses a chat can run in, as the node names them. */
-export const HARNESSES = ['claude', 'pi', 'codex'] as const;
+export const HARNESSES = ['claude', 'pi', 'codex', 'agy'] as const;
 export type Harness = (typeof HARNESSES)[number];
+
+/** The harnesses an agent's chat offers: agy is the Node Agent's so far, and the node refuses it of any other. */
+export function harnessesOf(agent: Reachable): readonly Harness[] {
+    return agent.kind === 'node' ? HARNESSES : HARNESSES.filter(harness => harness !== 'agy');
+}
 
 // Who the Node Agent is in Pi (pi am), and what it answered there (pi say).
 export interface PiAm {
@@ -50,6 +55,36 @@ export interface CodexAm {
 export interface CodexSaid {
     answer: string; is_error?: boolean; session: string; model: string; codex_version: string;
     input_tokens?: number; output_tokens?: number; took_ms?: number; unwritten?: string;
+}
+
+// In agy (agy am, agy say), which runs on Gemini through ACP.
+export interface AgyAm {
+    did?: string; model: string; session?: string; answering?: boolean;
+    agy?: string; agy_version?: string; not_ready?: string;
+}
+export interface AgySaid {
+    answer: string; session: string; conversation?: string; model: string; agy_version: string;
+    context_used?: number; context_size?: number; took_ms?: number; unwritten?: string;
+}
+
+/** agy am as the chat draws who answers. */
+export function agyAsAm(is: AgyAm): ClaudeAm {
+    return {
+        did: is.did ?? '', model: is.model, effort: '',
+        permission_mode: '', permission_modes: [], allow: [],
+        session: is.session ?? '', answering: is.answering ?? false, claude_code: is.agy ?? '',
+        not_ready: is.not_ready ?? '', signed_in: true, auth_method: 'Google Cloud',
+    };
+}
+
+/** agy say as the chat draws an answer. */
+export function agyAsSaid(said: AgySaid): ClaudeSaid {
+    return {
+        answer: said.answer, is_error: false, subtype: '',
+        session: said.session, model: said.model, claude_code: said.agy_version,
+        permission_mode: '', denied: [], cost_usd: 0,
+        took_ms: said.took_ms ?? 0, unwritten: said.unwritten ?? '',
+    };
 }
 
 /** pi am as the chat draws who answers. */
@@ -93,8 +128,8 @@ export function codexAsSaid(said: CodexSaid): ClaudeSaid {
 }
 
 /** What the node answers of an agent, by harness. */
-interface AmAnswer { claude?: ClaudeAm | null; pi?: PiAm | null; codex?: CodexAm | null }
-interface SaidAnswer { claude?: ClaudeSaid | null; pi?: PiSaid | null; codex?: CodexSaid | null }
+interface AmAnswer { claude?: ClaudeAm | null; pi?: PiAm | null; codex?: CodexAm | null; agy?: AgyAm | null }
+interface SaidAnswer { claude?: ClaudeSaid | null; pi?: PiSaid | null; codex?: CodexSaid | null; agy?: AgySaid | null }
 
 /** One agent at its path, in one harness, as the chat asks it. */
 export function agentIn(at: string, harness: Harness, unwrap: (answer: unknown) => AmAnswer = a => a as AmAnswer): NodeAgent {
@@ -102,12 +137,14 @@ export function agentIn(at: string, harness: Harness, unwrap: (answer: unknown) 
         const is = unwrap(answer);
         if (harness === 'pi' && is.pi) return piAsAm(is.pi);
         if (harness === 'codex' && is.codex) return codexAsAm(is.codex);
+        if (harness === 'agy' && is.agy) return agyAsAm(is.agy);
         if (harness === 'claude' && is.claude) return is.claude;
         throw new Error(`${at} answers for no ${harness}`);
     };
     const saidOf = (answer: SaidAnswer): ClaudeSaid => {
         if (harness === 'pi' && answer.pi) return piAsSaid(answer.pi);
         if (harness === 'codex' && answer.codex) return codexAsSaid(answer.codex);
+        if (harness === 'agy' && answer.agy) return agyAsSaid(answer.agy);
         if (answer.claude) return answer.claude;
         throw new Error(`${at} answered in no ${harness}`);
     };
@@ -243,7 +280,7 @@ export function drawAgentChat(body: HTMLElement, agent: Reachable, chatOf: (agen
             .catch((err: unknown) => { log.info(SEG.ELEMENT, `[Agents] no sessions listed for ${agent.called}: ${err instanceof Error ? err.message : String(err)}`); sessions.remove(); });
     }
 
-    for (const harness of HARNESSES) {
+    for (const harness of harnessesOf(agent)) {
         const tab = part('button', 'qntx-btn qntx-btn-small agents-tab');
         tab.type = 'button';
         tab.dataset.harness = harness;

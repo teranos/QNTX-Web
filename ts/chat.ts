@@ -228,6 +228,23 @@ export function scrollToBottom(box: HTMLElement): void {
     else box.scrollTop = box.scrollHeight;
 }
 
+/** Puts box at its bottom at once: a chat opened stands there, with no animation for a read to catch halfway. */
+export function jumpToBottom(box: HTMLElement): void {
+    const jump = () => {
+        if (typeof box.scrollTo === 'function') box.scrollTo({ top: box.scrollHeight, behavior: 'instant' });
+        else box.scrollTop = box.scrollHeight;
+    };
+    jump();
+    // A chat is drawn before its window has a size, and a box with no size has no bottom to stand at.
+    if (box.clientHeight > 0 || typeof ResizeObserver === 'undefined') return;
+    const sized = new ResizeObserver(() => {
+        if (box.clientHeight === 0) return;
+        sized.disconnect();
+        jump();
+    });
+    sized.observe(box);
+}
+
 /** The session drawn into body as the chat: every turn in order, what was folded counted. */
 export function renderChat(body: HTMLElement, read: SessionRead): void {
     const column = part('div', 'chat-col');

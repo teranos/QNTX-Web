@@ -427,6 +427,10 @@ export interface NodeGoogle {
   costs_wired: boolean;
   /** Where ROOT goes to connect them, by saying yes at Google once. */
   costs_connect: string;
+  /** Whether ROOT let the node call Vertex AI, which agy runs on. */
+  agy_wired: boolean;
+  /** Where ROOT goes to let it, by saying yes at Google once. */
+  agy_connect: string;
   /** What each budget last reported. */
   budgets: GoogleBudget[];
   /** The limit ROOT set on this node; zero is none. */

@@ -7,6 +7,7 @@
  * Add a new element type → add one entry here.
  */
 
+import { DROPPED_SYMBOLS } from '../../dropped-symbols';
 import type { Element } from '@teranos/elements';
 import { AX, SO, SE, AS, Attestation, Sigma, Type, Triplet, Prose, Subcanvas, Transcript } from '../../sym';
 import { createAxElement } from './ax-element';
@@ -21,7 +22,6 @@ import { createSigmaElement } from './sigma-element';
 import { createTypeElement } from './type-element';
 import { createTripletElement } from './triplet-element';
 import { createResultElement } from './result-element';
-import { createThreadElement } from './thread-element';
 import { createTranscriptElement } from './transcript-element';
 
 export interface ElementTypeEntry {
@@ -66,7 +66,6 @@ const ELEMENT_TYPES: ElementTypeEntry[] = [
     { symbol: Sigma,    className: 'canvas-sigma-element',       title: 'Sigma',       label: 'Sigma',     render: createSigmaElement },
     { symbol: Type,     className: 'canvas-type-element',        title: 'Type',        label: 'Type',      render: createTypeElement },
     { symbol: 'stream', className: 'canvas-stream-element',      title: 'Stream',      label: 'Stream',    render: (g) => createResultElement(g) },
-    { symbol: '\u303D', className: 'canvas-thread-element',     title: 'Thread',      label: 'Thread',    render: createThreadElement },
     { symbol: Transcript, className: 'canvas-transcript-element', title: 'Transcript', label: 'Transcript', render: createTranscriptElement },
 ];
 
@@ -105,6 +104,7 @@ export function replacePluginElementType(entry: ElementTypeEntry): boolean {
     return true;
 }
 
+
 /** What an entry is, said the way a refusal names it. */
 function nameOf(entry: ElementTypeEntry | undefined): string {
     if (!entry) return 'nothing';
@@ -120,6 +120,11 @@ export function holderOf(symbol: string): string {
 
 /** Register a new element type at runtime (for plugin elements) */
 export function registerElementType(entry: ElementTypeEntry): void {
+    if (DROPPED_SYMBOLS.includes(entry.symbol)) {
+        console.warn(`[ElementRegistry] ${nameOf(entry)} is not registered: ${entry.symbol} is dropped`);
+        return;
+    }
+
     if (_bySymbol.has(entry.symbol)) {
         console.warn(`[ElementRegistry] ${nameOf(entry)} is not registered: ${entry.symbol} is held by ${holderOf(entry.symbol)}`);
         return;

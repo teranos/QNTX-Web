@@ -13,6 +13,7 @@ import { assertOk, jsonBody } from '../http-utils';
 import { canvasSyncQueue } from './canvas-sync';
 import { refusal } from '../self-person';
 import { canvasQuery } from '../standing';
+import { isDropped } from '../dropped-symbols';
 
 /**
  * The canvas of the namespace this person stands in, by name. Null is a
@@ -153,6 +154,41 @@ export async function loadCanvasState(): Promise<{
     } catch (error) {
         log.error(SEG.ELEMENT, '[CanvasAPI] Failed to load canvas state:', error);
         throw error;
+    }
+}
+
+/**
+ * Records the node holds under a dropped symbol are left out of what was loaded, and the node is
+ * told to delete each, so none is merged in after the canvas has drawn or returns on the next load.
+ */
+export function dropDroppedRecords<S extends { elements: CanvasElementState[]; minimizedWindows: string[] }>(state: S): S {
+    const retired = state.elements.filter(isDropped);
+    if (retired.length === 0) return state;
+    const ids = new Set(retired.map(e => e.id));
+    for (const id of ids) deleteCanvasElement(id);
+    for (const id of state.minimizedWindows) if (ids.has(id)) deleteMinimizedWindow(id);
+    return {
+        ...state,
+        elements: state.elements.filter(e => !ids.has(e.id)),
+        minimizedWindows: state.minimizedWindows.filter(id => !ids.has(id)),
+    };
+}
+
+/**
+ * What the browser itself holds under a dropped symbol goes too, in every canvas, opened or not
+ * (drawing a canvas drops its own). The store removes the record from what it keeps, and that
+ * syncs to the node.
+ */
+export function dropDroppedLocally(ui: {
+    getCanvasElements(): CanvasElementState[];
+    getMinimizedWindows(): string[];
+    removeCanvasElement(id: string): void;
+    removeMinimizedWindow(id: string): void;
+}): void {
+    const ids = new Set(ui.getCanvasElements().filter(isDropped).map(e => e.id));
+    for (const id of ids) {
+        ui.removeCanvasElement(id);
+        if (ui.getMinimizedWindows().includes(id)) ui.removeMinimizedWindow(id);
     }
 }
 

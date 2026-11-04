@@ -53,7 +53,10 @@ function applyPostItStyle(element: HTMLElement, item: Element): void {
  * Create a note element element and populate it
  */
 export async function createNoteElement(item: Element): Promise<HTMLElement> {
-    const element = document.createElement('div');
+    // Carried from the spawn menu, it is that element: one DOM element for its whole life. The
+    // symbol it was carried as is not one this element wears.
+    const element = item.cursorElement ?? document.createElement('div');
+    if (item.cursorElement) element.replaceChildren();
     await setupNoteElement(element, item);
     return element;
 }

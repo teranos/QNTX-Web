@@ -68,7 +68,10 @@ export const PROMPT_DEFAULT_TEMPLATE = '---\nmodel: "anthropic/claude-haiku-4.5"
  * Create a prompt element with template editor on canvas
  */
 export async function createPromptElement(item: Element): Promise<HTMLElement> {
-    const element = document.createElement('div');
+    // Carried from the spawn menu, it is that element: one DOM element for its whole life. The
+    // symbol it was carried as is not one this element wears.
+    const element = item.cursorElement ?? document.createElement('div');
+    if (item.cursorElement) element.replaceChildren();
     await setupPromptElement(element, item);
     return element;
 }

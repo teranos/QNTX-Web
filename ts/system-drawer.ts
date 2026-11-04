@@ -5,7 +5,7 @@ import { getStorageItem, setStorageItem } from './indexeddb-storage.ts';
 import { sendMessage, connectivity } from './client';
 import { SearchView, TYPE_COMMAND, TYPE_SUBCANVAS } from './search-view.ts';
 import type { SearchMatch, SearchResultsMessage } from './search-view.ts';
-import { spawnElementByCommand, getMatchingCommands, getCommandLabel } from './components/element/canvas/spawn-menu.ts';
+import { spawnElementByCommand, getMatchingCommands, getCommandLabel } from './components/element/canvas/spawn-host.ts';
 import { uiState } from './state/ui.ts';
 import { Subcanvas } from './sym';
 

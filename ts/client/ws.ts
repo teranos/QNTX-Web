@@ -205,6 +205,8 @@ const MESSAGE_HANDLERS = {
             // An approval moved. The open element reads the lines again; the
             // row announcing one is not what it draws.
             dispatch('watcher_match', () => import('../approvals-element.js').then(({ reloadApprovals }) => reloadApprovals()));
+            // And the island in the shell follows it, open element or not.
+            dispatch('watcher_match', () => import('../island.js').then(({ followOnIsland }) => followOnIsland()));
         } else if (data.watcher_id === STANDING_ELEMENT_PUBLISHED) {
             // An element module was published. The page holds the module it
             // imported, so it asks /g/ what is standing now and swaps what

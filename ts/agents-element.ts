@@ -9,7 +9,7 @@
 // "IN MY MIND, THERE IS ONE FUCKING CHAT, WHERE I CAN SWITCH HARNESS, AND THEN
 // I TALK TO CODEX, AND THEN I TALK TO PI, AND THEY ARE MORE LIKE TABS WITHIN A WINDOW."
 
-import { preventDrag, tray } from '@teranos/elements';
+import { preventDrag, pressFrom, tray } from '@teranos/elements';
 import { restLevelInSidebar, enterLevel, levelRow } from './sidebar.ts';
 import { apiJson } from './client';
 import { log, SEG } from './logger.ts';
@@ -33,9 +33,9 @@ const PHONE = '(max-width: 768px)';
 export const HARNESSES = ['claude', 'pi', 'codex', 'agy'] as const;
 export type Harness = (typeof HARNESSES)[number];
 
-/** The harnesses an agent's chat offers: agy is the Node Agent's so far, and the node refuses it of any other. */
+/** The harnesses an agent's chat offers: agy is the Node Agent's and a namespace's agent's, and the node refuses it of any other. */
 export function harnessesOf(agent: Reachable): readonly Harness[] {
-    return agent.kind === 'node' ? HARNESSES : HARNESSES.filter(harness => harness !== 'agy');
+    return agent.kind === 'node' || agent.kind === 'namespace' ? HARNESSES : HARNESSES.filter(harness => harness !== 'agy');
 }
 
 // Who the Node Agent is in Pi (pi am), and what it answered there (pi say).
@@ -61,6 +61,8 @@ export interface CodexSaid {
 export interface AgyAm {
     did?: string; model: string; session?: string; answering?: boolean;
     agy?: string; agy_version?: string; not_ready?: string;
+    // Where a namespace's owner connects it to Google Cloud, while it is not.
+    google_connect?: string;
 }
 export interface AgySaid {
     answer: string; session: string; conversation?: string; model: string; agy_version: string;
@@ -188,7 +190,10 @@ export async function reachableAgents(namespace: string, ask: <T>(path: string) 
     // yet: its chat is where it is signed in, or where the node says why not.
     if (namespace) {
         found.push({ id: `namespace:${namespace}`, called: `the agent of ${namespace}`, at: `/api/agents/${encodeURIComponent(namespace)}`, kind: 'namespace',
-            unwrap: a => ({ claude: (a as { agent?: ClaudeAm }).agent }) });
+            unwrap: a => {
+                const is = a as { agent?: ClaudeAm; pi?: PiAm; codex?: CodexAm; agy?: AgyAm };
+                return { claude: is.agent, pi: is.pi, codex: is.codex, agy: is.agy };
+            } });
     }
     // The element agents are ROOT's, as the Node Agent is: listed when it is.
     // "each element is an agent as well": every element this viewer was given,
@@ -249,6 +254,8 @@ export function drawAgentChat(body: HTMLElement, agent: Reachable, chatOf: (agen
         settle = drawClaude(talk, chatOf(agent, chosen));
         const says = talk.querySelector<HTMLTextAreaElement>('.claude-says');
         if (says) says.placeholder = `Say something to ${agent.called}`;
+        // "A Namespace Owner logs in with their own oicd for their namespace access to agy, like how Root does for Node"
+        if (agent.kind === 'namespace' && chosen === 'agy') offerGoogleConnect(talk, agent.at);
     };
 
     // "so it means we need the SDK to list back sessions": an element's agent at the Console has Sessions there, listed under the tabs.
@@ -291,6 +298,19 @@ export function drawAgentChat(body: HTMLElement, agent: Reachable, chatOf: (agen
     preventDrag(tabs);
     draw();
     return () => settle();
+}
+
+/** Offers the namespace's owner Connect Google Cloud in talk, while the node says its agent in agy is not connected. */
+export function offerGoogleConnect(talk: HTMLElement, at: string, ask: <T>(path: string) => Promise<T> = apiJson, go: (url: string) => void = url => window.location.assign(url)): Promise<void> {
+    return ask<{ agy?: AgyAm }>(`${at}?harness=agy`)
+        .then(answer => {
+            const connect = answer.agy?.google_connect;
+            if (!connect || talk.querySelector('[data-press="google-namespace-connect"]')) return;
+            const press = pressFrom({ id: 'google-namespace-connect', title: 'Connect Google Cloud', does: () => go(`${connect}&page=${encodeURIComponent(window.location.pathname)}`) }).element;
+            press.dataset.press = 'google-namespace-connect';
+            talk.prepend(press);
+        })
+        .catch((err: unknown) => log.info(SEG.ELEMENT, `[Agents] agy am was not asked: ${err instanceof Error ? err.message : String(err)}`));
 }
 
 /** Where an agent's chat rests in the tray: the namespace agent's under the id the Connectors flow opens. */

@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { agyAsAm, agyAsSaid, harnessesOf, piAsAm, piAsSaid, type Reachable, type Harness } from './agents-element';
+import { agyAsAm, agyAsSaid, harnessesOf, offerGoogleConnect, piAsAm, piAsSaid, type Reachable, type Harness } from './agents-element';
 import type { ClaudeAm, ClaudeSaid, NodeAgent } from './claude-element';
 
 const USE_JSDOM = process.env.USE_JSDOM === '1';
@@ -89,13 +89,37 @@ describe('Agents', () => {
         expect(found.filter(a => a.kind === 'element').map(a => a.at)).toContain('/api/elements/shaken-thing');
     });
 
-    // "make sure agy is an option for Node Agent talks": the namespace's agent in
-    // agy is its own PR, and the node refuses it until then.
-    test('agy is a tab on the Node Agent, and on nothing else yet', () => {
-        expect(harnessesOf({ id: 'node', called: 'Node Agent', at: '/api/agent', kind: 'node' })).toContain('agy');
-        for (const kind of ['namespace', 'element', 'story'] as const) {
-            expect(harnessesOf({ id: kind, called: kind, at: `/api/x`, kind })).not.toContain('agy');
+    // "make sure agy is an option for Node Agent talks", and "A Namespace Owner logs in
+    // with their own oicd for their namespace access to agy, like how Root does for Node".
+    test('agy is a tab on the Node Agent and the namespace agent, and on nothing else', () => {
+        for (const kind of ['node', 'namespace'] as const) {
+            expect(harnessesOf({ id: kind, called: kind, at: '/api/x', kind })).toContain('agy');
         }
+        for (const kind of ['element', 'story'] as const) {
+            expect(harnessesOf({ id: kind, called: kind, at: '/api/x', kind })).not.toContain('agy');
+        }
+    });
+
+    test('a namespace agent in agy not connected offers its owner Connect Google Cloud, once', async () => {
+        const talk = document.createElement('div');
+        const went: string[] = [];
+        const ask = <T,>(path: string): Promise<T> => {
+            expect(path).toBe('/api/agents/garden?harness=agy');
+            return Promise.resolve({ agy: { model: 'gemini-3.8-flash', google_connect: '/auth/google/cloud?namespace=garden&thing=agy' } } as T);
+        };
+        await offerGoogleConnect(talk, '/api/agents/garden', ask, url => went.push(url));
+        await offerGoogleConnect(talk, '/api/agents/garden', ask, url => went.push(url));
+        const presses = talk.querySelectorAll<HTMLElement>('[data-press="google-namespace-connect"]');
+        expect(presses.length).toBe(1);
+        presses[0].querySelector<HTMLButtonElement>('button')?.click() ?? presses[0].click();
+        await settled();
+        expect(went[0]).toStartWith('/auth/google/cloud?namespace=garden&thing=agy&page=');
+    });
+
+    test('a namespace agent connected offers nothing', async () => {
+        const talk = document.createElement('div');
+        await offerGoogleConnect(talk, '/api/agents/garden', <T,>() => Promise.resolve({ agy: { model: 'gemini-3.8-flash' } } as T));
+        expect(talk.children.length).toBe(0);
     });
 
     test('agy am and agy say are drawn as the chat draws any harness', () => {

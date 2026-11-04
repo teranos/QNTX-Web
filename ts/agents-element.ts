@@ -42,6 +42,8 @@ export function harnessesOf(agent: Reachable): readonly Harness[] {
 export interface PiAm {
     did: string; model: string; thinking: string; gateway: string; session: string;
     answering: boolean; pi: string; pi_version: string; not_ready: string;
+    // A namespace's agent in Pi names its provider where the Node Agent names its gateway.
+    provider?: string;
 }
 export interface PiSaid {
     answer: string; is_error: boolean; stop: string; session: string; model: string;
@@ -95,7 +97,7 @@ export function piAsAm(is: PiAm): ClaudeAm {
         did: is.did, model: is.model, effort: is.thinking,
         permission_mode: '', permission_modes: [], allow: [],
         session: is.session, answering: is.answering, claude_code: is.pi,
-        not_ready: is.not_ready, signed_in: true, auth_method: is.gateway,
+        not_ready: is.not_ready, signed_in: true, auth_method: is.gateway || is.provider || '',
     };
 }
 
@@ -163,6 +165,12 @@ export function agentIn(at: string, harness: Harness, unwrap: (answer: unknown) 
     };
 }
 
+/** A namespace's agent as the node answers it: who it is in each harness. */
+export function namespaceAnswer(answer: unknown): AmAnswer {
+    const is = answer as { agent?: ClaudeAm; pi?: PiAm; codex?: CodexAm; agy?: AgyAm };
+    return { claude: is.agent, pi: is.pi, codex: is.codex, agy: is.agy };
+}
+
 /** An agent this person reaches: what it is called, where it answers, and how its am is unwrapped. */
 export interface Reachable {
     id: string;
@@ -190,10 +198,7 @@ export async function reachableAgents(namespace: string, ask: <T>(path: string) 
     // yet: its chat is where it is signed in, or where the node says why not.
     if (namespace) {
         found.push({ id: `namespace:${namespace}`, called: `the agent of ${namespace}`, at: `/api/agents/${encodeURIComponent(namespace)}`, kind: 'namespace',
-            unwrap: a => {
-                const is = a as { agent?: ClaudeAm; pi?: PiAm; codex?: CodexAm; agy?: AgyAm };
-                return { claude: is.agent, pi: is.pi, codex: is.codex, agy: is.agy };
-            } });
+            unwrap: namespaceAnswer });
     }
     // The element agents are ROOT's, as the Node Agent is: listed when it is.
     // "each element is an agent as well": every element this viewer was given,
@@ -241,9 +246,12 @@ export function drawAgentChat(body: HTMLElement, agent: Reachable, chatOf: (agen
     body.replaceChildren(tabs, talk);
     let settle = () => {};
     let chosen: Harness = 'claude';
+    // Each draw is one, so what a draw asked lands only while it is still the one drawn.
+    let drawn = 0;
 
     const draw = () => {
         settle();
+        const thisDraw = ++drawn;
         for (const tab of tabs.querySelectorAll<HTMLButtonElement>('.agents-tab')) tab.classList.toggle('agents-tab-on', tab.dataset.harness === chosen);
         if (agent.kind === 'namespace' && chosen === 'claude') {
             // The namespace agent signs in on its own account first (ADR-048).
@@ -255,7 +263,7 @@ export function drawAgentChat(body: HTMLElement, agent: Reachable, chatOf: (agen
         const says = talk.querySelector<HTMLTextAreaElement>('.claude-says');
         if (says) says.placeholder = `Say something to ${agent.called}`;
         // "A Namespace Owner logs in with their own oicd for their namespace access to agy, like how Root does for Node"
-        if (agent.kind === 'namespace' && chosen === 'agy') offerGoogleConnect(talk, agent.at);
+        if (agent.kind === 'namespace' && chosen === 'agy') offerGoogleConnect(talk, agent.at, apiJson, undefined, () => thisDraw === drawn);
     };
 
     // "so it means we need the SDK to list back sessions": an element's agent at the Console has Sessions there, listed under the tabs.
@@ -300,12 +308,14 @@ export function drawAgentChat(body: HTMLElement, agent: Reachable, chatOf: (agen
     return () => settle();
 }
 
-/** Offers the namespace's owner Connect Google Cloud in talk, while the node says its agent in agy is not connected. */
-export function offerGoogleConnect(talk: HTMLElement, at: string, ask: <T>(path: string) => Promise<T> = apiJson, go: (url: string) => void = url => window.location.assign(url)): Promise<void> {
+/** Offers the namespace's owner Connect Google Cloud in talk, while the node says its agent in agy is not connected and still says the chat is in agy. */
+export function offerGoogleConnect(talk: HTMLElement, at: string, ask: <T>(path: string) => Promise<T> = apiJson,
+    go: (url: string) => void = url => window.location.assign(url), still: () => boolean = () => true): Promise<void> {
     return ask<{ agy?: AgyAm }>(`${at}?harness=agy`)
         .then(answer => {
             const connect = answer.agy?.google_connect;
-            if (!connect || talk.querySelector('[data-press="google-namespace-connect"]')) return;
+            // An answer that arrives after the chat moved on to another harness offers nothing there.
+            if (!connect || !still() || talk.querySelector('[data-press="google-namespace-connect"]')) return;
             const press = pressFrom({ id: 'google-namespace-connect', title: 'Connect Google Cloud', does: () => go(`${connect}&page=${encodeURIComponent(window.location.pathname)}`) }).element;
             press.dataset.press = 'google-namespace-connect';
             talk.prepend(press);
@@ -386,5 +396,5 @@ export function openAgentsElement(): void {
 export function openAgentElement(): void {
     const namespace = standingNamespace();
     openAgentChat({ id: `namespace:${namespace}`, called: `the agent of ${namespace}`, at: `/api/agents/${encodeURIComponent(namespace)}`, kind: 'namespace',
-        unwrap: a => ({ claude: (a as { agent?: ClaudeAm }).agent }) });
+        unwrap: namespaceAnswer });
 }

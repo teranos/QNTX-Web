@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { agyAsAm, agyAsSaid, harnessesOf, offerGoogleConnect, piAsAm, piAsSaid, type Reachable, type Harness } from './agents-element';
+import { agyAsAm, agyAsSaid, harnessesOf, namespaceAnswer, offerGoogleConnect, piAsAm, piAsSaid, type Reachable, type Harness } from './agents-element';
 import type { ClaudeAm, ClaudeSaid, NodeAgent } from './claude-element';
 
 const USE_JSDOM = process.env.USE_JSDOM === '1';
@@ -114,6 +114,22 @@ describe('Agents', () => {
         presses[0].querySelector<HTMLButtonElement>('button')?.click() ?? presses[0].click();
         await settled();
         expect(went[0]).toStartWith('/auth/google/cloud?namespace=garden&thing=agy&page=');
+    });
+
+    test('an answer arriving after the chat left agy offers nothing', async () => {
+        const talk = document.createElement('div');
+        const ask = <T,>(): Promise<T> => Promise.resolve({ agy: { model: 'gemini-3.8-flash', google_connect: '/auth/google/cloud?namespace=garden&thing=agy' } } as T);
+        await offerGoogleConnect(talk, '/api/agents/garden', ask, () => {}, () => false);
+        expect(talk.children.length).toBe(0);
+    });
+
+    test('a namespace agent is read in every harness, and in Pi by its provider', () => {
+        const pi = { did: 'd', model: 'm', thinking: 'low', gateway: '', provider: 'openrouter', session: '', answering: false, pi: '/pi', pi_version: '1', not_ready: '' };
+        const read = namespaceAnswer({ namespace: 'garden', agent: am, pi, agy: { model: 'gemini-3.8-flash' } });
+        expect(read.claude).toEqual(am);
+        expect(read.agy?.model).toBe('gemini-3.8-flash');
+        expect(piAsAm(read.pi!).auth_method).toBe('openrouter');
+        expect(piAsAm({ ...pi, gateway: 'gw', provider: undefined }).auth_method).toBe('gw');
     });
 
     test('a namespace agent connected offers nothing', async () => {

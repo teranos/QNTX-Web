@@ -301,7 +301,7 @@ function spendRows(am: NodeAnthropic, console_: Light, ordered: (first: string, 
  * The most each Session an element's agent runs in at Anthropic may spend, in the currency the node names.
  * "what  is max cap? like set it in the ui and make default of 200"
  */
-function capLine(am: NodeAnthropic, capped: (amount: string) => void): HTMLElement {
+function capLine(am: NodeAnthropic, draft: string | null, typed: (amount: string) => void, capped: (amount: string) => void): HTMLElement {
     const line = document.createElement('div');
     line.dataset.cap = '';
     line.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end';
@@ -309,7 +309,8 @@ function capLine(am: NodeAnthropic, capped: (amount: string) => void): HTMLEleme
     field.input.dataset.ask = 'anthropic-cap';
     field.element.style.cssText = 'width:16em';
     field.input.style.width = '100%';
-    field.input.value = am.cap;
+    field.input.value = draft ?? am.cap;
+    field.input.addEventListener('input', () => typed(field.input.value));
     line.append(field.element, pressFrom({ id: 'anthropic-cap-set', title: 'Set cap', does: () => capped(field.input.value.trim()) }).element);
     if (am.cap_default) {
         const held = note("The node's default: no cap was set.");
@@ -346,6 +347,8 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
     // The lights drawn from what the node answered; an order given is answered anew.
     // Set up again is there once the Console is set up, and gone while it is being set up.
     let setting = false;
+    // A cap typed and not set yet is kept when an order's answer redraws the row, until a cap is set.
+    let capDraft: string | null = null;
     const drawSpend = (am: NodeAnthropic) => {
         lit(light, am);
         const asked = (path: string, sent: Record<string, string>) => {
@@ -359,7 +362,18 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
         };
         spend.replaceChildren(
             spendRows(am, light, (first, then) => asked('/api/anthropic/order', { first, then: String(then) }), am.accepted && !setting ? () => flow(am) : null),
-            capLine(am, (amount) => asked('/api/anthropic/cap', { amount })),
+            capLine(am, capDraft, (typed) => { capDraft = typed; }, (amount) => {
+                apiJson<NodeAnthropic>('/api/anthropic/cap', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount }),
+                }).then((answered) => {
+                    capDraft = null;
+                    drawSpend(answered);
+                }).catch((err: unknown) => {
+                    spend.appendChild(errorOf(err instanceof Error ? err.message : String(err)));
+                });
+            }),
         );
     };
 

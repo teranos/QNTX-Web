@@ -17,6 +17,9 @@ let atGoogle: Record<string, unknown> = {};
 /** What the Node Agent answers in agy, or null when am.toml names no agy for it. */
 let inAgy: Record<string, unknown> | null = null;
 
+/** While set, a cap asked of the node is answered only once this settles. */
+let capHeld: Promise<void> | null = null;
+
 /** Where a press sent ROOT. */
 let wentTo: string[] = [];
 
@@ -43,6 +46,7 @@ const NODE: NodeIdentity = {
 beforeEach(() => {
     document.body.innerHTML = '';
     asked = [];
+    capHeld = null;
     atAnthropic = { issuer: NODE.issuer, subject: NODE.did, asked: false, accepted: false, why: '' };
     atGoogle = { issuer: NODE.issuer, subject: NODE.did, connect: `${NODE.issuer}/auth/google/cloud`, asked: false, accepted: false, why: '' };
     wentTo = [];
@@ -68,7 +72,9 @@ beforeEach(() => {
         if (method === 'POST' && String(url).endsWith('/api/anthropic/order')) {
             atAnthropic = { ...atAnthropic, first: body.first, then: body.then === 'true' };
         } else if (method === 'POST' && String(url).endsWith('/api/anthropic/cap')) {
-            atAnthropic = { ...atAnthropic, cap: body.amount, cap_default: false };
+            atAnthropic = body.amount ? { ...atAnthropic, cap: body.amount, cap_default: false } : { ...atAnthropic, cap: '200', cap_default: true };
+            const answered = new Response(JSON.stringify(atAnthropic), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            if (capHeld) return capHeld.then(() => answered);
         } else if (method === 'POST') {
             // Anthropic accepts the node at any rule but fdrl_refused.
             const ids = idsIn(body.given);
@@ -286,6 +292,19 @@ describe('Tim: ROOT caps what a Session at Anthropic may spend', () => {
         expect((held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement).value).toBe('50');
         expect(held.querySelector('[data-cap-default]')).toBeNull();
     });
+
+    // Qodo's review of QNTX-Web#55: an order pressed redrew the row and the cap typed and not set was gone.
+    test('a cap typed and not set stays when ROOT changes the order', async () => {
+        atAnthropic = { ...atAnthropic, asked: true, accepted: true, first: 'console', then: false, cap: '200', cap_currency: 'USD', cap_default: true };
+        const held = await drawn();
+        const field = held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement;
+        field.value = '75';
+        field.dispatchEvent(new Event('input'));
+        await press(held, 'anthropic-then');
+        expect(asked.at(-1)!.url).toEndWith('/api/anthropic/order');
+        expect((held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement).value).toBe('75');
+    });
+
 });
 
 describe('Tim: ROOT connects the node to Google Cloud', () => {

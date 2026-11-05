@@ -239,6 +239,11 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     // One thing said: its words, what was typed for them, its picture, the mode and model it was said in, and its row while it waits.
     interface Said { words: string; typed: string; picture: Blob | null; mode: string; model: string; row?: HTMLElement }
     const waiting: Said[] = [];
+    // After a refusal, the box holds the first of what waits: it is said ahead of what waits behind it.
+    let boxHoldsFirst = false;
+    // Each read of the session in the order asked, and the latest drawn: one asked before it is not drawn over it.
+    let readsAsked = 0;
+    let readDrawn = 0;
 
     // A row of the live view: the thing itself, with no speaker in front of it.
     // "i dont want [tool] [read] [write] etc. because im in a convo, i prefer to
@@ -324,9 +329,12 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         failed.replaceChildren(sacredEntry(apiError(`claude-${Date.now()}`, new Date().toISOString(), said, { surface: 'claude', region: what })));
     };
 
-    const read = (): Promise<void> => node.read()
+    const read = (): Promise<void> => {
+        const asked = ++readsAsked;
+        return node.read()
         .then(answer => {
-            if (!answer) return;
+            if (!answer || asked < readDrawn) return;
+            readDrawn = asked;
             // The column is drawn anew: where it stood is read before, and a
             // reader at the bottom is kept there; one who scrolled up is not moved.
             const drawn = session.querySelector('.chat-col') !== null;
@@ -336,12 +344,21 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             if (!drawn) jumpToBottom(scroller); else if (follow) scrollToBottom(scroller); else scroller.scrollTop = stood;
         })
         .catch((err: unknown) => fails('read', err));
+    };
 
     // "CHAT MUST HAVE SOMETHING THAT ANIMATES"
     // "SO YOU KNOW THE SYSTEM IS THINKING"
     const sayContext = (tokens: number) => {
         if (tokens > 0) context.textContent = `${Math.round(tokens / 1000)}k of context`;
     };
+    // A row of what waits to be said.
+    const waits = (it: Said) => {
+        it.row = chatRow('you', chatText(it.words), part('span', 'chat-waiting-said'));
+        it.row.classList.add('chat-waiting');
+        it.row.querySelector('.chat-waiting-said')!.textContent = 'waiting';
+        keepingBottom(scroller, () => queued.appendChild(it.row!));
+    };
+
     const hold = (answering: boolean) => {
         if (answering) { const said = part('span', 'claude-status-text'); said.textContent = 'answering…'; status.replaceChildren(spark(), said, context); }
         else status.replaceChildren(context);
@@ -403,30 +420,44 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                 if (next) { next.row?.remove(); sayIt(next); }
             }, (err: unknown) => {
                 fails('say', err);
-                // A refusal does not cost the words: what was refused and what waited behind it
-                // are back in the box, ahead of anything typed since, and none of it is said.
-                const back = [it, ...waiting.splice(0)];
-                for (const one of back) one.row?.remove();
-                says.value = [...back.map(one => one.typed), says.value].filter(Boolean).join('\n\n');
-                if (!picture) carry(back.find(one => one.picture)?.picture ?? null);
+                // A refusal does not cost the words, nor the picture they were said with: what was
+                // refused waits again ahead of what waited behind it, and none of it is said until Say.
+                waits(it);
+                for (const one of waiting) queued.appendChild(one.row!);
+                waiting.unshift(it);
+                // An empty box takes it back, as it was typed, to be said again or changed.
+                if (!says.value.trim() && !picture) {
+                    waiting.shift();
+                    it.row!.remove();
+                    says.value = it.typed;
+                    carry(it.picture);
+                    boxHoldsFirst = true;
+                }
                 sending = false;
                 settle();
             });
     };
 
     const sendIt = () => {
+        if (sending) { const it = typedIn(); if (it) { waits(it); waiting.push(it); } return; }
+        const it = typedIn();
+        // What the box holds goes ahead of what waits only when it is the first of it.
+        if (it && (boxHoldsFirst || waiting.length === 0)) { boxHoldsFirst = false; sayIt(it); return; }
+        if (it) { waits(it); waiting.push(it); }
+        boxHoldsFirst = false;
+        const next = waiting.shift();
+        if (next) { next.row?.remove(); sayIt(next); }
+    };
+
+    // What is in the box, taken out of it to be said.
+    const typedIn = (): Said | null => {
         const words = says.value.trim() || (picture ? LOOK : '');
-        if (!words) return;
+        if (!words) return null;
         const it: Said = { words, typed: says.value.trim(), picture, mode: mode.value, model: model.hidden ? '' : model.value };
         // "kinda buggy still is, the text linger even after i sent it": said is out of the box.
         says.value = '';
         carry(null);
-        if (!sending) { sayIt(it); return; }
-        it.row = chatRow('you', chatText(words), part('span', 'chat-waiting-said'));
-        it.row.classList.add('chat-waiting');
-        it.row.querySelector('.chat-waiting-said')!.textContent = 'waiting';
-        keepingBottom(scroller, () => queued.appendChild(it.row!));
-        waiting.push(it);
+        return it;
     };
     send.addEventListener('click', sendIt);
     says.addEventListener('keydown', (e) => {

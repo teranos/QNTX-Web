@@ -84,7 +84,7 @@ table.element-table th {
 }
 
 .element-pill-past {
-    color: var(--color-warning, #fbbf24);
+    color: var(--color-warning);
     background: rgba(251, 191, 36, 0.14);
     border: 1px solid rgba(251, 191, 36, 0.4);
 }

@@ -10,25 +10,21 @@
     "declaration-no-important": 4,
     "no-descending-specificity": 2
   },
-  "css/code-block-base.css": {
-    "scale-unlimited/declaration-strict-value": 2,
-    "declaration-no-important": 4
-  },
   "css/codemirror.css": {
-    "scale-unlimited/declaration-strict-value": 6,
+    "scale-unlimited/declaration-strict-value": 5,
     "declaration-no-important": 1,
     "selector-max-id": 10
   },
   "css/components.css": {
-    "scale-unlimited/declaration-strict-value": 27,
+    "scale-unlimited/declaration-strict-value": 25,
     "no-descending-specificity": 3
   },
   "css/components/base-panel.css": {
-    "scale-unlimited/declaration-strict-value": 14,
+    "scale-unlimited/declaration-strict-value": 13,
     "no-descending-specificity": 1
   },
   "css/core.css": {
-    "scale-unlimited/declaration-strict-value": 13,
+    "scale-unlimited/declaration-strict-value": 12,
     "declaration-no-important": 3,
     "selector-max-id": 19
   },
@@ -42,7 +38,7 @@
     "selector-max-id": 19
   },
   "css/drawer.css": {
-    "scale-unlimited/declaration-strict-value": 28,
+    "scale-unlimited/declaration-strict-value": 26,
     "no-descending-specificity": 3,
     "selector-max-id": 20
   },
@@ -82,9 +78,6 @@
   "css/filetree.css": {
     "scale-unlimited/declaration-strict-value": 1,
     "declaration-no-important": 1
-  },
-  "css/go-code-block.css": {
-    "scale-unlimited/declaration-strict-value": 2
   },
   "css/ground.css": {
     "scale-unlimited/declaration-strict-value": 6,

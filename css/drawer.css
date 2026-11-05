@@ -94,7 +94,7 @@
 }
 
 #drawer-search-input:focus {
-    border-color: var(--accent-color, #4a9eff);
+    border-color: var(--accent-color);
 }
 
 #drawer-search-input::placeholder {
@@ -143,7 +143,7 @@
 }
 
 .hixtory-status.error {
-    color: #ff6b6b;
+    color: var(--element-status-error-text);
 }
 
 .hixtory-status.running {
@@ -167,7 +167,7 @@
     align-items: center;
     gap: var(--gap);
     font-size: var(--font-size-sm);
-    color: var(--text-secondary, #999);
+    color: var(--text-secondary);
     transition: all 0.2s;
 }
 
@@ -256,7 +256,7 @@
 }
 
 .light[data-state="refused"] {
-    color: #ff6b6b;
+    color: var(--element-status-error-text);
 }
 
 .light[data-state="refused"] .status-dot {

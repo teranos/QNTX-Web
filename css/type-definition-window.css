@@ -22,7 +22,7 @@
     margin-bottom: 6px;
     font-size: var(--font-size-sm);
     font-weight: 600;
-    color: var(--text-secondary, #999);
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -32,15 +32,15 @@
     padding: var(--panel-padding-sm);
     font-size: var(--font-size-md);
     font-family: var(--font-mono);
-    background: var(--panel-bg, #1a1a1a);
+    background: var(--panel-bg);
     border: 1px solid var(--panel-border-color);
     border-radius: var(--border-radius);
-    color: var(--text-primary, #e0e0e0);
+    color: var(--text-primary);
 }
 
 .form-input:focus {
     outline: none;
-    border-color: var(--accent-color, #4a9eff);
+    border-color: var(--accent-color);
     box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.15);
 }
 
@@ -85,17 +85,17 @@
 }
 
 .type-definition-content .btn-primary {
-    background: var(--accent-color, #4a9eff);
+    background: var(--accent-color);
     color: white;
 }
 
 .type-definition-content .btn-primary:hover {
-    background: var(--accent-hover, #3a8eef);
+    background: var(--accent-hover);
 }
 
 .type-definition-content .btn-secondary {
-    background: var(--panel-bg-secondary, #252525);
-    color: var(--text-primary, #e0e0e0);
+    background: var(--panel-bg-secondary);
+    color: var(--text-primary);
     border: 1px solid var(--panel-border-color);
 }
 
@@ -107,7 +107,7 @@
 .type-def-header {
     padding: 12px;
     border-bottom: var(--panel-border);
-    background: var(--panel-bg-secondary, #1e1e1e);
+    background: var(--panel-bg-secondary);
 }
 
 .type-def-title {
@@ -119,12 +119,12 @@
 .type-def-name {
     font-weight: 600;
     font-size: var(--font-size-md);
-    color: var(--text-primary, #e0e0e0);
+    color: var(--text-primary);
     font-family: var(--font-mono);
 }
 
 .type-def-label {
-    color: var(--text-secondary, #999);
+    color: var(--text-secondary);
     font-size: var(--font-size-sm);
 }
 
@@ -144,7 +144,7 @@
     margin: 0 0 12px 0;
     font-size: var(--font-size-md);
     font-weight: 600;
-    color: var(--text-primary, #e0e0e0);
+    color: var(--text-primary);
 }
 
 /* Field list */
@@ -160,7 +160,7 @@
     justify-content: space-between;
     align-items: center;
     padding: var(--panel-padding-sm);
-    background: var(--panel-bg, #1a1a1a);
+    background: var(--panel-bg);
     border: 1px solid var(--panel-border-color);
     border-radius: var(--border-radius);
     cursor: pointer;
@@ -169,13 +169,13 @@
 
 .field-item:hover {
     background: var(--panel-bg-hover);
-    border-color: var(--accent-color, #4a9eff);
+    border-color: var(--accent-color);
 }
 
 .field-item.selected {
     background: rgba(74, 158, 255, 0.1);
-    border-color: var(--accent-color, #4a9eff);
-    box-shadow: 0 0 0 1px var(--accent-color, #4a9eff);
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 1px var(--accent-color);
 }
 
 /* Rich string field highlighting - using search yellow */
@@ -200,7 +200,7 @@
     font-family: var(--font-mono);
     font-size: var(--font-size-sm);
     font-weight: 500;
-    color: var(--text-primary, #e0e0e0);
+    color: var(--text-primary);
 }
 
 /* Field indicators */
@@ -248,15 +248,15 @@
     padding: 6px 10px;
     font-family: var(--font-mono);
     font-size: var(--font-size-sm);
-    background: var(--panel-bg, #1a1a1a);
+    background: var(--panel-bg);
     border: 1px solid var(--panel-border-color);
     border-radius: var(--border-radius);
-    color: var(--text-primary, #e0e0e0);
+    color: var(--text-primary);
 }
 
 .add-field-input:focus {
     outline: none;
-    border-color: var(--accent-color, #4a9eff);
+    border-color: var(--accent-color);
     box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.15);
 }
 
@@ -264,7 +264,7 @@
     padding: 6px 16px;
     font-size: var(--font-size-md);
     font-weight: 600;
-    background: var(--accent-color, #4a9eff);
+    background: var(--accent-color);
     color: white;
     border: none;
     border-radius: var(--border-radius);
@@ -273,13 +273,13 @@
 }
 
 .add-field-btn:hover {
-    background: var(--accent-hover, #3a8eef);
+    background: var(--accent-hover);
 }
 
 /* Field controls section */
 .field-controls {
     padding: 12px;
-    background: var(--panel-bg-secondary, #1e1e1e);
+    background: var(--panel-bg-secondary);
     border-top: var(--panel-border);
 }
 
@@ -288,7 +288,7 @@
     font-size: var(--font-size-sm);
     font-weight: 600;
     text-transform: uppercase;
-    color: var(--text-secondary, #999);
+    color: var(--text-secondary);
     letter-spacing: 0.5px;
 }
 
@@ -318,11 +318,11 @@
 .field-option span:first-of-type {
     font-size: var(--font-size-md);
     font-weight: 500;
-    color: var(--text-primary, #e0e0e0);
+    color: var(--text-primary);
 }
 
 .field-option-desc {
     font-size: var(--font-size-sm);
-    color: var(--text-secondary, #999);
+    color: var(--text-secondary);
     margin-top: 2px;
 }

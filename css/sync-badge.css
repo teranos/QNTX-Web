@@ -13,3 +13,10 @@
     background: transparent;
     cursor: default;
 }
+
+/* display above beats the hidden attribute's own display: none, and an empty
+   badge held 24px at the system bar's left end, pushing the latch, the search
+   and the status sideways when it was added. */
+.sync-badge[hidden] {
+    display: none;
+}

@@ -658,7 +658,7 @@
     flex: 1;
     padding: 3px 6px;
     background: rgba(0, 0, 0, 0.2);
-    border: 1px solid var(--border-on-dark, #555);
+    border: 1px solid var(--border-on-dark);
     border-radius: 4px;
     color: var(--text-on-dark);
 }
@@ -686,7 +686,7 @@
 .plugin-config-new-key {
     padding: 6px 8px;
     background: rgba(0, 0, 0, 0.2);
-    border: 1px solid var(--border-on-dark, #555);
+    border: 1px solid var(--border-on-dark);
     border-radius: 4px;
     color: var(--text-on-dark);
     font-size: var(--font-size-md);

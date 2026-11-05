@@ -69,7 +69,7 @@
 
 .cm-tooltip-autocomplete li {
     padding: 4px 8px;
-    color: #ccc;
+    color: var(--editor-text);
 }
 
 .cm-tooltip-autocomplete li[aria-selected] {

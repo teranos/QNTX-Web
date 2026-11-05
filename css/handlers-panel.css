@@ -218,7 +218,7 @@
 }
 
 .handlers-result-error .handlers-result-id {
-    color: var(--color-error, #e06060);
+    color: var(--color-error);
 }
 
 .handlers-card-facts {

@@ -129,7 +129,7 @@
   margin: 0;
   font-size: var(--font-size-lg);
   font-weight: 600;
-  color: #000;
+  color: var(--text-emphasis);
   letter-spacing: 0.3px;
 }
 

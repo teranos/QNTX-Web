@@ -305,6 +305,22 @@ describe('Tim: ROOT caps what a Session at Anthropic may spend', () => {
         expect((held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement).value).toBe('75');
     });
 
+    // Qodo's review of QNTX-Web#55: two caps set at once could draw the older answer last.
+    test('a cap is asked once at a time: pressed again while one is asked, nothing more is asked', async () => {
+        atAnthropic = { ...atAnthropic, asked: true, accepted: true, first: 'console', then: false, cap: '200', cap_currency: 'USD', cap_default: true };
+        let answer: () => void = () => {};
+        capHeld = new Promise((settled) => { answer = settled; });
+        const held = await drawn();
+        const field = held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement;
+        field.value = '40';
+        await press(held, 'anthropic-cap-set');
+        field.value = '60';
+        await press(held, 'anthropic-cap-set');
+        expect(asked.filter((a) => a.url.endsWith('/api/anthropic/cap')).map((a) => a.body.amount)).toEqual(['40']);
+        answer();
+        await settle();
+        expect((held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement).value).toBe('40');
+    });
 });
 
 describe('Tim: ROOT connects the node to Google Cloud', () => {

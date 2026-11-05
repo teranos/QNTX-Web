@@ -349,6 +349,8 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
     let setting = false;
     // A cap typed and not set yet is kept when an order's answer redraws the row, until a cap is set.
     let capDraft: string | null = null;
+    // A cap is asked of the node once at a time, so no older answer is drawn over a newer one.
+    let capAsking = false;
     const drawSpend = (am: NodeAnthropic) => {
         lit(light, am);
         const asked = (path: string, sent: Record<string, string>) => {
@@ -363,6 +365,8 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
         spend.replaceChildren(
             spendRows(am, light, (first, then) => asked('/api/anthropic/order', { first, then: String(then) }), am.accepted && !setting ? () => flow(am) : null),
             capLine(am, capDraft, (typed) => { capDraft = typed; }, (amount) => {
+                if (capAsking) return;
+                capAsking = true;
                 apiJson<NodeAnthropic>('/api/anthropic/cap', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -372,7 +376,7 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
                     drawSpend(answered);
                 }).catch((err: unknown) => {
                     spend.appendChild(errorOf(err instanceof Error ? err.message : String(err)));
-                });
+                }).finally(() => { capAsking = false; });
             }),
         );
     };

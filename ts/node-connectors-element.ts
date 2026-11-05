@@ -372,7 +372,8 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ amount }),
                 }).then((answered) => {
-                    capDraft = null;
+                    // What was typed since it was sent is still to be set, and stays.
+                    if (capDraft === null || capDraft.trim() === amount) capDraft = null;
                     drawSpend(answered);
                 }).catch((err: unknown) => {
                     spend.appendChild(errorOf(err instanceof Error ? err.message : String(err)));

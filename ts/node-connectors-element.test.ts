@@ -321,6 +321,23 @@ describe('Tim: ROOT caps what a Session at Anthropic may spend', () => {
         await settle();
         expect((held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement).value).toBe('40');
     });
+
+    // Qodo's review of QNTX-Web#55: what was typed while a cap was being set was gone when the node answered.
+    test('a cap typed while one is being set stays when the node answers the one set', async () => {
+        atAnthropic = { ...atAnthropic, asked: true, accepted: true, first: 'console', then: false, cap: '200', cap_currency: 'USD', cap_default: true };
+        let answer: () => void = () => {};
+        capHeld = new Promise((settled) => { answer = settled; });
+        const held = await drawn();
+        const field = held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement;
+        field.value = '40';
+        field.dispatchEvent(new Event('input'));
+        await press(held, 'anthropic-cap-set');
+        field.value = '65';
+        field.dispatchEvent(new Event('input'));
+        answer();
+        await settle();
+        expect((held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement).value).toBe('65');
+    });
 });
 
 describe('Tim: ROOT connects the node to Google Cloud', () => {

@@ -40,7 +40,7 @@
 .panel-close:hover,
 .toast-close:hover {
     background: var(--bg-hover);
-    color: #000;
+    color: var(--text-emphasis);
     border-color: var(--color-burnt-orange);
     transform: none; /* Explicitly prevent any scaling */
 }
@@ -49,7 +49,7 @@
 .panel-close:active,
 .toast-close:active {
     background: #e0e0e0;
-    color: #000;
+    color: var(--text-emphasis);
 }
 
 /* Focus state for keyboard navigation */
@@ -365,7 +365,7 @@
 .chat-thought, .chat-marker { font-style: italic; }
 .chat-row pre, .chat-text { margin: 0; font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
 .chat-head { color: var(--text-on-dark-secondary); }
-.chat-add { color: var(--color-success, #7cb87c); }
+.chat-add { color: var(--color-success); }
 .chat-del { color: var(--color-warning); }
 .chat-code { background: var(--bg-almost-black); border: 1px solid var(--border-on-dark); padding: 4px 6px; margin: 2px 0; white-space: pre-wrap; }
 .chat-inline-code { background: var(--bg-almost-black); padding: 0 3px; }

@@ -37,8 +37,8 @@ body {
     position: absolute;
     top: -40px;
     left: 0;
-    background: var(--bg-primary, #fff);
-    color: var(--text-primary, #000);
+    background: var(--bg-primary);
+    color: var(--text-primary);
     padding: 8px 16px;
     z-index: 10001;
     text-decoration: none;
@@ -183,7 +183,7 @@ body.disconnected #container {
     margin: 0 0 4px 0;
     font-size: var(--font-size-lg);
     font-weight: 600;
-    color: #000;
+    color: var(--text-emphasis);
 }
 
 #header .subtitle {

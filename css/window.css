@@ -34,7 +34,7 @@
 .label {
     flex: 0 0 auto;
     font-weight: normal;
-    color: var(--text-on-dark-secondary, #a9abaa);
+    color: var(--text-on-dark-secondary);
     font-size: var(--font-size-md);
 }
 
@@ -63,19 +63,19 @@
     padding: 6px 8px;
     font-family: var(--font-mono);
     font-size: var(--font-size-sm);
-    background: var(--bg-dark-light, #343534);
-    border: 1px solid var(--border-on-dark, #3f4140);
+    background: var(--bg-dark-light);
+    border: 1px solid var(--border-on-dark);
     border-radius: 4px;
-    color: var(--text-on-dark, #dfe1e0);
+    color: var(--text-on-dark);
 }
 
 .input:focus {
     outline: none;
-    border-color: var(--accent-on-dark, #7dba8a);
+    border-color: var(--accent-on-dark);
 }
 
 .input::placeholder {
-    color: var(--text-on-dark-tertiary, #878988);
+    color: var(--text-on-dark-tertiary);
 }
 
 .btn {
@@ -83,27 +83,27 @@
     font-size: var(--font-size-sm);
     font-weight: 500;
     font-family: var(--font-mono);
-    background: var(--bg-dark-light, #343534);
-    border: 1px solid var(--border-on-dark, #3f4140);
+    background: var(--bg-dark-light);
+    border: 1px solid var(--border-on-dark);
     border-radius: 4px;
-    color: var(--text-on-dark, #dfe1e0);
+    color: var(--text-on-dark);
     cursor: pointer;
 }
 
 .btn:hover {
-    background: var(--bg-dark-hover, #2a2b2a);
-    border-color: var(--accent-on-dark, #7dba8a);
+    background: var(--bg-dark-hover);
+    border-color: var(--accent-on-dark);
 }
 
 .btn--primary {
-    background: var(--accent-color, #5a9a6a);
-    border-color: var(--accent-color, #5a9a6a);
+    background: var(--accent-color);
+    border-color: var(--accent-color);
     color: #fff;
 }
 
 .btn--primary:hover {
-    background: var(--accent-hover, #4a8559);
-    border-color: var(--accent-hover, #4a8559);
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
 }
 
 .element-value {
@@ -139,7 +139,7 @@
 .element-empty {
     padding: 20px;
     text-align: center;
-    color: var(--panel-text-tertiary, #c0c0c0);
+    color: var(--panel-text-tertiary);
 }
 
 /* A failure an element shows. Red ground and light text, so it is never read as
@@ -187,7 +187,7 @@
 }
 
 .element-note {
-    color: var(--panel-text-tertiary, #c0c0c0);
+    color: var(--panel-text-tertiary);
 }
 
 /* Which provider the node infers with (⌬). Read-only: the row says what
@@ -242,7 +242,7 @@
 .db-stat-section-title {
     font-size: var(--font-size-md);
     font-weight: 600;
-    color: var(--panel-text-primary, #333);
+    color: var(--panel-text-primary);
     margin: 0 8px 8px 8px;
 }
 
@@ -256,12 +256,12 @@
 .rich-field-item {
     display: inline-block;
     padding: 3px 8px;
-    background: var(--panel-bg-secondary, #f0f0f0);
+    background: var(--panel-bg-secondary);
     border: 1px solid var(--panel-border-color);
     border-radius: var(--border-radius);
     font-size: var(--font-size-sm);
     font-family: var(--font-mono);
-    color: var(--panel-text-primary, #333);
+    color: var(--panel-text-primary);
     transition: background-color 0.2s ease;
 }
 

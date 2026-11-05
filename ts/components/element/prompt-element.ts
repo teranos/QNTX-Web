@@ -213,6 +213,8 @@ export async function setupPromptElement(element: HTMLElement, item: Element): P
             timestamp: startTime,
         });
 
+        // The result this run is drawn in, once spawned: a run that fails lets go of it.
+        let responseElement: HTMLElement | null = null;
         try {
             // Collect attachments from melded elements
             // TODO [TS-4]: Extract shared collectMeldedAttachments(elementId) — identical
@@ -247,7 +249,7 @@ export async function setupPromptElement(element: HTMLElement, item: Element): P
             }
 
             // Spawn response element below prompt before fetch starts
-            const responseElement = spawnResponseBelow(element, item.id, template);
+            responseElement = spawnResponseBelow(element, item.id, template);
 
             // The socket the stream is asked on: it is sent there and nowhere else.
             const asked = ownSocket();
@@ -261,7 +263,7 @@ export async function setupPromptElement(element: HTMLElement, item: Element): P
             if (!response.ok) {
                 const errorText = await response.text();
                 if (responseElement) {
-                    unsubscribeStream(item.id);
+                    unsubscribeStream(item.id, responseElement);
                     responseElement.remove();
                 }
                 throw new Error(`API error: ${response.status} - ${errorText}`);
@@ -279,7 +281,7 @@ export async function setupPromptElement(element: HTMLElement, item: Element): P
 
             if (data.error) {
                 if (responseElement) {
-                    unsubscribeStream(item.id);
+                    unsubscribeStream(item.id, responseElement);
                     responseElement.remove();
                 }
                 return;
@@ -287,11 +289,12 @@ export async function setupPromptElement(element: HTMLElement, item: Element): P
 
             // The answer whole, drawn in place of the stream when that cannot finish where it was sent.
             const tokenCount = responseElement ? getResponseTokenCount(responseElement) : 0;
-            if (data.response) answerArrived(item.id, asked, data.response, data.streamed, tokenCount > 0);
+            if (data.response && responseElement) answerArrived(responseElement, asked, data.response, data.streamed, tokenCount > 0);
             log.debug(SEG.ELEMENT, `[Prompt] Response complete, ${tokenCount} tokens`);
 
         } catch (error) {
             log.error(SEG.ELEMENT, '[Prompt] Execution failed:', error);
+            if (responseElement) unsubscribeStream(item.id, responseElement);
             const errorMsg = error instanceof Error ? error.message : String(error);
             updateStatus({
                 state: 'error',

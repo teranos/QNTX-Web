@@ -131,7 +131,7 @@ describe('ResultElement', () => {
             document.body.appendChild(element);
             const copy = element.querySelector<HTMLButtonElement>('button[title="Copy to clipboard"]') ?? Array.from(element.querySelectorAll<HTMLButtonElement>('button')).find(b => b.textContent === '⎘');
             expect(copy?.style.display).toBe('none');
-            answerArrived('job-whole-1', '', 'Up 3 days.', false);
+            answerArrived(element, '', 'Up 3 days.', false);
             expect(element.querySelector('.result-element-output')?.textContent).toBe('Up 3 days.');
             expect(copy?.style.display).toBe('');
         });

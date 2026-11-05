@@ -98,9 +98,10 @@ export function subscribeStream(jobId: string, callback: StreamCallback): void {
     subscribers.set(jobId, callback);
 }
 
-export function unsubscribeStream(jobId: string): void {
+/** Stops listening for jobId; owner is the result element whose run is over, so a later run of the same prompt keeps its own. */
+export function unsubscribeStream(jobId: string, owner?: HTMLElement): void {
     subscribers.delete(jobId);
-    streamDone(jobId);
+    streamDone(jobId, owner);
     if (subscribers.size === 0) {
         unregisterHandler('llm_stream');
         log.debug(SEG.ELEMENT, '[ResultElement] Unregistered llm_stream handler');
@@ -364,7 +365,7 @@ export function createResultElement(
     // Close — always visible, composition-aware
     const closeBtn = headerBtn('×', 'Close');
     closeBtn.addEventListener('click', () => {
-        if (streamJobId) unsubscribeStream(streamJobId);
+        if (streamJobId) unsubscribeStream(streamJobId, element);
 
         const composition = element.closest('.melded-composition') as HTMLElement | null;
         if (composition) {
@@ -731,7 +732,7 @@ export function createResultElement(
 
         // The stream is over, whole or not: what it drew stands and is kept.
         const finish = () => {
-            unsubscribeStream(streamJobId!);
+            unsubscribeStream(streamJobId!, element);
             isStreaming = false;
             // Reveal copy + expand buttons
             copyBtn.style.display = '';
@@ -773,7 +774,7 @@ export function createResultElement(
         });
 
         // A stream that cannot finish where it was sent: the answer whole, in place of what streamed.
-        awaitWhole(streamJobId, (text: string) => {
+        awaitWhole(streamJobId, element, (text: string) => {
             const token: StreamToken = { text };
             tokens.splice(0, tokens.length, token);
             output.replaceChildren(renderToken(token, 0, colorMode));
@@ -803,7 +804,7 @@ export function createResultElement(
     // ── Cleanup ─────────────────────────────────────────────────────
 
     storeCleanup(element, () => {
-        if (streamJobId) unsubscribeStream(streamJobId);
+        if (streamJobId) unsubscribeStream(streamJobId, element);
         if (streamInstance) {
             visibilityObserver?.unobserve(output);
             instances.delete(streamInstance);
@@ -1161,19 +1162,20 @@ async function executeStreamFollowUp(
             controls.success(elapsedMs);
 
             if (data.error) {
-                unsubscribeStream(responseElementId);
+                unsubscribeStream(responseElementId, responseElement);
                 responseElement.remove();
                 uiState.removeCanvasElement(responseElementId);
                 controls.error(`Failed: ${data.error}`);
                 return;
             }
 
-            if (data.response) answerArrived(responseElementId, asked, data.response, data.streamed, getResponseTokenCount(responseElement) > 0);
+            if (data.response) answerArrived(responseElement, asked, data.response, data.streamed, getResponseTokenCount(responseElement) > 0);
 
             log.debug(SEG.ELEMENT, `[ResultElement] Follow-up complete, ${getResponseTokenCount(responseElement)} streamed tokens`);
         })
         .catch((err) => {
-            unsubscribeStream(request.itemId);
+            // The run that failed is this result's, by its own id: what waited for it is let go with it.
+            unsubscribeStream(responseElementId, responseElement);
             responseElement.remove();
             uiState.removeCanvasElement(responseElementId);
 

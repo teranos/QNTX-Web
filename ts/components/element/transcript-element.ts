@@ -34,7 +34,6 @@ export interface TranscriptRead {
     started: string;
     ended: string;
     turns: Turn[];
-    folded: number;
     model: string;
     effort: string;
 }

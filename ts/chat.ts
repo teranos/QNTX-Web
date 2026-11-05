@@ -20,7 +20,6 @@ export interface SessionRead {
     started: string;
     ended: string;
     turns: Turn[];
-    folded: number;
     model: string;
     effort: string;
 }
@@ -245,12 +244,11 @@ export function jumpToBottom(box: HTMLElement): void {
     sized.observe(box);
 }
 
-/** The session drawn into body as the chat: every turn in order, what was folded counted. */
+/** The session drawn into body as the chat: every turn in order. */
 export function renderChat(body: HTMLElement, read: SessionRead): void {
     const column = part('div', 'chat-col');
     const ago = lastTalked(read);
     if (ago) column.append(chatRow('marker', chatText(ago)));
-    if (read.folded > 0) column.append(chatRow('marker', chatText(`${read.folded} earlier events folded by the store`)));
     for (const turn of read.turns) {
         const row = turnRow(turn);
         if (!row.classList.contains('chat-nothing')) column.append(row);

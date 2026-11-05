@@ -8,8 +8,6 @@
 
 import type { SystemCapabilitiesMessage } from '../../types/websocket';
 import { log, SEG } from '../logger';
-import { statusIndicators } from '../status-indicators';
-import { sigmaBelongsHere } from '../capabilities';
 
 /**
  * Handle system capabilities message from backend
@@ -22,10 +20,6 @@ export function handleSystemCapabilities(data: SystemCapabilitiesMessage): void 
         storage_optimized: data.storage_optimized,
         storage_version: data.storage_version,
     });
-
-    if (!sigmaBelongsHere(data.store)) {
-        statusIndicators.removeIndicator('sigma');
-    }
 
     // Update Self diagnostic element
     import('../default-elements.js')

@@ -67,8 +67,6 @@ export interface Transcript {
   ended: string;
   /** Its turns, each naming the attestation it was read from. */
   turns: Turn[];
-  /** Events the store folded into sigmas (ADR-020), counted and not read. */
-  folded: number;
   /** The model the session started on, as its SessionStart says. */
   model: string;
   /** The effort its last Stop ran at, as that Stop's effort.level says. */

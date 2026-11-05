@@ -57,8 +57,6 @@ export type MessageType =
   | 'pulse_execution_failed'
   | 'pulse_execution_completed'
   | 'pulse_execution_log_stream'
-  | 'storage_warning'
-  | 'storage_eviction'
   | 'system_capabilities'
   | 'watcher_match'
   | 'watcher_error'
@@ -303,19 +301,6 @@ export interface LogsMessage extends BaseMessage {
 }
 
 /**
- * Storage eviction notification when attestations are deleted due to limits
- */
-export interface StorageEvictionMessage extends BaseMessage {
-  type: 'storage_eviction';
-  event_type: string;
-  actor: string;
-  context: string;
-  entity: string;
-  deletions_count: number;
-  message: string;
-}
-
-/**
  * System capabilities notification (from server/syscap/types.go:Message)
  * Sent once on WebSocket connection to inform client of available optimizations
  */
@@ -377,7 +362,6 @@ export interface DatabaseStatsMessage extends BaseMessage {
   unique_subjects: number;
   unique_contexts: number;
   rich_fields?: unknown[];
-  distillation?: { [key: string]: any };
 }
 
 /**
@@ -466,7 +450,6 @@ export type WebSocketMessage =
   | PulseExecutionFailedMessage
   | PulseExecutionCompletedMessage
   | PulseExecutionLogStreamMessage
-  | StorageEvictionMessage
   | SystemCapabilitiesMessage
   | WatcherMatchMessage
   | WatcherErrorMessage
@@ -506,7 +489,6 @@ export interface MessageHandlers {
   pulse_execution_failed?: MessageHandler<PulseExecutionFailedMessage>;
   pulse_execution_completed?: MessageHandler<PulseExecutionCompletedMessage>;
   pulse_execution_log_stream?: MessageHandler<PulseExecutionLogStreamMessage>;
-  storage_eviction?: MessageHandler<StorageEvictionMessage>;
   system_capabilities?: MessageHandler<SystemCapabilitiesMessage>;
   watcher_match?: MessageHandler<WatcherMatchMessage>;
   watcher_error?: MessageHandler<WatcherErrorMessage>;

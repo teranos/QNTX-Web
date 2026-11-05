@@ -5,8 +5,8 @@
  * attestation spawns the attestation element.
  *
  * What it shows, in order: related subjects, related contexts and actors, and
- * attributes — folded out of the attestations filed under this predicate, the
- * way a sigma folds its observations. The subjects and contexts are pressable,
+ * attributes — folded out of the attestations filed under this predicate. The
+ * subjects and contexts are pressable,
  * and open theirs.
  */
 

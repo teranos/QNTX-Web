@@ -209,5 +209,7 @@ export function rootShake(who: Person | null): boolean {
             log.error(SEG.UI, `[Shake] the shell's shake was not listened to: ${err instanceof Error ? err.message : String(err)}`);
         });
     }
+    // The page says it feels ROOT's shake now: <html data-shake="felt">, what a story shaking it waits on.
+    document.documentElement.dataset.shake = 'felt';
     return true;
 }

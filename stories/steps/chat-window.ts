@@ -88,7 +88,11 @@ Then('what I say to it stays in the window, and the transcript scrolls inside', 
 
 Given('I am ROOT on a phone', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
+    // The page is up: it says it feels ROOT's shake (<html data-shake="felt">, ts/shake.ts), and an
+    // element is on screen to talk to. A shake while it is still starting reaches no listener, or finds nothing in front.
     await page.goto('/__mock__/as/ROOT');
+    await expect(page.locator('html[data-shake="felt"]')).toBeAttached({ timeout: 15_000 });
+    await expect(page.locator('[data-element-id][data-form="canvasPlaced"]').first()).toBeVisible();
 });
 
 When('I shake it', async ({ page }) => {

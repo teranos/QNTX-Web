@@ -1,7 +1,8 @@
 // ROOT SHAKE picks the element in front; say carries the element and the picture.
 
 import { describe, expect, test } from 'bun:test';
-import { elementOfSymbol, elementOnScreen, SHAKE_ID } from './shake';
+import { elementOfSymbol, elementOnScreen, rootShake, SHAKE_ID } from './shake';
+import type { Person } from './self-person';
 import { sayBody } from './claude-element';
 
 function placed(id: string, form: string, z: string, symbol = ''): HTMLElement {
@@ -98,5 +99,20 @@ describe('what say carries', () => {
     test('the mode and the picture', () => {
         expect(JSON.parse(sayBody('look', 'plan', { file_id: 'f1' })))
             .toEqual({ harness: 'claude', says: 'look', permission_mode: 'plan', file_id: 'f1' });
+    });
+});
+
+// A page says, on purpose, that it feels ROOT's shake: what shakes it waits on that, and not on a log line.
+describe('ROOT SHAKE felt', () => {
+    test('the page says it once ROOT SHAKE is wired', () => {
+        delete document.documentElement.dataset.shake;
+        expect(rootShake({ level: 'ROOT' } as Person)).toBe(true);
+        expect(document.documentElement.dataset.shake).toBe('felt');
+    });
+
+    test('anyone else\'s page does not say it', () => {
+        delete document.documentElement.dataset.shake;
+        expect(rootShake({ level: 'USER' } as Person)).toBe(false);
+        expect(document.documentElement.dataset.shake).toBeUndefined();
     });
 });

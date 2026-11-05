@@ -17,7 +17,7 @@
 import type { Element } from '@teranos/elements';
 import { SO, Doc, Prose } from '../../sym';
 import { log, SEG } from '../../logger';
-import { apiFetch } from '../../client';
+import { apiFetch, withOwnSocket } from '../../client';
 import { jsonBody } from '../../http-utils';
 import { preventDrag, storeCleanup } from '@teranos/elements';
 import { canvasPlaced } from '@teranos/elements';
@@ -248,11 +248,11 @@ export async function setupPromptElement(element: HTMLElement, item: Element): P
             // Spawn response element below prompt before fetch starts
             const responseElement = spawnResponseBelow(element, item.id, template);
 
-            const response = await apiFetch('/api/prompt/direct', jsonBody('POST', {
+            const response = await apiFetch('/api/prompt/direct', jsonBody('POST', withOwnSocket({
                 template: finalTemplate,
                 element_id: item.id,
                 ...(fileIds.length > 0 && { file_ids: fileIds }),
-            }));
+            })));
 
             if (!response.ok) {
                 const errorText = await response.text();

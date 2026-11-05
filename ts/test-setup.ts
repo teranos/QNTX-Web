@@ -36,6 +36,8 @@ mock.module('./client', () => ({
     connectWebSocket: () => {},
     registerHandler: () => {},
     unregisterHandler: () => {},
+    ownSocket: () => '',
+    withOwnSocket: <T,>(body: T) => body,
 }));
 
 export {};

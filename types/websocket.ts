@@ -172,6 +172,8 @@ export interface VersionMessage extends BaseMessage {
   commit: string;
   build_time?: string;
   go_version?: string;
+  // Which socket this is: a stream asked for over HTTP names it, and is sent to it alone.
+  socket?: string;
 }
 
 /**

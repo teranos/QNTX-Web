@@ -23,7 +23,7 @@ import { unmeldComposition, makeDraggable, storeCleanup, preventDrag, wireExpand
 import { autoMeldResultBelow } from './meld/auto-meld-result';
 import { setResponseState } from './response-state';
 import { uiState } from '../../state/ui';
-import { registerHandler, unregisterHandler, apiFetch, backendWsUrl } from '../../client';
+import { registerHandler, unregisterHandler, apiFetch, backendWsUrl, withOwnSocket } from '../../client';
 import { assertOk, jsonBody } from '../../http-utils';
 import { canvasSyncQueue } from '../../api/canvas-sync';
 import { createFollowUpZone, type FollowUpRequest, type FollowUpControls } from './element-followup';
@@ -1144,7 +1144,7 @@ async function executeStreamFollowUp(
 
     const startTime = Date.now();
 
-    apiFetch('/api/prompt/direct', jsonBody('POST', body))
+    apiFetch('/api/prompt/direct', jsonBody('POST', withOwnSocket(body)))
         .then(async (response) => {
             await assertOk(response, 'Prompt API error');
             return response.json();

@@ -8,7 +8,7 @@
 
 import type { Element } from '@teranos/elements';
 import { log, SEG } from '../../logger';
-import { apiFetch } from '../../client';
+import { apiFetch, withOwnSocket } from '../../client';
 import { assertOk, jsonBody } from '../../http-utils';
 import { canvasSyncQueue } from '../../api/canvas-sync';
 import { uiState } from '../../state/ui';
@@ -229,7 +229,7 @@ async function defaultExecute(
 
     const startTime = Date.now();
 
-    apiFetch('/api/prompt/direct', jsonBody('POST', body))
+    apiFetch('/api/prompt/direct', jsonBody('POST', withOwnSocket(body)))
         .then(async (response) => {
             await assertOk(response, 'Prompt API error');
             return response.json();

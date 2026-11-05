@@ -416,3 +416,27 @@ describe('Spike: sendMessage', () => {
         }
     });
 });
+
+// "3. who? the receiver?"
+// The node names the socket in its first message, and what is asked for over
+// HTTP names it back, so a stream comes to this socket alone.
+describe('The socket this page holds', () => {
+    test('the version message names it, and the version handler still hears it', () => {
+        const { routeMessage, ownSocket, registerHandler, unregisterHandler } = require('./client/ws');
+        const heard = mock(() => {});
+        registerHandler('version', heard);
+        try {
+            routeMessage({ type: 'version', version: 'v1', commit: 'abc1234', socket: '10.0.0.1:5000_42' }, {});
+            expect(ownSocket()).toBe('10.0.0.1:5000_42');
+            expect(heard).toHaveBeenCalledTimes(1);
+        } finally { unregisterHandler('version'); }
+    });
+
+    test('a request names it once it is known, and names none before', () => {
+        const { routeMessage, withOwnSocket } = require('./client/ws');
+        routeMessage({ type: 'version', version: 'v1', commit: 'abc1234' }, {});
+        expect(withOwnSocket({ template: 'hi', element_id: 'e-1' })).toEqual({ template: 'hi', element_id: 'e-1' });
+        routeMessage({ type: 'version', version: 'v1', commit: 'abc1234', socket: '10.0.0.1:5000_43' }, {});
+        expect(withOwnSocket({ template: 'hi', element_id: 'e-1' })).toEqual({ template: 'hi', element_id: 'e-1', socket: '10.0.0.1:5000_43' });
+    });
+});

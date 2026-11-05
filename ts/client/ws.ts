@@ -19,6 +19,7 @@ import type {
     WatcherErrorMessage,
     ElementFiredMessage,
     WatcherQueueStatusMessage,
+    VersionMessage,
 } from '../../types/websocket';
 import type { RichSearchResultsMessage } from '../generated/proto/plugin/grpc/protocol/server.ts';
 import { handleJobNotification, handleDaemonStatusNotification } from '../tauri-notifications';
@@ -40,6 +41,20 @@ let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let reconnectAttempt = 0;
 let authStopped = false; // true when reconnect was stopped because no session is admitted
 let messageHandlers: MessageHandlers = {};
+// The socket this page holds, as the node named it in its first message there:
+// a stream asked for over HTTP names it, and is sent to it alone. Empty while
+// no socket is open, and a request then names none.
+let socket = '';
+
+/** The socket this page holds, or empty when it holds none the node has named. */
+export function ownSocket(): string {
+    return socket;
+}
+
+/** body, naming the socket this page holds when the node has named one. */
+export function withOwnSocket<T extends Record<string, unknown>>(body: T): T & { socket?: string } {
+    return socket ? { ...body, socket } : body;
+}
 
 // When authentication is restored (e.g. user logged in via another tab),
 // resume WebSocket reconnection if it was stopped by a 401.
@@ -133,6 +148,12 @@ const MESSAGE_HANDLERS = {
 
         // Invoke registered handler
         dispatch('daemon_status', () => messageHandlers['daemon_status']?.(data));
+    },
+
+    // "3. who? the receiver?"
+    version: (data: VersionMessage) => {
+        socket = data.socket ?? '';
+        dispatch('version', () => messageHandlers['version']?.(data));
     },
 
     llm_stream: (data: LLMStreamMessage) => {
@@ -420,6 +441,8 @@ export function connectWebSocket(handlers: MessageHandlers): void {
     };
 
     ws.onclose = function(event: CloseEvent): void {
+        // The next socket is a new one, named by the node when it opens.
+        socket = '';
         log.info(SEG.WS, 'WebSocket disconnected', {
             code: event.code,
             reason: event.reason || '(no reason)',

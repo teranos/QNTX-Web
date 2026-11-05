@@ -20,6 +20,9 @@ let inAgy: Record<string, unknown> | null = null;
 /** While set, a cap asked of the node is answered only once this settles. */
 let capHeld: Promise<void> | null = null;
 
+/** While set, an order asked of the node is answered only once this settles. */
+let orderHeld: Promise<void> | null = null;
+
 /** Where a press sent ROOT. */
 let wentTo: string[] = [];
 
@@ -47,6 +50,7 @@ beforeEach(() => {
     document.body.innerHTML = '';
     asked = [];
     capHeld = null;
+    orderHeld = null;
     atAnthropic = { issuer: NODE.issuer, subject: NODE.did, asked: false, accepted: false, why: '' };
     atGoogle = { issuer: NODE.issuer, subject: NODE.did, connect: `${NODE.issuer}/auth/google/cloud`, asked: false, accepted: false, why: '' };
     wentTo = [];
@@ -71,6 +75,8 @@ beforeEach(() => {
         }
         if (method === 'POST' && String(url).endsWith('/api/anthropic/order')) {
             atAnthropic = { ...atAnthropic, first: body.first, then: body.then === 'true' };
+            const answered = new Response(JSON.stringify(atAnthropic), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            if (orderHeld) return orderHeld.then(() => answered);
         } else if (method === 'POST' && String(url).endsWith('/api/anthropic/cap')) {
             atAnthropic = body.amount ? { ...atAnthropic, cap: body.amount, cap_default: false } : { ...atAnthropic, cap: '200', cap_default: true };
             const answered = new Response(JSON.stringify(atAnthropic), { status: 200, headers: { 'Content-Type': 'application/json' } });
@@ -317,6 +323,40 @@ describe('Tim: ROOT caps what a Session at Anthropic may spend', () => {
         field.value = '60';
         await press(held, 'anthropic-cap-set');
         expect(asked.filter((a) => a.url.endsWith('/api/anthropic/cap')).map((a) => a.body.amount)).toEqual(['40']);
+        answer();
+        await settle();
+        expect((held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement).value).toBe('40');
+    });
+
+    // Qodo's review of QNTX-Web#55: an order and a cap asked at once could each be written over by the other at the node,
+    // and the later answer drew an older setting over the one just set.
+    test('an order pressed while a cap is being set asks nothing, and the cap set is what shows', async () => {
+        atAnthropic = { ...atAnthropic, asked: true, accepted: true, first: 'console', then: false, cap: '200', cap_currency: 'USD', cap_default: true };
+        let answer: () => void = () => {};
+        capHeld = new Promise((settled) => { answer = settled; });
+        const held = await drawn();
+        const field = held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement;
+        field.value = '40';
+        field.dispatchEvent(new Event('input'));
+        await press(held, 'anthropic-cap-set');
+        await press(held, 'anthropic-then');
+        expect(asked.filter((a) => a.url.endsWith('/api/anthropic/order'))).toEqual([]);
+        answer();
+        await settle();
+        expect((held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement).value).toBe('40');
+    });
+
+    test('a cap set while an order is being asked asks nothing, and stays typed for when it can be', async () => {
+        atAnthropic = { ...atAnthropic, asked: true, accepted: true, first: 'console', then: false, cap: '200', cap_currency: 'USD', cap_default: true };
+        let answer: () => void = () => {};
+        orderHeld = new Promise((settled) => { answer = settled; });
+        const held = await drawn();
+        await press(held, 'anthropic-then');
+        const field = held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement;
+        field.value = '40';
+        field.dispatchEvent(new Event('input'));
+        await press(held, 'anthropic-cap-set');
+        expect(asked.filter((a) => a.url.endsWith('/api/anthropic/cap'))).toEqual([]);
         answer();
         await settle();
         expect((held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement).value).toBe('40');

@@ -349,24 +349,28 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
     let setting = false;
     // A cap typed and not set yet is kept when an order's answer redraws the row, until a cap is set.
     let capDraft: string | null = null;
-    // A cap is asked of the node once at a time, so no older answer is drawn over a newer one.
-    let capAsking = false;
+    // What ROOT changes here, an order or a cap, is asked of the node one at a time: the node
+    // writes the whole line for each, and an answer drawn redraws the whole row, so two at once
+    // could each be written over and drawn over by the other.
+    let asking = false;
     const drawSpend = (am: NodeAnthropic) => {
         lit(light, am);
         const asked = (path: string, sent: Record<string, string>) => {
+            if (asking) return;
+            asking = true;
             apiJson<NodeAnthropic>(path, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(sent),
             }).then(drawSpend).catch((err: unknown) => {
                 spend.appendChild(errorOf(err instanceof Error ? err.message : String(err)));
-            });
+            }).finally(() => { asking = false; });
         };
         spend.replaceChildren(
             spendRows(am, light, (first, then) => asked('/api/anthropic/order', { first, then: String(then) }), am.accepted && !setting ? () => flow(am) : null),
             capLine(am, capDraft, (typed) => { capDraft = typed; }, (amount) => {
-                if (capAsking) return;
-                capAsking = true;
+                if (asking) return;
+                asking = true;
                 apiJson<NodeAnthropic>('/api/anthropic/cap', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -377,7 +381,7 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
                     drawSpend(answered);
                 }).catch((err: unknown) => {
                     spend.appendChild(errorOf(err instanceof Error ? err.message : String(err)));
-                }).finally(() => { capAsking = false; });
+                }).finally(() => { asking = false; });
             }),
         );
     };

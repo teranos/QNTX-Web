@@ -76,6 +76,11 @@ class CanvasSyncQueueImpl {
         return this.queue.length;
     }
 
+    /** Whether any canvas mutation is waiting to be synced */
+    get hasPending(): boolean {
+        return this.queue.length > 0;
+    }
+
     /** Read-only snapshot of pending entries for diagnostics */
     get entries(): readonly CanvasSyncEntry[] {
         return this.queue;

@@ -42,7 +42,7 @@
 
 #loader-logs {
     width: 300px;
-    max-height: 120px;
+    height: 120px;
     overflow-y: auto;
     background: #0f0f0f;
     border: 1px solid var(--bg-dark);

@@ -6,6 +6,7 @@
 
 import { join, resolve } from 'path'
 import { rm, mkdir, copyFile } from 'fs/promises'
+import { standScript } from '../stand-pixel'
 
 const srcDir = join(import.meta.dir, 'src')
 const outDir = join(import.meta.dir, 'dist')
@@ -44,6 +45,9 @@ await copyFile(morphSource, join(outDir, 'morph.css'))
 
 // Copy index.html, rewrite script src
 const html = await Bun.file(join(import.meta.dir, 'index.html')).text()
-await Bun.write(join(outDir, 'index.html'), html.replace('/src/main.ts', '/main.js'))
+await Bun.write(
+  join(outDir, 'index.html'),
+  html.replace('/src/main.ts', '/main.js').replace('</head>', `${standScript}\n</head>`),
+)
 
 console.log('design-system built -> dist/')

@@ -11,6 +11,7 @@
 
 import { cp, mkdir, readdir, rm } from "fs/promises";
 import { existsSync } from "fs";
+import { standScript } from "./stand-pixel";
 import { join } from "path";
 import { Database } from "bun:sqlite";
 
@@ -174,6 +175,8 @@ try {
       </script>
       </head>`
   );
+
+  updatedHtml = updatedHtml.replace("</head>", `${standScript}\n</head>`);
 
   await Bun.write(join(outputDir, "index.html"), updatedHtml);
 

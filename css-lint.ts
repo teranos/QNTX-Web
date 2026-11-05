@@ -32,8 +32,13 @@ const results = JSON.parse(raw.slice(start, raw.lastIndexOf(']') + 1)) as {
 }[];
 
 // A rule with an invalid option does not run: that is a broken linter, not a clean file.
-const broken = results.flatMap(r => [...r.invalidOptionWarnings, ...r.parseErrors].map(w => `${relative(root, r.source)}: ${w.text}`));
-if (broken.length) { console.error(`stylelint reported errors of its own:\n  ${[...new Set(broken)].join('\n  ')}`); process.exit(2); }
+const broken = new Map<string, string[]>();
+for (const r of results) for (const w of [...r.invalidOptionWarnings, ...r.parseErrors]) (broken.get(w.text) ?? broken.set(w.text, []).get(w.text)!).push(relative(root, r.source));
+if (broken.size) {
+    const lines = [...broken].map(([text, files]) => `${text}  (${files.length} file${files.length === 1 ? '' : 's'}, e.g. ${files[0]})`);
+    console.error(`stylelint reported errors of its own:\n  ${lines.join('\n  ')}`);
+    process.exit(2);
+}
 
 type Counts = Record<string, Record<string, number>>;
 const now: Counts = {};

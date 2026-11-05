@@ -96,6 +96,12 @@ body:not(.sidebar-open) #sidebar {
     min-height: 32px;
     padding: 7px 14px;
     line-height: 18px;
+    /* One row, whatever tag draws it: a <button> (the rows that open a level)
+       brings its own centred Arial at 13.33px unless these are said, and a
+       <div> (an element at rest) is sized by the package's rule on it. */
+    text-align: left;
+    font-family: inherit;
+    font-size: var(--font-size-sm);
     color: var(--text-on-dark);
     background: transparent;
     border: 1px solid transparent;
@@ -227,7 +233,6 @@ body:not(.sidebar-open) #sidebar {
 .sidebar-list .sidebar-above { display: none; }
 .sidebar-level { display: block; }
 .sidebar-back[data-form="button"] { color: var(--text-on-dark-secondary); border-bottom: 1px solid var(--border-on-dark); margin-bottom: 4px; }
-.sidebar-level-row[data-form="button"], .sidebar-back[data-form="button"] { text-align: left; }
 .sidebar-level-row[data-form="button"] { padding-left: 24px; }
 .sidebar-level-note { padding: 7px 24px; color: var(--text-on-dark-secondary); }
 .sidebar-level-row.sidebar-row-on[data-form="button"] { color: var(--accent-on-dark); background: var(--bg-dark-hover); }

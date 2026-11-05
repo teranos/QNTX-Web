@@ -270,6 +270,11 @@ async function anthropicAnswer(method: string, path: string, req: Request): Prom
     }
     if (path === "/api/anthropic/cap" && method === "POST") {
         const { amount = "" } = (await req.json()) as { amount?: string };
+        // An amount left out takes the cap back to the node's default (teranos/QNTX, server/anthropic_cap.go).
+        if (amount.trim() === "") {
+            capping.cap = "";
+            return json(anthropicAm());
+        }
         if (!/^\d+(\.\d{1,2})?$/.test(amount.trim()) || Number(amount) <= 0) return json({ error: `"${amount}" is no amount of USD: a number above zero with at most two places after the point, 200 or 12.50` }, 400);
         capping.cap = amount.trim();
         return json(anthropicAm());

@@ -5,8 +5,10 @@
 // `bun run contrast` prints the full list. Fixing one is a colour decision, not a lint fix.
 
 import { describe, expect, test } from 'bun:test';
+import { existsSync, readFileSync } from 'fs';
+import { join } from 'path';
 import { parseColour, ratio } from './contrast';
-import { collect, readBaseline } from './contrast-run';
+import { collect, readBaseline, root } from './contrast-run';
 
 describe('contrast maths', () => {
     const c = (v: string) => parseColour(v)!.rgb;
@@ -19,6 +21,12 @@ describe('contrast maths', () => {
 describe('contrast', () => {
     const run = collect();
     const base = readBaseline();
+
+    test('every interior in css-interiors.json is a stylesheet that exists, and none is measured', () => {
+        const { interiors } = JSON.parse(readFileSync(join(root, 'css-interiors.json'), 'utf8')) as { interiors: string[] };
+        expect(interiors.filter(f => !existsSync(join(root, f)))).toEqual([]);
+        expect(run.hits.filter(h => interiors.includes(h.file)).map(h => h.key)).toEqual([]);
+    });
 
     test('the manifest names only tokens that exist', () => {
         expect(run.skipped.filter(s => s.skipped === 'undefined token').map(s => s.key)).toEqual([]);

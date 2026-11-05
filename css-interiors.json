@@ -1,0 +1,20 @@
+{
+  "_": "Stylesheets for what an element draws inside its own frame. An element is allowed to be its own thing: these are exempt from the shell's look rules (token-only colour, radius, z-index, shadow; colour literals in shorthands) and from the same-rule contrast check. Correctness and the QNTX-wide axioms (no ellipsis, no unknown properties or values, specificity) still apply. Everything not listed here is the shell: the frame, sidebar, tray, door, drawer, toasts, canvas, and the shared components.",
+  "interiors": [
+    "css/codemirror.css",
+    "css/docs.css",
+    "css/element-table.css",
+    "css/element/followup.css",
+    "css/element/token-popup.css",
+    "css/filetree.css",
+    "css/ground.css",
+    "css/handlers-panel.css",
+    "css/obsidian-element.css",
+    "css/parity-element.css",
+    "css/plugin-panel.css",
+    "css/pulse-panel.css",
+    "css/pulse-scheduling.css",
+    "css/type-definition-window.css",
+    "css/window.css"
+  ]
+}

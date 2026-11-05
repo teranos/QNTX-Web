@@ -25,9 +25,11 @@ export function collect() {
     const tokens = parseTokens(tokensCss);
     const manifest = JSON.parse(readFileSync(join(root, 'contrast-pairs.json'), 'utf8')) as Manifest;
     const pairs = declaredPairs(manifest, tokens);
+    // An element's interior chooses its own colours: only the shell is measured here.
+    const { interiors } = JSON.parse(readFileSync(join(root, 'css-interiors.json'), 'utf8')) as { interiors: string[] };
     const hits: RuleHit[] = [];
     for (const file of cssFiles(join(root, 'css'))) {
-        if (file.endsWith('tokens.css')) continue;
+        if (file.endsWith('tokens.css') || interiors.includes(relative(root, file))) continue;
         hits.push(...ruleHits(relative(root, file), readFileSync(file, 'utf8'), tokens));
     }
     const failingPairs = pairs.filter((p): p is Extract<PairResult, { ratio: number }> => 'ratio' in p && p.ratio < manifest.min);

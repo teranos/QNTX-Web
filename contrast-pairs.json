@@ -1,0 +1,28 @@
+{
+  "_": "Declared text/surface pairings. Within a theme, any text role may sit on any of its surfaces; `pairs` adds the status pairings that ship together. A pairing below `min` must be in contrast-baseline.json or the suite fails.",
+  "min": 4.5,
+  "themes": {
+    "light": {
+      "surfaces": ["--bg-primary", "--bg-almost-white", "--bg-hover"],
+      "text": ["--text-primary", "--text-secondary", "--text-tertiary", "--text-emphasis", "--accent-color"]
+    },
+    "dark": {
+      "surfaces": ["--bg-secondary", "--bg-tertiary", "--bg-almost-black", "--bg-dark-light", "--bg-canvas"],
+      "text": ["--text-on-dark", "--text-on-dark-secondary", "--text-on-dark-tertiary", "--text-on-dark-emphasis", "--accent-on-dark", "--color-success", "--color-error", "--color-warning", "--color-info"]
+    }
+  },
+  "pairs": [
+    { "text": "--status-pending-text", "surface": "--status-pending-bg" },
+    { "text": "--status-running-text", "surface": "--status-running-bg" },
+    { "text": "--status-completed-text", "surface": "--status-completed-bg" },
+    { "text": "--status-failed-text", "surface": "--status-failed-bg" },
+    { "text": "--status-paused-text", "surface": "--status-pending-bg" },
+    { "text": "--status-stopped-text", "surface": "--bg-primary" },
+    { "text": "--element-status-idle-text", "surface": "--element-status-idle-section-bg" },
+    { "text": "--element-status-pending-text", "surface": "--element-status-pending-bg" },
+    { "text": "--element-status-running-text", "surface": "--element-status-running-bg" },
+    { "text": "--element-status-success-text", "surface": "--element-status-success-bg" },
+    { "text": "--element-status-error-text", "surface": "--element-status-error-bg" },
+    { "text": "--element-status-warning-text", "surface": "--element-status-warning-bg" }
+  ]
+}

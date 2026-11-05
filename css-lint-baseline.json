@@ -1,0 +1,157 @@
+{
+  "css/animations.css": {
+    "scale-unlimited/declaration-strict-value": 1
+  },
+  "css/brow.css": {
+    "scale-unlimited/declaration-strict-value": 2
+  },
+  "css/canvas.css": {
+    "scale-unlimited/declaration-strict-value": 24,
+    "declaration-no-important": 4,
+    "no-descending-specificity": 2
+  },
+  "css/code-block-base.css": {
+    "scale-unlimited/declaration-strict-value": 2,
+    "declaration-no-important": 4
+  },
+  "css/codemirror.css": {
+    "scale-unlimited/declaration-strict-value": 6,
+    "declaration-no-important": 1,
+    "selector-max-id": 10
+  },
+  "css/components.css": {
+    "scale-unlimited/declaration-strict-value": 27,
+    "no-descending-specificity": 3
+  },
+  "css/components/base-panel.css": {
+    "scale-unlimited/declaration-strict-value": 14,
+    "no-descending-specificity": 1
+  },
+  "css/core.css": {
+    "scale-unlimited/declaration-strict-value": 13,
+    "declaration-no-important": 3,
+    "selector-max-id": 19
+  },
+  "css/docs.css": {
+    "scale-unlimited/declaration-strict-value": 6,
+    "no-descending-specificity": 23
+  },
+  "css/door.css": {
+    "scale-unlimited/declaration-strict-value": 11,
+    "no-descending-specificity": 2,
+    "selector-max-id": 19
+  },
+  "css/drawer.css": {
+    "scale-unlimited/declaration-strict-value": 28,
+    "no-descending-specificity": 3,
+    "selector-max-id": 20
+  },
+  "css/element-table.css": {
+    "scale-unlimited/declaration-strict-value": 2,
+    "no-descending-specificity": 2
+  },
+  "css/element/execution-state.css": {
+    "scale-unlimited/declaration-strict-value": 1
+  },
+  "css/element/followup.css": {
+    "scale-unlimited/declaration-strict-value": 1,
+    "no-descending-specificity": 1
+  },
+  "css/element/meld.css": {
+    "scale-unlimited/declaration-strict-value": 1,
+    "declaration-no-important": 1
+  },
+  "css/element/rectangle-selection.css": {
+    "scale-unlimited/declaration-strict-value": 1
+  },
+  "css/element/states/canvas-placed.css": {
+    "scale-unlimited/declaration-strict-value": 1
+  },
+  "css/element/states/panel.css": {
+    "scale-unlimited/declaration-strict-value": 5
+  },
+  "css/element/title-bar.css": {
+    "scale-unlimited/declaration-strict-value": 3
+  },
+  "css/element/token-popup.css": {
+    "scale-unlimited/declaration-strict-value": 5
+  },
+  "css/element/tray.css": {
+    "scale-unlimited/declaration-strict-value": 1
+  },
+  "css/filetree.css": {
+    "scale-unlimited/declaration-strict-value": 1,
+    "declaration-no-important": 1
+  },
+  "css/go-code-block.css": {
+    "scale-unlimited/declaration-strict-value": 2
+  },
+  "css/ground.css": {
+    "scale-unlimited/declaration-strict-value": 6,
+    "no-descending-specificity": 5
+  },
+  "css/handlers-panel.css": {
+    "scale-unlimited/declaration-strict-value": 1,
+    "no-descending-specificity": 1
+  },
+  "css/loading.css": {
+    "scale-unlimited/declaration-strict-value": 4,
+    "selector-max-id": 5
+  },
+  "css/namespace-page.css": {
+    "scale-unlimited/declaration-strict-value": 1,
+    "selector-max-id": 5
+  },
+  "css/namespaces-bar.css": {
+    "scale-unlimited/declaration-strict-value": 20,
+    "selector-max-id": 1
+  },
+  "css/obsidian-element.css": {
+    "no-descending-specificity": 2
+  },
+  "css/panel-base.css": {
+    "scale-unlimited/declaration-strict-value": 17
+  },
+  "css/plugin-panel.css": {
+    "scale-unlimited/declaration-strict-value": 80,
+    "no-descending-specificity": 4
+  },
+  "css/pulse-panel.css": {
+    "scale-unlimited/declaration-strict-value": 21
+  },
+  "css/pulse-scheduling.css": {
+    "scale-unlimited/declaration-strict-value": 11,
+    "no-descending-specificity": 5
+  },
+  "css/responsive.css": {
+    "declaration-no-important": 4,
+    "selector-max-id": 2
+  },
+  "css/scrollbar.css": {
+    "selector-max-id": 10
+  },
+  "css/search.css": {
+    "scale-unlimited/declaration-strict-value": 3
+  },
+  "css/sidebar.css": {
+    "scale-unlimited/declaration-strict-value": 3,
+    "declaration-no-important": 2,
+    "selector-max-id": 9
+  },
+  "css/toast.css": {
+    "scale-unlimited/declaration-strict-value": 9,
+    "selector-max-id": 1
+  },
+  "css/type-definition-window.css": {
+    "scale-unlimited/declaration-strict-value": 8,
+    "no-descending-specificity": 1
+  },
+  "css/utilities.css": {
+    "scale-unlimited/declaration-strict-value": 5,
+    "declaration-no-important": 68
+  },
+  "css/window.css": {
+    "scale-unlimited/declaration-strict-value": 11,
+    "no-descending-specificity": 1
+  }
+}

@@ -1,30 +1,34 @@
 {
   "css/animations.css": {
-    "scale-unlimited/declaration-strict-value": 1
+    "scale-unlimited/declaration-strict-value": 3
   },
   "css/brow.css": {
     "scale-unlimited/declaration-strict-value": 2
   },
   "css/canvas.css": {
-    "scale-unlimited/declaration-strict-value": 24,
+    "scale-unlimited/declaration-strict-value": 47,
     "declaration-no-important": 4,
+    "declaration-property-value-disallowed-list": 13,
     "no-descending-specificity": 2
   },
   "css/codemirror.css": {
-    "scale-unlimited/declaration-strict-value": 5,
+    "scale-unlimited/declaration-strict-value": 11,
     "declaration-no-important": 1,
+    "declaration-property-value-disallowed-list": 4,
     "selector-max-id": 10
   },
   "css/components.css": {
-    "scale-unlimited/declaration-strict-value": 25,
+    "scale-unlimited/declaration-strict-value": 35,
+    "declaration-property-value-disallowed-list": 12,
     "no-descending-specificity": 3
   },
   "css/components/base-panel.css": {
-    "scale-unlimited/declaration-strict-value": 13,
+    "scale-unlimited/declaration-strict-value": 15,
+    "declaration-property-value-disallowed-list": 8,
     "no-descending-specificity": 1
   },
   "css/core.css": {
-    "scale-unlimited/declaration-strict-value": 12,
+    "scale-unlimited/declaration-strict-value": 16,
     "declaration-no-important": 3,
     "selector-max-id": 19
   },
@@ -33,21 +37,22 @@
     "no-descending-specificity": 23
   },
   "css/door.css": {
-    "scale-unlimited/declaration-strict-value": 11,
+    "scale-unlimited/declaration-strict-value": 17,
     "no-descending-specificity": 2,
     "selector-max-id": 19
   },
   "css/drawer.css": {
-    "scale-unlimited/declaration-strict-value": 26,
+    "scale-unlimited/declaration-strict-value": 30,
     "no-descending-specificity": 3,
     "selector-max-id": 20
   },
   "css/element-table.css": {
-    "scale-unlimited/declaration-strict-value": 2,
+    "scale-unlimited/declaration-strict-value": 10,
+    "declaration-property-value-disallowed-list": 6,
     "no-descending-specificity": 2
   },
   "css/element/execution-state.css": {
-    "scale-unlimited/declaration-strict-value": 1
+    "scale-unlimited/declaration-strict-value": 4
   },
   "css/element/followup.css": {
     "scale-unlimited/declaration-strict-value": 1,
@@ -55,36 +60,44 @@
   },
   "css/element/meld.css": {
     "scale-unlimited/declaration-strict-value": 1,
-    "declaration-no-important": 1
+    "declaration-no-important": 1,
+    "declaration-property-value-disallowed-list": 1
   },
   "css/element/rectangle-selection.css": {
+    "scale-unlimited/declaration-strict-value": 3,
+    "declaration-property-value-disallowed-list": 1
+  },
+  "css/element/resize.css": {
     "scale-unlimited/declaration-strict-value": 1
   },
   "css/element/states/canvas-placed.css": {
-    "scale-unlimited/declaration-strict-value": 1
+    "scale-unlimited/declaration-strict-value": 1,
+    "declaration-property-value-disallowed-list": 1
   },
   "css/element/states/panel.css": {
-    "scale-unlimited/declaration-strict-value": 5
+    "scale-unlimited/declaration-strict-value": 6
   },
   "css/element/title-bar.css": {
-    "scale-unlimited/declaration-strict-value": 3
+    "scale-unlimited/declaration-strict-value": 4,
+    "declaration-property-value-disallowed-list": 1
   },
   "css/element/token-popup.css": {
-    "scale-unlimited/declaration-strict-value": 5
+    "scale-unlimited/declaration-strict-value": 9,
+    "declaration-property-value-disallowed-list": 3
   },
   "css/element/tray.css": {
     "scale-unlimited/declaration-strict-value": 1
   },
   "css/filetree.css": {
-    "scale-unlimited/declaration-strict-value": 1,
+    "scale-unlimited/declaration-strict-value": 3,
     "declaration-no-important": 1
   },
   "css/ground.css": {
-    "scale-unlimited/declaration-strict-value": 6,
+    "scale-unlimited/declaration-strict-value": 8,
     "no-descending-specificity": 5
   },
   "css/handlers-panel.css": {
-    "scale-unlimited/declaration-strict-value": 1,
+    "scale-unlimited/declaration-strict-value": 9,
     "no-descending-specificity": 1
   },
   "css/loading.css": {
@@ -96,24 +109,29 @@
     "selector-max-id": 5
   },
   "css/namespaces-bar.css": {
-    "scale-unlimited/declaration-strict-value": 20,
+    "scale-unlimited/declaration-strict-value": 23,
+    "declaration-property-value-disallowed-list": 4,
     "selector-max-id": 1
   },
   "css/obsidian-element.css": {
     "no-descending-specificity": 2
   },
   "css/panel-base.css": {
-    "scale-unlimited/declaration-strict-value": 17
+    "scale-unlimited/declaration-strict-value": 19,
+    "declaration-property-value-disallowed-list": 5
   },
   "css/plugin-panel.css": {
-    "scale-unlimited/declaration-strict-value": 80,
+    "scale-unlimited/declaration-strict-value": 122,
+    "declaration-property-value-disallowed-list": 20,
     "no-descending-specificity": 4
   },
   "css/pulse-panel.css": {
-    "scale-unlimited/declaration-strict-value": 21
+    "scale-unlimited/declaration-strict-value": 37,
+    "declaration-property-value-disallowed-list": 6
   },
   "css/pulse-scheduling.css": {
-    "scale-unlimited/declaration-strict-value": 11,
+    "scale-unlimited/declaration-strict-value": 12,
+    "declaration-property-value-disallowed-list": 2,
     "no-descending-specificity": 5
   },
   "css/responsive.css": {
@@ -124,19 +142,21 @@
     "selector-max-id": 10
   },
   "css/search.css": {
-    "scale-unlimited/declaration-strict-value": 3
+    "scale-unlimited/declaration-strict-value": 11
   },
   "css/sidebar.css": {
-    "scale-unlimited/declaration-strict-value": 3,
+    "scale-unlimited/declaration-strict-value": 4,
     "declaration-no-important": 2,
     "selector-max-id": 9
   },
   "css/toast.css": {
-    "scale-unlimited/declaration-strict-value": 9,
+    "scale-unlimited/declaration-strict-value": 19,
+    "declaration-property-value-disallowed-list": 5,
     "selector-max-id": 1
   },
   "css/type-definition-window.css": {
-    "scale-unlimited/declaration-strict-value": 8,
+    "scale-unlimited/declaration-strict-value": 11,
+    "declaration-property-value-disallowed-list": 1,
     "no-descending-specificity": 1
   },
   "css/utilities.css": {
@@ -145,6 +165,7 @@
   },
   "css/window.css": {
     "scale-unlimited/declaration-strict-value": 11,
+    "declaration-property-value-disallowed-list": 1,
     "no-descending-specificity": 1
   }
 }

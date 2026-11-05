@@ -9,7 +9,8 @@ let badge: HTMLDivElement | null = null;
 function update(): void {
     if (!badge) return;
     const count = canvasSyncQueue.size;
-    if (count === 0) {
+    const somethingPending = canvasSyncQueue.entries.some(() => true);
+    if (!somethingPending) {
         badge.hidden = true;
         badge.removeAttribute('data-tooltip');
     } else {

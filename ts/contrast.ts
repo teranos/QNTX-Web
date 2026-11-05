@@ -104,7 +104,9 @@ export function ruleHits(file: string, css: string, tokens: Record<string, strin
         const fg = parseColour(resolve(color[1], tokens) ?? '');
         const bk = parseColour(resolve(bg[1], tokens) ?? '');
         if (!fg || !bk || fg.alpha !== 1 || bk.alpha !== 1) continue;
-        out.push({ key: `${file} | ${selector} | color:${color[1]} on ${bg[1]}`, file, selector, color: color[1], background: bg[1], ratio: ratio(fg.rgb, bk.rgb) });
+        // The key ignores var() fallbacks: stripping a dead fallback must not look like a new failure.
+        const bare = (v: string) => v.replace(/var\(\s*(--[a-z0-9-]+)\s*,[^)]*\)/g, 'var($1)');
+        out.push({ key: `${file} | ${selector} | color:${bare(color[1])} on ${bare(bg[1])}`, file, selector, color: color[1], background: bg[1], ratio: ratio(fg.rgb, bk.rgb) });
     }
     return out;
 }

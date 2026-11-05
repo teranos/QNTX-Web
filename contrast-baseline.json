@@ -51,13 +51,13 @@
     "css/pulse-panel.css | .pulse-btn-delete.pulse-btn-confirming | color:var(--status-failed-text) on var(--status-failed-bg)",
     "css/pulse-panel.css | .pulse-btn-force | color:white on #ff6b00",
     "css/pulse-panel.css | .pulse-btn-force.pulse-btn-confirming | color:var(--status-pending-text) on var(--status-pending-bg)",
-    "css/pulse-scheduling.css | .pulse-btn-confirm | color:white on var(--color-success, #4caf50)",
+    "css/pulse-scheduling.css | .pulse-btn-confirm | color:white on var(--color-success)",
     "css/pulse-scheduling.css | .pulse-btn-confirm-active | color:var(--status-pending-text) on var(--status-pending-bg)",
     "css/pulse-scheduling.css | .pulse-schedule-badge.active | color:var(--status-completed-text) on var(--status-completed-bg)",
     "css/pulse-scheduling.css | .pulse-schedule-badge.paused | color:#757575 on var(--bg-almost-white)",
-    "css/type-definition-window.css | .add-field-btn | color:white on var(--accent-color, #4a9eff)",
-    "css/type-definition-window.css | .type-definition-content .btn-primary | color:white on var(--accent-color, #4a9eff)",
-    "css/window.css | .btn--primary | color:#fff on var(--accent-color, #5a9a6a)",
+    "css/type-definition-window.css | .add-field-btn | color:white on var(--accent-color)",
+    "css/type-definition-window.css | .type-definition-content .btn-primary | color:white on var(--accent-color)",
+    "css/window.css | .btn--primary | color:#fff on var(--accent-color)",
     "css/window.css | .element-error | color:#ffe4ec on var(--color-error)"
   ]
 }

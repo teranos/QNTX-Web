@@ -6,7 +6,16 @@
  * Personas: Tim (happy path), Spike (edge cases), Jenny (complex scenarios).
  */
 
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, mock } from 'bun:test';
+import * as realFiles from './api/files';
+
+// The picture a say carries is sent up through uploadFile, and apiJson answers {} in every test
+// (test-setup.ts). mock.module is process-global: this stands in only while a test sets shelved,
+// and is the real uploadFile otherwise.
+let shelved: ((file: File) => Promise<realFiles.FileUploadResult>) | null = null;
+const realUpload = realFiles.uploadFile;
+mock.module('./api/files', () => ({ ...realFiles, uploadFile: (file: File) => (shelved ?? realUpload)(file) }));
+
 import { drawClaude, type ClaudeAm, type ClaudeSaid, type LiveEvent, type NodeAgent } from './claude-element';
 import type { SessionRead } from './chat';
 
@@ -284,19 +293,192 @@ describe('Claude - Jenny', () => {
         stop();
     });
 
-    // Jenny: while it answers, a second thing cannot be said from here.
-    test('the box is held while it answers', async () => {
+    // "kinda buggy still is, the text linger even after i sent it"
+    test('the box empties when it is said, before the agent answers', async () => {
         const body = document.createElement('div');
-        let answer: (said: ClaudeSaid) => void = () => {};
-        const asked = node({ say: () => new Promise<ClaudeSaid>(resolve => { answer = resolve; }) });
+        const asked = node({ say: () => new Promise<ClaudeSaid>(() => {}) });
         const stop = drawClaude(body, asked, 1);
+        await settled();
+        say(body, 'hey, own https://github.com/teranos/QNTX/pull/1508 please');
+        await settled();
+        expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('');
+        expect(body.querySelector('.claude-status')?.textContent).toContain('answering');
+        stop();
+    });
+
+    // "i wish to be able to send multipl emessahes, like i do now, here in claude code, if you get me"
+    test('what is said while it answers waits, shown as waiting, and is said when the turn before it ends', async () => {
+        const body = document.createElement('div');
+        const answers: Array<(said: ClaudeSaid) => void> = [];
+        const sent: string[] = [];
+        const stop = drawClaude(body, node({
+            say: (says) => { sent.push(says); return new Promise<ClaudeSaid>(resolve => { answers.push(resolve); }); },
+        }), 1);
         await settled();
         say(body, 'first');
         await settled();
-        expect(body.querySelector<HTMLButtonElement>('.claude-send')!.disabled).toBe(true);
-        answer(answered);
-        await settled();
         expect(body.querySelector<HTMLButtonElement>('.claude-send')!.disabled).toBe(false);
+        say(body, 'second');
+        say(body, 'third');
+        await settled();
+        const waiting = () => Array.from(body.querySelectorAll('.chat-waiting')).map(r => r.querySelector('.chat-text')?.textContent);
+        expect(sent).toEqual(['first']);
+        expect(waiting()).toEqual(['second', 'third']);
+        expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('');
+
+        answers[0](answered);
+        await settled();
+        expect(sent).toEqual(['first', 'second']);
+        expect(waiting()).toEqual(['third']);
+        expect(body.querySelector('.claude-status')?.textContent).toContain('answering');
+
+        answers[1](answered);
+        await settled();
+        expect(sent).toEqual(['first', 'second', 'third']);
+        expect(waiting()).toEqual([]);
+
+        answers[2](answered);
+        await settled();
+        expect(body.querySelector('.claude-status')?.textContent).not.toContain('answering');
+        stop();
+    });
+
+    // "i wish to be able to send multipl emessahes, like i do now, here in claude code, if you get me"
+    // In Claude Code a message that waits stays with the session it was typed in: a chat left for
+    // another harness's tab still says what waits to the harness it was typed for.
+    test('what waits is said to the harness it was typed for, after its chat was left for another tab', async () => {
+        const body = document.createElement('div');
+        const answers: Array<(said: ClaudeSaid) => void> = [];
+        const sent: string[] = [];
+        const stop = drawClaude(body, node({
+            say: (says) => { sent.push(says); return new Promise<ClaudeSaid>(resolve => { answers.push(resolve); }); },
+        }), 1);
+        await settled();
+        say(body, 'first');
+        await settled();
+        say(body, 'second');
+        await settled();
+        // Another tab pressed: this chat is settled and another drawn in its place.
+        stop();
+        answers[0](answered);
+        await settled();
+        expect(sent).toEqual(['first', 'second']);
+        answers[1](answered);
+        await settled();
+    });
+
+    // A refusal does not cost the words: what was refused is back in the box, what waited behind it still waits, and none of it is said.
+    test('a refusal puts what was refused back in the box, keeps what waited waiting, and says none of it until Say', async () => {
+        const body = document.createElement('div');
+        const answers: Array<{ resolve: (said: ClaudeSaid) => void; reject: (err: Error) => void }> = [];
+        const sent: string[] = [];
+        const stop = drawClaude(body, node({
+            say: (says) => { sent.push(says); return new Promise<ClaudeSaid>((resolve, reject) => { answers.push({ resolve, reject }); }); },
+        }), 1);
+        await settled();
+        say(body, 'first');
+        await settled();
+        say(body, 'second');
+        await settled();
+        answers[0].reject(new Error('/api/agent/say: HTTP 500 Claude Code did not answer: exit status 1'));
+        await settled();
+        const waiting = () => Array.from(body.querySelectorAll('.chat-waiting')).map(r => r.querySelector('.chat-text')?.textContent);
+        expect(sent).toEqual(['first']);
+        expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('first');
+        expect(waiting()).toEqual(['second']);
+
+        body.querySelector<HTMLButtonElement>('.claude-send')!.click();
+        await settled();
+        expect(sent).toEqual(['first', 'first']);
+        answers[1].resolve(answered);
+        await settled();
+        expect(sent).toEqual(['first', 'first', 'second']);
+        expect(waiting()).toEqual([]);
+        stop();
+    });
+
+    // A node standing in for /api/files: each picture sent up is a file of its own.
+    const files = () => {
+        shelved = (file: File) => file.text().then(named => ({ id: `f-${named}`, filename: 'said.png', size: named.length }) as realFiles.FileUploadResult);
+        return { restore: () => { shelved = null; } };
+    };
+    const picked = (body: HTMLElement, named: string) => {
+        const pick = body.querySelector<HTMLInputElement>('.claude-pick')!;
+        Object.defineProperty(pick, 'files', { value: [new Blob([named], { type: 'image/png' })], configurable: true });
+        pick.dispatchEvent(new Event('change'));
+    };
+
+    // Each thing said keeps the picture it was said with, through a refusal.
+    test('a refusal costs no picture: each waiting one keeps its own, and a picture picked since is left in the box', async () => {
+        const body = document.createElement('div');
+        const answers: Array<{ resolve: (said: ClaudeSaid) => void; reject: (err: Error) => void }> = [];
+        const sent: Array<[string, string]> = [];
+        const shelf = files();
+        try {
+            const stop = drawClaude(body, node({
+                say: (says, _mode, carried) => { sent.push([says, carried?.file_id ?? '']); return new Promise<ClaudeSaid>((resolve, reject) => { answers.push({ resolve, reject }); }); },
+            }), 1);
+            await settled();
+            picked(body, 'one');
+            say(body, 'first');
+            await settled();
+            picked(body, 'two');
+            say(body, 'second');
+            await settled();
+            // Typed and picked since, not yet said.
+            picked(body, 'three');
+            body.querySelector<HTMLTextAreaElement>('.claude-says')!.value = 'third';
+            answers[0].reject(new Error('/api/agent/say: HTTP 500 Claude Code did not answer: exit status 1'));
+            await settled();
+            const waiting = () => Array.from(body.querySelectorAll('.chat-waiting')).map(r => r.querySelector('.chat-text')?.textContent);
+            expect(waiting()).toEqual(['first', 'second']);
+            expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('third');
+
+            body.querySelector<HTMLButtonElement>('.claude-send')!.click();
+            // Each say answered once it has been made, in the order made; one never made fails here.
+            for (let i = 1; i <= 3; i++) {
+                for (let tries = 0; answers.length <= i && tries < 50; tries++) await settled();
+                expect(answers.length).toBeGreaterThan(i);
+                answers[i].resolve(answered);
+            }
+            await settled();
+            expect(sent).toEqual([['first', 'f-one'], ['first', 'f-one'], ['second', 'f-two'], ['third', 'f-three']]);
+            stop();
+        } finally { shelf.restore(); }
+    });
+
+    // An answer read before a later one is not drawn over it.
+    test('a session read that comes back after a later one does not draw over it', async () => {
+        const body = document.createElement('div');
+        const answers: Array<(said: ClaudeSaid) => void> = [];
+        let answeredCount = 0;
+        const reads: Array<() => void> = [];
+        const sessionAfter = (n: number): SessionRead => ({ ...session, turns: [...session.turns, { at: '2026-10-05T09:00:05Z', speaker: 'assistant', text: `answer ${n}`, of: `s-${n}` }] });
+        const stop = drawClaude(body, node({
+            say: () => new Promise<ClaudeSaid>(resolve => { answers.push(said => { answeredCount++; resolve(said); }); }),
+            read: () => { const n = answeredCount; return new Promise<SessionRead>(resolve => { reads.push(() => resolve(sessionAfter(n))); }); },
+        }), 1);
+        await settled();
+        say(body, 'first');
+        await settled();
+        say(body, 'second');
+        await settled();
+        answers[0](answered);
+        await settled();
+        // The read say's answer asked for, then settle's, which is held back.
+        reads[0]();
+        await settled();
+        const held = reads[1];
+        answers[1](answered);
+        await settled();
+        for (const [i, read] of reads.entries()) if (i > 1) read();
+        await settled();
+        for (const [i, read] of reads.entries()) if (i > 1) read();
+        await settled();
+        expect(body.querySelector('.claude-session')!.textContent).toContain('answer 2');
+        held();
+        await settled();
+        expect(body.querySelector('.claude-session')!.textContent).toContain('answer 2');
         stop();
     });
 });
@@ -338,7 +520,7 @@ describe('Claude - the session while it runs', () => {
         expect(rows).toEqual(['how long has the box been up?', '$ uptime', 'up 3 days, 2 users', 'Up 3 days.']);
         expect(live.textContent).not.toContain('[tool]');
         // Still answering: say has not come back.
-        expect(body.querySelector<HTMLButtonElement>('.claude-send')!.disabled).toBe(true);
+        expect(body.querySelector('.claude-status')?.textContent).toContain('answering');
 
         landed!(event('text', 'Up 3 days.'));
         expect(live.querySelectorAll('.chat-said').length).toBe(1);

@@ -24,7 +24,7 @@ When(/^I say "(.+)" to it$/, async ({ page }, words: string) => {
 Then('its words arrive while it answers', async ({ page }) => {
     const live = page.locator('.chat-live');
     const assistant = live.locator('.chat-said .chat-words');
-    // What it did lands first, as the thing itself, then the words, while the send button is still held.
+    // What it did lands first, as the thing itself, then the words, while it is still answering.
     await expect(live.locator('.chat-did').first()).toHaveText('$ echo MOCK uptime');
     await expect(live.locator('.chat-did').nth(1)).toContainText('+ MOCK line 40 of 40, written by the mock');
     await expect(live.locator('.chat-got')).toHaveText('MOCK uptime: up 0 days, this is the mock');
@@ -32,9 +32,9 @@ Then('its words arrive while it answers', async ({ page }) => {
     await expect(assistant).toBeVisible();
     const first = await assistant.textContent();
     await page.screenshot({ path: `${SHOTS}/1-first-words.png` });
-    await expect(page.locator('.claude-send')).toBeDisabled();
+    await expect(page.locator('.claude-status')).toContainText('answering');
     await expect.poll(() => assistant.textContent(), { message: 'the words grow while it answers' }).not.toBe(first);
-    await expect(page.locator('.claude-send')).toBeDisabled();
+    await expect(page.locator('.claude-status')).toContainText('answering');
     await page.screenshot({ path: `${SHOTS}/2-more-words.png` });
     // What was said is not drawn twice: the transcript holds it, the live view does not.
     await expect(live).not.toContainText('[human]');
@@ -63,7 +63,7 @@ Then('when I scroll back down, what arrives follows', async ({ page }) => {
 });
 
 Then('once it has answered, the transcript holds them and the live view is gone', async ({ page }) => {
-    await expect(page.locator('.claude-send')).toBeEnabled({ timeout: 30_000 });
+    await expect(page.locator('.claude-status')).not.toContainText('answering', { timeout: 30_000 });
     await expect(page.locator('.chat-live .chat-row')).toHaveCount(0);
     await expect(page.locator('.claude-session')).toContainText('You said: What would you tell people at a claude code community meetup?');
     await page.screenshot({ path: `${SHOTS}/3-answered.png` });

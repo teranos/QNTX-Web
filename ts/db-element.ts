@@ -169,7 +169,7 @@ function landingsHTML(landings: Landing[] | undefined, failed: any, onePath: str
         </div>`).join('');
 
     return `
-        <div style="padding: 8px 0; border-bottom: 1px solid var(--border-color, #333);">
+        <div style="padding: 8px 0; border-bottom: 1px solid var(--border-on-dark);">
             <span class="label">Answering reads from ${landings.length} ${landings.length === 1 ? 'database' : 'databases'}:</span>
             <span class="element-value">${held.toLocaleString()} attestations</span>
             <div style="margin-top: 4px;">${rows}</div>
@@ -265,7 +265,7 @@ function renderDbStats(): void {
             : '';
 
     sectionOverview.innerHTML = `
-        <div style="display: flex; flex-wrap: wrap; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--border-color, #333);">
+        <div style="display: flex; flex-wrap: wrap; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--border-on-dark);">
             <span><span class="label">Backend:</span> <span class="element-value">${storageBackend}</span></span>
             ${countSpan('Attestations', dbStats.total_attestations)}
         </div>
@@ -338,7 +338,7 @@ function renderDbStats(): void {
         }
     }
 
-    sectionPredicates.innerHTML = predicatesHTML ? `<div style="padding: 8px 0; border-bottom: 1px solid var(--border-color, #333);">${predicatesHTML}</div>` : '';
+    sectionPredicates.innerHTML = predicatesHTML ? `<div style="padding: 8px 0; border-bottom: 1px solid var(--border-on-dark);">${predicatesHTML}</div>` : '';
 
     // Wire type links. Both sections, because a namespace's own predicates and
     // contexts are drawn beside its database in the overview and they open the
@@ -384,7 +384,7 @@ function renderDbStats(): void {
         }
 
         sectionEvictions.innerHTML = `
-            <div style="padding: 8px 0; border-bottom: 1px solid var(--border-color, #333);">
+            <div style="padding: 8px 0; border-bottom: 1px solid var(--border-on-dark);">
                 <div style="margin-bottom: 4px;">
                     <span class="label">Evictions:</span>
                     <span class="element-value">${summary.count} events, ${summary.totalEvicted.toLocaleString()} attestations evicted</span>
@@ -762,7 +762,7 @@ function renderPerformanceSection(container: HTMLElement, perf: PerfData | null,
 
     if (!perf || !perf.current || perf.current.length === 0) {
         if (liveHTML) {
-            container.innerHTML = `<div style="padding: 8px 0; border-bottom: 1px solid var(--border-color, #333);">${liveHTML}</div>`;
+            container.innerHTML = `<div style="padding: 8px 0; border-bottom: 1px solid var(--border-on-dark);">${liveHTML}</div>`;
         }
         return;
     }
@@ -806,7 +806,7 @@ function renderPerformanceSection(container: HTMLElement, perf: PerfData | null,
     }).join('');
 
     container.innerHTML = `
-        <div style="padding: 8px 0; border-bottom: 1px solid var(--border-color, #333);">
+        <div style="padding: 8px 0; border-bottom: 1px solid var(--border-on-dark);">
             ${liveHTML}
             <span class="label" style="">Performance (5m windows):</span>
             <div style="margin-top: 4px;">${rows}</div>

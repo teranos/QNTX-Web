@@ -306,7 +306,7 @@ function buildEditUI(container: HTMLElement): void {
     saveSection.className = 'save-section';
     saveSection.style.cssText = `
         padding: 12px;
-        border-top: 1px solid var(--panel-border-color, #333);
+        border-top: 1px solid var(--panel-border-color);
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -400,9 +400,9 @@ function attachEditListeners(container: HTMLElement): void {
         saveBtn.textContent = 'Attesting...';
         try {
             await persistTypeDefinition();
-            showStatus(container, '✓ Attested', 'var(--success-color, #2ecc71)');
+            showStatus(container, '✓ Attested', 'var(--color-success)');
         } catch (error) {
-            showStatus(container, `✗ Failed to attest: ${error instanceof Error ? error.message : String(error)}`, 'var(--error-color, #e74c3c)', 0);
+            showStatus(container, `✗ Failed to attest: ${error instanceof Error ? error.message : String(error)}`, 'var(--color-error)', 0);
             log.error(SEG.ERROR, 'Failed to attest type definition:', error);
         } finally {
             saveBtn.disabled = false;
@@ -650,7 +650,7 @@ async function loadExistingTypes(typesList: HTMLElement, container: HTMLElement)
             item.appendChild(fieldCount);
             item.appendChild(ends);
 
-            item.addEventListener('mouseenter', () => { item.style.background = 'var(--hover-bg, rgba(255,255,255,0.05))'; });
+            item.addEventListener('mouseenter', () => { item.style.background = 'var(--panel-bg-hover)'; });
             item.addEventListener('mouseleave', () => { item.style.background = ''; });
 
             item.addEventListener('click', () => {

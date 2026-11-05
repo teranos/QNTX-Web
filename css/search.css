@@ -36,8 +36,8 @@
 }
 
 .search-new-type-btn:hover {
-    color: var(--text-on-dark-primary, #fff);
-    border-color: var(--text-on-dark-primary, #fff);
+    color: var(--text-on-dark-emphasis);
+    border-color: var(--text-on-dark-emphasis);
 }
 
 /* Result line */

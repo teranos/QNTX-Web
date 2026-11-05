@@ -421,22 +421,21 @@ describe('Spike: sendMessage', () => {
 // The node names the socket in its first message, and what is asked for over
 // HTTP names it back, so a stream comes to this socket alone.
 describe('The socket this page holds', () => {
-    test('the version message names it, and the version handler still hears it', () => {
-        const { routeMessage, ownSocket, registerHandler, unregisterHandler } = require('./client/ws');
+    test('the version message names it, and the version handler handed to routing still hears it', () => {
+        const { routeMessage, ownSocket } = require('./client/ws');
         const heard = mock(() => {});
-        registerHandler('version', heard);
-        try {
-            routeMessage({ type: 'version', version: 'v1', commit: 'abc1234', socket: '10.0.0.1:5000_42' }, {});
-            expect(ownSocket()).toBe('10.0.0.1:5000_42');
-            expect(heard).toHaveBeenCalledTimes(1);
-        } finally { unregisterHandler('version'); }
+        routeMessage({ type: 'version', version: 'v1', commit: 'abc1234', socket: '10.0.0.1:5000_42' }, { version: heard });
+        expect(ownSocket()).toBe('10.0.0.1:5000_42');
+        expect(heard).toHaveBeenCalledTimes(1);
     });
 
-    test('a request names it once it is known, and names none before', () => {
-        const { routeMessage, withOwnSocket } = require('./client/ws');
+    test('none is named before the node names one, and none once it closed', () => {
+        const { routeMessage, ownSocket, socketClosed } = require('./client/ws');
         routeMessage({ type: 'version', version: 'v1', commit: 'abc1234' }, {});
-        expect(withOwnSocket({ template: 'hi', element_id: 'e-1' })).toEqual({ template: 'hi', element_id: 'e-1' });
+        expect(ownSocket()).toBe('');
         routeMessage({ type: 'version', version: 'v1', commit: 'abc1234', socket: '10.0.0.1:5000_43' }, {});
-        expect(withOwnSocket({ template: 'hi', element_id: 'e-1' })).toEqual({ template: 'hi', element_id: 'e-1', socket: '10.0.0.1:5000_43' });
+        expect(ownSocket()).toBe('10.0.0.1:5000_43');
+        socketClosed();
+        expect(ownSocket()).toBe('');
     });
 });

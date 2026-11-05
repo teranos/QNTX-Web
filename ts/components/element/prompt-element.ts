@@ -17,7 +17,7 @@
 import type { Element } from '@teranos/elements';
 import { SO, Doc, Prose } from '../../sym';
 import { log, SEG } from '../../logger';
-import { apiFetch, withOwnSocket } from '../../client';
+import { apiFetch, ownSocket } from '../../client';
 import { jsonBody } from '../../http-utils';
 import { preventDrag, storeCleanup } from '@teranos/elements';
 import { canvasPlaced } from '@teranos/elements';
@@ -26,7 +26,8 @@ import { uiState } from '../../state/ui';
 import { createAutoSave } from './element-autosave';
 import { tooltip } from '../tooltip';
 import { findCompositionByElement, extractElementIds } from '../../state/compositions';
-import { createResultElement, getResponseTokenCount, unsubscribeStream, populateStaticContent } from './result-element';
+import { createResultElement, getResponseTokenCount, unsubscribeStream } from './result-element';
+import { answerArrived } from './whole-answer';
 
 /**
  * Prompt element execution status
@@ -248,11 +249,14 @@ export async function setupPromptElement(element: HTMLElement, item: Element): P
             // Spawn response element below prompt before fetch starts
             const responseElement = spawnResponseBelow(element, item.id, template);
 
-            const response = await apiFetch('/api/prompt/direct', jsonBody('POST', withOwnSocket({
+            // The socket the stream is asked on: it is sent there and nowhere else.
+            const asked = ownSocket();
+            const response = await apiFetch('/api/prompt/direct', jsonBody('POST', {
                 template: finalTemplate,
                 element_id: item.id,
                 ...(fileIds.length > 0 && { file_ids: fileIds }),
-            })));
+                ...(asked && { socket: asked }),
+            }));
 
             if (!response.ok) {
                 const errorText = await response.text();
@@ -281,11 +285,9 @@ export async function setupPromptElement(element: HTMLElement, item: Element): P
                 return;
             }
 
-            // If no tokens arrived (non-streaming provider), populate with response text
+            // The answer whole, drawn in place of the stream when that cannot finish where it was sent.
+            if (data.response) answerArrived(item.id, asked, data.response);
             const tokenCount = responseElement ? getResponseTokenCount(responseElement) : 0;
-            if (tokenCount === 0 && data.response && responseElement) {
-                populateStaticContent(responseElement, data.response);
-            }
             log.debug(SEG.ELEMENT, `[Prompt] Response complete, ${tokenCount} tokens`);
 
         } catch (error) {

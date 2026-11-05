@@ -24,4 +24,4 @@ export { apiFetch, apiJson } from './client/http';
 export { assertOk, jsonBody, stripProtocol, extractHttpStatus } from './http-utils';
 
 // ── WebSocket ──
-export { connectWebSocket, sendMessage, registerHandler, unregisterHandler, validateBackendURL, routeMessage, ownSocket, withOwnSocket } from './client/ws';
+export { connectWebSocket, sendMessage, registerHandler, unregisterHandler, validateBackendURL, routeMessage, ownSocket } from './client/ws';

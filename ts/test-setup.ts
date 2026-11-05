@@ -37,7 +37,6 @@ mock.module('./client', () => ({
     registerHandler: () => {},
     unregisterHandler: () => {},
     ownSocket: () => '',
-    withOwnSocket: <T,>(body: T) => body,
 }));
 
 export {};

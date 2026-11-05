@@ -5,6 +5,7 @@
 
 import { describe, test, expect, beforeEach } from 'bun:test';
 import { createResultElement, type ExecutionResult } from './result-element';
+import { answerArrived } from './whole-answer';
 import type { Element } from '@teranos/elements';
 
 // Only run these tests when USE_JSDOM=1 (CI environment)
@@ -120,5 +121,19 @@ describe('ResultElement', () => {
             expect(container.contains(element)).toBe(false);
         });
 
+    });
+
+    // "3. who? the receiver?"
+    // A stream that cannot come, or cannot finish, is drawn whole from the response, and the element is done.
+    describe('a stream drawn whole from the response', () => {
+        test('the answer is the output, and copying it is offered', () => {
+            const element = createResultElement({ ...item, id: 'result-stream-1' }, undefined, undefined, 'how long has the box been up?', 'job-whole-1');
+            document.body.appendChild(element);
+            const copy = element.querySelector<HTMLButtonElement>('button[title="Copy to clipboard"]') ?? Array.from(element.querySelectorAll<HTMLButtonElement>('button')).find(b => b.textContent === '⎘');
+            expect(copy?.style.display).toBe('none');
+            answerArrived('job-whole-1', '', 'Up 3 days.');
+            expect(element.querySelector('.result-element-output')?.textContent).toBe('Up 3 days.');
+            expect(copy?.style.display).toBe('');
+        });
     });
 });

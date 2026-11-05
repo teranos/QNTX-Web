@@ -23,7 +23,8 @@ import { unmeldComposition, makeDraggable, storeCleanup, preventDrag, wireExpand
 import { autoMeldResultBelow } from './meld/auto-meld-result';
 import { setResponseState } from './response-state';
 import { uiState } from '../../state/ui';
-import { registerHandler, unregisterHandler, apiFetch, backendWsUrl, withOwnSocket } from '../../client';
+import { registerHandler, unregisterHandler, apiFetch, backendWsUrl, ownSocket } from '../../client';
+import { awaitWhole, answerArrived, streamDone } from './whole-answer';
 import { assertOk, jsonBody } from '../../http-utils';
 import { canvasSyncQueue } from '../../api/canvas-sync';
 import { createFollowUpZone, type FollowUpRequest, type FollowUpControls } from './element-followup';
@@ -99,6 +100,7 @@ export function subscribeStream(jobId: string, callback: StreamCallback): void {
 
 export function unsubscribeStream(jobId: string): void {
     subscribers.delete(jobId);
+    streamDone(jobId);
     if (subscribers.size === 0) {
         unregisterHandler('llm_stream');
         log.debug(SEG.ELEMENT, '[ResultElement] Unregistered llm_stream handler');
@@ -727,16 +729,22 @@ export function createResultElement(
 
         let streamStartMs = 0;
 
+        // The stream is over, whole or not: what it drew stands and is kept.
+        const finish = () => {
+            unsubscribeStream(streamJobId!);
+            isStreaming = false;
+            // Reveal copy + expand buttons
+            copyBtn.style.display = '';
+            toWindowBtn.style.display = '';
+            // Disconnect from Metal renderer — keep last frame as static image
+            closeNebula();
+            persistContent();
+        };
+
         subscribeStream(streamJobId, (msg: LLMStreamMessage) => {
             if (msg.model) streamModel = msg.model;
 
             if (msg.done) {
-                unsubscribeStream(streamJobId!);
-                isStreaming = false;
-                // Reveal copy + expand buttons
-                copyBtn.style.display = '';
-                toWindowBtn.style.display = '';
-
                 // Compute and persist generation stats
                 const tokenCount = msg.completion_tokens || tokens.length;
                 if (tokenCount > 0) {
@@ -745,11 +753,7 @@ export function createResultElement(
                     savedStats = { tokenCount, tokPerSec, model: streamModel };
                     renderStatsLine(output, savedStats);
                 }
-
-                // Disconnect from Metal renderer — keep last frame as static image
-                closeNebula();
-
-                persistContent();
+                finish();
                 log.debug(SEG.ELEMENT, `[ResultElement] Stream complete for ${streamJobId}, ${tokens.length} tokens`);
                 return;
             }
@@ -766,6 +770,15 @@ export function createResultElement(
 
             }
             output.scrollTop = output.scrollHeight;
+        });
+
+        // A stream that cannot finish where it was sent: the answer whole, in place of what streamed.
+        awaitWhole(streamJobId, (text: string) => {
+            const token: StreamToken = { text };
+            tokens.splice(0, tokens.length, token);
+            output.replaceChildren(renderToken(token, 0, colorMode));
+            finish();
+            log.debug(SEG.ELEMENT, `[ResultElement] Stream for ${streamJobId} could not finish; drawn whole from the response`);
         });
     }
 
@@ -955,16 +968,6 @@ export function getResponseTokenCount(elementEl: HTMLElement): number {
 }
 
 /**
- * Populate a streaming response element with static text
- * (for non-streaming providers that return a full response).
- */
-export function populateStaticContent(elementEl: HTMLElement, text: string): void {
-    const output = elementEl.querySelector('.result-element-output');
-    if (!output) return;
-    output.appendChild(el('span', { text }));
-}
-
-/**
  * Update an existing response element's content in place.
  */
 export function updateResultElementContent(resultElement: HTMLElement, result: ExecutionResult): boolean {
@@ -1142,9 +1145,13 @@ async function executeStreamFollowUp(
     if (request.provider) body.provider = request.provider;
     if (request.fileIds.length > 0) body.file_ids = request.fileIds;
 
+    // The socket the stream is asked on: it is sent there and nowhere else.
+    const asked = ownSocket();
+    if (asked) body.socket = asked;
+
     const startTime = Date.now();
 
-    apiFetch('/api/prompt/direct', jsonBody('POST', withOwnSocket(body)))
+    apiFetch('/api/prompt/direct', jsonBody('POST', body))
         .then(async (response) => {
             await assertOk(response, 'Prompt API error');
             return response.json();
@@ -1161,12 +1168,9 @@ async function executeStreamFollowUp(
                 return;
             }
 
-            const tokenCount = getResponseTokenCount(responseElement);
-            if (tokenCount === 0 && data.response) {
-                populateStaticContent(responseElement, data.response);
-            }
+            if (data.response) answerArrived(responseElementId, asked, data.response);
 
-            log.debug(SEG.ELEMENT, `[ResultElement] Follow-up complete, ${tokenCount} streamed tokens`);
+            log.debug(SEG.ELEMENT, `[ResultElement] Follow-up complete, ${getResponseTokenCount(responseElement)} streamed tokens`);
         })
         .catch((err) => {
             unsubscribeStream(request.itemId);

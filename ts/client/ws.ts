@@ -51,9 +51,22 @@ export function ownSocket(): string {
     return socket;
 }
 
-/** body, naming the socket this page holds when the node has named one. */
-export function withOwnSocket<T extends Record<string, unknown>>(body: T): T & { socket?: string } {
-    return socket ? { ...body, socket } : body;
+// Who is told when the socket the node named closes, with the name it had.
+const socketGone = new Set<(gone: string) => void>();
+
+/** Tells told, with the name it had, each time the socket the node named closes. */
+export function whenSocketGone(told: (gone: string) => void): void {
+    socketGone.add(told);
+}
+
+/** The socket closed: the next is a new one, named by the node when it opens. */
+export function socketClosed(): void {
+    const gone = socket;
+    socket = '';
+    if (!gone) return;
+    for (const told of socketGone) {
+        try { told(gone); } catch (err: unknown) { log.error(SEG.WS, 'A listener for the socket closing failed:', err); }
+    }
 }
 
 // When authentication is restored (e.g. user logged in via another tab),
@@ -148,12 +161,6 @@ const MESSAGE_HANDLERS = {
 
         // Invoke registered handler
         dispatch('daemon_status', () => messageHandlers['daemon_status']?.(data));
-    },
-
-    // "3. who? the receiver?"
-    version: (data: VersionMessage) => {
-        socket = data.socket ?? '';
-        dispatch('version', () => messageHandlers['version']?.(data));
     },
 
     llm_stream: (data: LLMStreamMessage) => {
@@ -361,6 +368,10 @@ export function routeMessage(
     data: WebSocketMessage,
     registeredHandlers: MessageHandlers
 ): { handled: boolean; handlerType: 'builtin' | 'registered' | 'default' | 'none' } {
+    // "3. who? the receiver?"
+    // The node's first message names the socket it came on; it is then handled as ever.
+    if (data.type === 'version') socket = (data as VersionMessage).socket ?? '';
+
     // Look up built-in handler first
     const builtInHandler = MESSAGE_HANDLERS[data.type as keyof typeof MESSAGE_HANDLERS];
     if (builtInHandler) {
@@ -441,8 +452,7 @@ export function connectWebSocket(handlers: MessageHandlers): void {
     };
 
     ws.onclose = function(event: CloseEvent): void {
-        // The next socket is a new one, named by the node when it opens.
-        socket = '';
+        socketClosed();
         log.info(SEG.WS, 'WebSocket disconnected', {
             code: event.code,
             reason: event.reason || '(no reason)',

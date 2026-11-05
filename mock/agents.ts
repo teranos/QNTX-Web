@@ -82,10 +82,11 @@ class Going {
 
     constructor(readonly session: string) {}
 
-    print(kind: string, text: string, tool = ''): void {
+    /** One event, whole before anyone listening is handed it: a listener holds what it was handed. */
+    print(kind: string, text: string, tool = '', input = '{"command":"echo MOCK uptime"}'): void {
         const event: LiveEvent = {
             session: this.session, harness: 'claude', at: new Date().toISOString(), kind, text, tool,
-            tool_use_id: tool ? `mock-tool-use-${this.events.length}` : '', input: tool ? '{"command":"echo MOCK uptime"}' : '',
+            tool_use_id: tool ? `mock-tool-use-${this.events.length}` : '', input: tool ? input : '',
             raw: JSON.stringify({ mock: true, type: kind === 'delta' ? 'stream_event' : kind, text }), mark: String(this.events.length + 1),
         };
         this.events.push(event);
@@ -185,8 +186,7 @@ export class Agent {
         await wait(WORD_MS);
         going.print('tool_result', 'MOCK uptime: up 0 days, this is the mock');
         await wait(WORD_MS);
-        going.print('tool_use', 'Write', 'Write');
-        going.events[going.events.length - 1]!.input = JSON.stringify({ file_path: `mock/turn-${held.turns.length}.md`, content: Array.from({ length: 40 }, (_, i) => `MOCK line ${i + 1} of 40, written by the mock`).join('\n') });
+        going.print('tool_use', 'Write', 'Write', JSON.stringify({ file_path: `mock/turn-${held.turns.length}.md`, content: Array.from({ length: 40 }, (_, i) => `MOCK line ${i + 1} of 40, written by the mock`).join('\n') }));
         let said = '';
         for (const word of answer.split(' ')) {
             await wait(WORD_MS);

@@ -14,6 +14,11 @@ const testDir = defineBddConfig({
 
 export default defineConfig({
     testDir,
+    // The mock is one node, and its Node Agent one agent: what one story says
+    // to it is answered in every chat open on it. A chat opened while another
+    // story's turn prints follows that turn, a line at a time, and is not the
+    // quiet chat its own story opens. So the stories are walked one at a time.
+    workers: 1,
     outputDir: 'test-results',
     reporter: 'list',
     use: { baseURL: `http://localhost:${PORT}`, viewport: { width: 1440, height: 900 } },

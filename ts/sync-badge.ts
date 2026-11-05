@@ -8,12 +8,12 @@ let badge: HTMLDivElement | null = null;
 
 function update(): void {
     if (!badge) return;
-    const count = canvasSyncQueue.size;
-    const somethingPending = canvasSyncQueue.entries.some(() => true);
-    if (!somethingPending) {
+    if (!canvasSyncQueue.hasPending) {
         badge.hidden = true;
         badge.removeAttribute('data-tooltip');
     } else {
+        const entries = canvasSyncQueue.entries;
+        const count = entries.length;
         badge.hidden = false;
         badge.textContent = `${count} pending`;
 
@@ -28,7 +28,6 @@ function update(): void {
             badge.style.color = '';
         }
 
-        const entries = canvasSyncQueue.entries;
         badge.dataset.tooltip = entries.map(e => {
             const retry = e.retryCount ? ` (retry ${e.retryCount})` : '';
             return `${e.op} ${e.id}${retry}`;

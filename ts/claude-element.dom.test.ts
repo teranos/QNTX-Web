@@ -343,6 +343,30 @@ describe('Claude - Jenny', () => {
         stop();
     });
 
+    // "i wish to be able to send multipl emessahes, like i do now, here in claude code, if you get me"
+    // In Claude Code a message that waits stays with the session it was typed in: a chat left for
+    // another harness's tab still says what waits to the harness it was typed for.
+    test('what waits is said to the harness it was typed for, after its chat was left for another tab', async () => {
+        const body = document.createElement('div');
+        const answers: Array<(said: ClaudeSaid) => void> = [];
+        const sent: string[] = [];
+        const stop = drawClaude(body, node({
+            say: (says) => { sent.push(says); return new Promise<ClaudeSaid>(resolve => { answers.push(resolve); }); },
+        }), 1);
+        await settled();
+        say(body, 'first');
+        await settled();
+        say(body, 'second');
+        await settled();
+        // Another tab pressed: this chat is settled and another drawn in its place.
+        stop();
+        answers[0](answered);
+        await settled();
+        expect(sent).toEqual(['first', 'second']);
+        answers[1](answered);
+        await settled();
+    });
+
     // A refusal does not cost the words: what was refused is back in the box, what waited behind it still waits, and none of it is said.
     test('a refusal puts what was refused back in the box, keeps what waited waiting, and says none of it until Say', async () => {
         const body = document.createElement('div');

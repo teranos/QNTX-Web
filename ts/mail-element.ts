@@ -277,7 +277,7 @@ export function renderMessage(container: HTMLElement, m: MailMessage): void {
         frame.srcdoc = shown;
         frame.style.width = '100%';
         frame.style.height = '480px';
-        frame.style.border = '1px solid var(--border-color, #ddd)';
+        frame.style.border = '1px solid var(--border)';
         frame.style.background = '#ffffff';
         container.appendChild(frame);
     }

@@ -33,7 +33,7 @@
     font-size: var(--font-size-md);
     font-family: var(--font-mono);
     background: var(--panel-bg, #1a1a1a);
-    border: 1px solid var(--panel-border-color, #333);
+    border: 1px solid var(--panel-border-color);
     border-radius: var(--border-radius);
     color: var(--text-primary, #e0e0e0);
 }
@@ -54,7 +54,7 @@
 .form-color {
     width: 60px;
     height: 36px;
-    border: 1px solid var(--panel-border-color, #333);
+    border: 1px solid var(--panel-border-color);
     border-radius: var(--border-radius);
     cursor: pointer;
 }
@@ -71,7 +71,7 @@
     justify-content: flex-end;
     margin-top: 20px;
     padding-top: 16px;
-    border-top: 1px solid var(--panel-border-color, #333);
+    border-top: 1px solid var(--panel-border-color);
 }
 
 .type-definition-content .btn {
@@ -96,11 +96,11 @@
 .type-definition-content .btn-secondary {
     background: var(--panel-bg-secondary, #252525);
     color: var(--text-primary, #e0e0e0);
-    border: 1px solid var(--panel-border-color, #333);
+    border: 1px solid var(--panel-border-color);
 }
 
 .type-definition-content .btn-secondary:hover {
-    background: var(--panel-bg-hover, #2a2a2a);
+    background: var(--panel-bg-hover);
 }
 
 /* Type header section */
@@ -132,7 +132,7 @@
     width: 20px;
     height: 20px;
     border-radius: var(--border-radius);
-    border: 1px solid var(--panel-border-color, #444);
+    border: 1px solid var(--panel-border-color);
 }
 
 /* Fields section */
@@ -161,14 +161,14 @@
     align-items: center;
     padding: var(--panel-padding-sm);
     background: var(--panel-bg, #1a1a1a);
-    border: 1px solid var(--panel-border-color, #333);
+    border: 1px solid var(--panel-border-color);
     border-radius: var(--border-radius);
     cursor: pointer;
     transition: var(--panel-transition);
 }
 
 .field-item:hover {
-    background: var(--panel-bg-hover, #252525);
+    background: var(--panel-bg-hover);
     border-color: var(--accent-color, #4a9eff);
 }
 
@@ -240,7 +240,7 @@
     gap: var(--gap);
     margin-top: 8px;
     padding-top: 8px;
-    border-top: 1px dashed var(--panel-border-color, #333);
+    border-top: 1px dashed var(--panel-border-color);
 }
 
 .add-field-input {
@@ -249,7 +249,7 @@
     font-family: var(--font-mono);
     font-size: var(--font-size-sm);
     background: var(--panel-bg, #1a1a1a);
-    border: 1px solid var(--panel-border-color, #333);
+    border: 1px solid var(--panel-border-color);
     border-radius: var(--border-radius);
     color: var(--text-primary, #e0e0e0);
 }

@@ -148,6 +148,8 @@
     --panel-text-primary: var(--text-primary);
     --panel-text-secondary: var(--text-secondary);
     --panel-text-tertiary: var(--text-tertiary);
+    --panel-border-color: var(--border);
+    --panel-bg-hover: var(--bg-hover);
 
     /* Transitions */
     --panel-transition: all 0.2s ease;

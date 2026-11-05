@@ -583,7 +583,7 @@ function renderEmbeddings(): void {
     if (sectionReembed) {
         if (available && unembedded > 0) {
             sectionReembed.innerHTML = `
-                <div class="element-section" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-color, #333)">
+                <div class="element-section" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-on-dark)">
                     <button class="emb-reembed-btn panel-btn" style="width:100%"
                         ${reembedding ? 'disabled' : ''}>
                         ${reembedding ? 'Embedding...' : `Embed ${Math.min(1000, unembedded)} oldest of ${unembedded} unembedded`}
@@ -655,13 +655,13 @@ function renderEmbeddings(): void {
             const ct = prevCT ?? String(hc?.cluster_threshold ?? 0.5);
             const cmt = prevCMT ?? String(hc?.cluster_match_threshold ?? 0.7);
             sectionCluster.innerHTML = `
-                <div class="element-section" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-color, #333)">
+                <div class="element-section" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-on-dark)">
                     <h3 class="element-section-title">HDBSCAN Clustering</h3>
                     ${clusterRows}
                     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center">
-                        <label style="color:#9ca3af;display:inline-flex;align-items:center;gap:3px">size<input class="emb-param emb-param-min-cluster-size" type="number" min="2" max="50" step="1" value="${minCS}" style="width:36px;padding:1px 3px;background:var(--input-bg, #1a1a2e);border:1px solid var(--border-color, #333);color:var(--text-color, #e0e0e0);border-radius:3px;text-align:right"></label>
-                        <label style="color:#9ca3af;display:inline-flex;align-items:center;gap:3px">thresh<input class="emb-param emb-param-cluster-threshold" type="number" min="0.1" max="1.0" step="0.05" value="${ct}" style="width:42px;padding:1px 3px;background:var(--input-bg, #1a1a2e);border:1px solid var(--border-color, #333);color:var(--text-color, #e0e0e0);border-radius:3px;text-align:right"></label>
-                        <label style="color:#9ca3af;display:inline-flex;align-items:center;gap:3px">match<input class="emb-param emb-param-match-threshold" type="number" min="0.1" max="1.0" step="0.05" value="${cmt}" style="width:42px;padding:1px 3px;background:var(--input-bg, #1a1a2e);border:1px solid var(--border-color, #333);color:var(--text-color, #e0e0e0);border-radius:3px;text-align:right"></label>
+                        <label style="color:#9ca3af;display:inline-flex;align-items:center;gap:3px">size<input class="emb-param emb-param-min-cluster-size" type="number" min="2" max="50" step="1" value="${minCS}" style="width:36px;padding:1px 3px;background:var(--bg-almost-black);border:1px solid var(--border-on-dark);color:var(--text-on-dark);border-radius:3px;text-align:right"></label>
+                        <label style="color:#9ca3af;display:inline-flex;align-items:center;gap:3px">thresh<input class="emb-param emb-param-cluster-threshold" type="number" min="0.1" max="1.0" step="0.05" value="${ct}" style="width:42px;padding:1px 3px;background:var(--bg-almost-black);border:1px solid var(--border-on-dark);color:var(--text-on-dark);border-radius:3px;text-align:right"></label>
+                        <label style="color:#9ca3af;display:inline-flex;align-items:center;gap:3px">match<input class="emb-param emb-param-match-threshold" type="number" min="0.1" max="1.0" step="0.05" value="${cmt}" style="width:42px;padding:1px 3px;background:var(--bg-almost-black);border:1px solid var(--border-on-dark);color:var(--text-on-dark);border-radius:3px;text-align:right"></label>
                         <button class="emb-cluster-btn panel-btn" style="margin-left:auto;padding:2px 10px;"
                             ${clustering ? 'disabled' : ''}>
                             ${clustering ? 'Clustering...' : 'Recompute'}
@@ -718,7 +718,7 @@ function renderEmbeddings(): void {
                 // Destroy 3D if switching back to 2D
                 if (regl3d) { regl3d.cleanup(); regl3d = null; }
 
-                const inputStyle = 'padding:2px 4px;background:var(--input-bg, #1a1a2e);border:1px solid var(--border-color, #333);color:var(--text-color, #e0e0e0);border-radius:3px;text-align:right;-moz-appearance:textfield';
+                const inputStyle = 'padding:2px 4px;background:var(--bg-almost-black);border:1px solid var(--border-on-dark);color:var(--text-on-dark);border-radius:3px;text-align:right;-moz-appearance:textfield';
 
                 // Read current projection param values before replacing
                 const prevNeighbors = (sectionScatter.querySelector('.emb-param-n-neighbors') as HTMLInputElement)?.value;
@@ -773,7 +773,7 @@ function renderEmbeddings(): void {
                     }).join('');
                 const has3D = methodNames.some(m => projections[m]?.some(p => p.z != null));
                 sectionScatter.innerHTML = `
-                    <div class="element-section" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-color, #333)">
+                    <div class="element-section" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-on-dark)">
                         <div style="display:flex;align-items:center;justify-content:space-between">
                             <h3 class="element-section-title" style="margin:0">Projections</h3>
                             ${has3D ? `<button class="emb-3d-toggle panel-btn" style="padding:2px 10px;">${view3d ? '2D' : '3D'}</button>` : ''}
@@ -807,7 +807,7 @@ function renderEmbeddings(): void {
                 });
             } else {
                 sectionScatter.innerHTML = `
-                    <div class="element-section" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-color, #333)">
+                    <div class="element-section" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-on-dark)">
                         <h3 class="element-section-title">Projections</h3>
                         <div class="element-row">
                             <span class="label">Status:</span>
@@ -853,7 +853,7 @@ function renderEmbeddings(): void {
         const runIDs = new Set(timeline.map(p => p.run_id));
         if (available && runIDs.size >= 2) {
             sectionTimeline.innerHTML = `
-                <div class="element-section" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-color, #333)">
+                <div class="element-section" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-on-dark)">
                     <h3 class="element-section-title">Cluster Timeline</h3>
                     <div class="emb-timeline"></div>
                 </div>
@@ -864,7 +864,7 @@ function renderEmbeddings(): void {
             }
         } else if (available && runIDs.size === 1) {
             sectionTimeline.innerHTML = `
-                <div class="element-section" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-color, #333)">
+                <div class="element-section" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-on-dark)">
                     <h3 class="element-section-title">Cluster Timeline</h3>
                     <div style="color:#6b7280">Need 2+ clustering runs for timeline</div>
                 </div>
@@ -927,12 +927,12 @@ async function renderClusterDetail(clusterID: number): Promise<void> {
                 <div style="flex:1;min-width:0">
                     <h3 class="element-section-title">Projection</h3>
                     <div class="emb-detail-scatters" style="display:flex;gap:6px"></div>
-                    <div class="element-section" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-color, #333)">
+                    <div class="element-section" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-on-dark)">
                         <h3 class="element-section-title">Cluster History</h3>
                         <div class="emb-detail-timeline"></div>
                     </div>
                 </div>
-                <div style="flex:1;min-width:0;border-left:1px solid var(--border-color, #333);padding-left:12px">
+                <div style="flex:1;min-width:0;border-left:1px solid var(--border-on-dark);padding-left:12px">
                     <h3 class="element-section-title">Recent Attestations</h3>
                     <div class="emb-detail-members" style="overflow-y:auto">
                         <div class="element-loading">Loading...</div>

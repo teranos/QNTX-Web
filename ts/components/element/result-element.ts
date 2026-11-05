@@ -116,7 +116,7 @@ function renderStatsLine(container: HTMLElement, stats: GenerationStats): void {
     const statsEl = el('div', {
         class: 'result-element-stats',
         text: parts.join(' · '),
-        style: { color: 'var(--text-muted)', padding: '4px 8px 2px', textAlign: 'right', opacity: '0.6' },
+        style: { color: 'var(--text-on-dark-tertiary)', padding: '4px 8px 2px', textAlign: 'right', opacity: '0.6' },
     });
     container.appendChild(statsEl);
 }

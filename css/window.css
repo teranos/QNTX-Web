@@ -20,7 +20,7 @@
     gap: 2px 10px;
     justify-content: space-between;
     padding: 3px 8px;
-    border-bottom: 1px solid var(--panel-border-color, #e0e0e0);
+    border-bottom: 1px solid var(--panel-border-color);
 }
 
 .element-row:last-child {
@@ -28,7 +28,7 @@
 }
 
 .emb-model-row:hover {
-    background: var(--panel-hover-bg, #ffffff0a);
+    background: var(--panel-bg-hover);
 }
 
 .label {
@@ -229,14 +229,14 @@
 }
 
 .db-path:hover {
-    color: var(--link-hover, #0066cc);
+    color: var(--accent-hover);
 }
 
 /* Rich Fields Section */
 .db-stat-section {
     margin-top: 16px;
     padding-top: 16px;
-    border-top: 1px solid var(--panel-border-color, #e0e0e0);
+    border-top: 1px solid var(--panel-border-color);
 }
 
 .db-stat-section-title {
@@ -257,7 +257,7 @@
     display: inline-block;
     padding: 3px 8px;
     background: var(--panel-bg-secondary, #f0f0f0);
-    border: 1px solid var(--panel-border-color, #d0d0d0);
+    border: 1px solid var(--panel-border-color);
     border-radius: var(--border-radius);
     font-size: var(--font-size-sm);
     font-family: var(--font-mono);
@@ -266,5 +266,5 @@
 }
 
 .rich-field-item:hover {
-    background: var(--panel-bg-hover, #e8e8e8);
+    background: var(--panel-bg-hover);
 }

@@ -87,7 +87,7 @@
 }
 
 .handlers-play-btn:hover {
-    color: var(--color-primary);
+    color: var(--accent-on-dark);
     background: rgba(255, 255, 255, 0.08);
 }
 

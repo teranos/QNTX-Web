@@ -229,6 +229,8 @@ function keysOf(namespace: string) {
 const atAnthropic: Record<string, string> = {};
 // What ROOT's agents spend first, and whether the other follows (server/anthropic_spend.go).
 const spending = { first: "session", then: false };
+// The cap on each Session at Anthropic, in USD: the node's default until ROOT sets one (server/anthropic_cap.go).
+const capping = { cap: "", default: "200" };
 // The session's windows, as ug's status line reads them.
 const SESSION_WINDOWS = [
     { window: "five_hour", used_percentage: 88, resets_at: 1900000000, at: "2026-10-27T17:00:00Z" },
@@ -248,6 +250,7 @@ function anthropicAm() {
     return {
         issuer: "https://l.example", subject: "did:key:z6MkmockNode", ...atAnthropic,
         asked: ready, accepted, first: spending.first, then: spending.then, session: SESSION_WINDOWS, in_use: "",
+        cap: capping.cap || capping.default, cap_currency: "USD", cap_default: capping.cap === "",
         why: ready && !accepted ? `Anthropic at https://api.anthropic.com did not accept the identity of did:key:z6MkmockNode at rule ${atAnthropic.federation_rule_id}: oauth token request failed (status 401); {"error":{"message":"Authentication failed","type":"authentication_error"}}` : "",
     };
 }
@@ -263,6 +266,17 @@ async function anthropicAnswer(method: string, path: string, req: Request): Prom
         if (first !== "session" && first !== "console") return json({ error: `first is session or console, not ${first}` }, 400);
         spending.first = first;
         spending.then = then === "true";
+        return json(anthropicAm());
+    }
+    if (path === "/api/anthropic/cap" && method === "POST") {
+        const { amount = "" } = (await req.json()) as { amount?: string };
+        // An amount left out takes the cap back to the node's default (teranos/QNTX, server/anthropic_cap.go).
+        if (amount.trim() === "") {
+            capping.cap = "";
+            return json(anthropicAm());
+        }
+        if (!/^\d+(\.\d{1,2})?$/.test(amount.trim()) || Number(amount) <= 0) return json({ error: `"${amount}" is no amount of USD: a number above zero with at most two places after the point, 200 or 12.50` }, 400);
+        capping.cap = amount.trim();
         return json(anthropicAm());
     }
     if (path === "/api/google" || path === "/api/google/limit") {

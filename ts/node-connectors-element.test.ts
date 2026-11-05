@@ -17,6 +17,12 @@ let atGoogle: Record<string, unknown> = {};
 /** What the Node Agent answers in agy, or null when am.toml names no agy for it. */
 let inAgy: Record<string, unknown> | null = null;
 
+/** While set, a cap asked of the node is answered only once this settles. */
+let capHeld: Promise<void> | null = null;
+
+/** While set, an order asked of the node is answered only once this settles. */
+let orderHeld: Promise<void> | null = null;
+
 /** Where a press sent ROOT. */
 let wentTo: string[] = [];
 
@@ -43,6 +49,8 @@ const NODE: NodeIdentity = {
 beforeEach(() => {
     document.body.innerHTML = '';
     asked = [];
+    capHeld = null;
+    orderHeld = null;
     atAnthropic = { issuer: NODE.issuer, subject: NODE.did, asked: false, accepted: false, why: '' };
     atGoogle = { issuer: NODE.issuer, subject: NODE.did, connect: `${NODE.issuer}/auth/google/cloud`, asked: false, accepted: false, why: '' };
     wentTo = [];
@@ -67,6 +75,12 @@ beforeEach(() => {
         }
         if (method === 'POST' && String(url).endsWith('/api/anthropic/order')) {
             atAnthropic = { ...atAnthropic, first: body.first, then: body.then === 'true' };
+            const answered = new Response(JSON.stringify(atAnthropic), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            if (orderHeld) return orderHeld.then(() => answered);
+        } else if (method === 'POST' && String(url).endsWith('/api/anthropic/cap')) {
+            atAnthropic = body.amount ? { ...atAnthropic, cap: body.amount, cap_default: false } : { ...atAnthropic, cap: '200', cap_default: true };
+            const answered = new Response(JSON.stringify(atAnthropic), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            if (capHeld) return capHeld.then(() => answered);
         } else if (method === 'POST') {
             // Anthropic accepts the node at any rule but fdrl_refused.
             const ids = idsIn(body.given);
@@ -259,6 +273,110 @@ describe('Tim: ROOT orders what its agents spend (stories/29)', () => {
         const held = await drawn();
         expect((held.querySelector('[data-light="anthropic-session"]') as HTMLElement).dataset.state).toBe('refused');
         expect(inUse(held)?.dataset.source).toBe('console');
+    });
+});
+
+// "make 6SION set one, prep a pr"
+// "what  is max cap? like set it in the ui and make default of 200"
+describe('Tim: ROOT caps what a Session at Anthropic may spend', () => {
+    test("the cap shows in the node's currency, and the node's default says it is one", async () => {
+        atAnthropic = { ...atAnthropic, asked: true, accepted: true, first: 'console', then: false, cap: '200', cap_currency: 'USD', cap_default: true };
+        const held = await drawn();
+        const cap = held.querySelector('[data-cap]') as HTMLElement;
+        expect(cap.textContent).toContain('Cap per Session at Anthropic, USD');
+        expect((held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement).value).toBe('200');
+        expect(held.querySelector('[data-cap-default]')).not.toBeNull();
+    });
+
+    test('ROOT sets the cap here, and the row answers with it', async () => {
+        atAnthropic = { ...atAnthropic, asked: true, accepted: true, first: 'console', then: false, cap: '200', cap_currency: 'USD', cap_default: true };
+        const held = await drawn();
+        (held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement).value = ' 50 ';
+        await press(held, 'anthropic-cap-set');
+        expect(asked.at(-1)!.url).toEndWith('/api/anthropic/cap');
+        expect(asked.at(-1)!.body).toEqual({ amount: '50' });
+        expect((held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement).value).toBe('50');
+        expect(held.querySelector('[data-cap-default]')).toBeNull();
+    });
+
+    // Qodo's review of QNTX-Web#55: an order pressed redrew the row and the cap typed and not set was gone.
+    test('a cap typed and not set stays when ROOT changes the order', async () => {
+        atAnthropic = { ...atAnthropic, asked: true, accepted: true, first: 'console', then: false, cap: '200', cap_currency: 'USD', cap_default: true };
+        const held = await drawn();
+        const field = held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement;
+        field.value = '75';
+        field.dispatchEvent(new Event('input'));
+        await press(held, 'anthropic-then');
+        expect(asked.at(-1)!.url).toEndWith('/api/anthropic/order');
+        expect((held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement).value).toBe('75');
+    });
+
+    // Qodo's review of QNTX-Web#55: two caps set at once could draw the older answer last.
+    test('a cap is asked once at a time: pressed again while one is asked, nothing more is asked', async () => {
+        atAnthropic = { ...atAnthropic, asked: true, accepted: true, first: 'console', then: false, cap: '200', cap_currency: 'USD', cap_default: true };
+        let answer: () => void = () => {};
+        capHeld = new Promise((settled) => { answer = settled; });
+        const held = await drawn();
+        const field = held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement;
+        field.value = '40';
+        await press(held, 'anthropic-cap-set');
+        field.value = '60';
+        await press(held, 'anthropic-cap-set');
+        expect(asked.filter((a) => a.url.endsWith('/api/anthropic/cap')).map((a) => a.body.amount)).toEqual(['40']);
+        answer();
+        await settle();
+        expect((held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement).value).toBe('40');
+    });
+
+    // Qodo's review of QNTX-Web#55: an order and a cap asked at once could each be written over by the other at the node,
+    // and the later answer drew an older setting over the one just set.
+    test('an order pressed while a cap is being set asks nothing, and the cap set is what shows', async () => {
+        atAnthropic = { ...atAnthropic, asked: true, accepted: true, first: 'console', then: false, cap: '200', cap_currency: 'USD', cap_default: true };
+        let answer: () => void = () => {};
+        capHeld = new Promise((settled) => { answer = settled; });
+        const held = await drawn();
+        const field = held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement;
+        field.value = '40';
+        field.dispatchEvent(new Event('input'));
+        await press(held, 'anthropic-cap-set');
+        await press(held, 'anthropic-then');
+        expect(asked.filter((a) => a.url.endsWith('/api/anthropic/order'))).toEqual([]);
+        answer();
+        await settle();
+        expect((held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement).value).toBe('40');
+    });
+
+    test('a cap set while an order is being asked asks nothing, and stays typed for when it can be', async () => {
+        atAnthropic = { ...atAnthropic, asked: true, accepted: true, first: 'console', then: false, cap: '200', cap_currency: 'USD', cap_default: true };
+        let answer: () => void = () => {};
+        orderHeld = new Promise((settled) => { answer = settled; });
+        const held = await drawn();
+        await press(held, 'anthropic-then');
+        const field = held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement;
+        field.value = '40';
+        field.dispatchEvent(new Event('input'));
+        await press(held, 'anthropic-cap-set');
+        expect(asked.filter((a) => a.url.endsWith('/api/anthropic/cap'))).toEqual([]);
+        answer();
+        await settle();
+        expect((held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement).value).toBe('40');
+    });
+
+    // Qodo's review of QNTX-Web#55: what was typed while a cap was being set was gone when the node answered.
+    test('a cap typed while one is being set stays when the node answers the one set', async () => {
+        atAnthropic = { ...atAnthropic, asked: true, accepted: true, first: 'console', then: false, cap: '200', cap_currency: 'USD', cap_default: true };
+        let answer: () => void = () => {};
+        capHeld = new Promise((settled) => { answer = settled; });
+        const held = await drawn();
+        const field = held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement;
+        field.value = '40';
+        field.dispatchEvent(new Event('input'));
+        await press(held, 'anthropic-cap-set');
+        field.value = '65';
+        field.dispatchEvent(new Event('input'));
+        answer();
+        await settle();
+        expect((held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement).value).toBe('65');
     });
 });
 

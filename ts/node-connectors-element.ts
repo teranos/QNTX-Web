@@ -297,6 +297,29 @@ function spendRows(am: NodeAnthropic, console_: Light, ordered: (first: string, 
     return rows;
 }
 
+/**
+ * The most each Session an element's agent runs in at Anthropic may spend, in the currency the node names.
+ * "what  is max cap? like set it in the ui and make default of 200"
+ */
+function capLine(am: NodeAnthropic, draft: string | null, typed: (amount: string) => void, capped: (amount: string) => void): HTMLElement {
+    const line = document.createElement('div');
+    line.dataset.cap = '';
+    line.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end';
+    const field = fieldFrom({ id: 'anthropic-cap', label: `Cap per Session at Anthropic, ${am.cap_currency}` });
+    field.input.dataset.ask = 'anthropic-cap';
+    field.element.style.cssText = 'width:16em';
+    field.input.style.width = '100%';
+    field.input.value = draft ?? am.cap;
+    field.input.addEventListener('input', () => typed(field.input.value));
+    line.append(field.element, pressFrom({ id: 'anthropic-cap-set', title: 'Set cap', does: () => capped(field.input.value.trim()) }).element);
+    if (am.cap_default) {
+        const held = note("The node's default: no cap was set.");
+        held.dataset.capDefault = '';
+        line.append(held);
+    }
+    return line;
+}
+
 /** The Anthropic row: what ROOT's agents spend, each namespace's OIDC, and the set-up flow or what was set up. */
 function anthropicRow(node: NodeIdentity): HTMLElement {
     const row = document.createElement('div');
@@ -324,17 +347,43 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
     // The lights drawn from what the node answered; an order given is answered anew.
     // Set up again is there once the Console is set up, and gone while it is being set up.
     let setting = false;
+    // A cap typed and not set yet is kept when an order's answer redraws the row, until a cap is set.
+    let capDraft: string | null = null;
+    // What ROOT changes here, an order or a cap, is asked of the node one at a time: the node
+    // writes the whole line for each, and an answer drawn redraws the whole row, so two at once
+    // could each be written over and drawn over by the other.
+    let asking = false;
     const drawSpend = (am: NodeAnthropic) => {
         lit(light, am);
-        spend.replaceChildren(spendRows(am, light, (first, then) => {
-            apiJson<NodeAnthropic>('/api/anthropic/order', {
+        const asked = (path: string, sent: Record<string, string>) => {
+            if (asking) return;
+            asking = true;
+            apiJson<NodeAnthropic>(path, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ first, then: String(then) }),
+                body: JSON.stringify(sent),
             }).then(drawSpend).catch((err: unknown) => {
                 spend.appendChild(errorOf(err instanceof Error ? err.message : String(err)));
-            });
-        }, am.accepted && !setting ? () => flow(am) : null));
+            }).finally(() => { asking = false; });
+        };
+        spend.replaceChildren(
+            spendRows(am, light, (first, then) => asked('/api/anthropic/order', { first, then: String(then) }), am.accepted && !setting ? () => flow(am) : null),
+            capLine(am, capDraft, (typed) => { capDraft = typed; }, (amount) => {
+                if (asking) return;
+                asking = true;
+                apiJson<NodeAnthropic>('/api/anthropic/cap', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount }),
+                }).then((answered) => {
+                    // What was typed since it was sent is still to be set, and stays.
+                    if (capDraft === null || capDraft.trim() === amount) capDraft = null;
+                    drawSpend(answered);
+                }).catch((err: unknown) => {
+                    spend.appendChild(errorOf(err instanceof Error ? err.message : String(err)));
+                }).finally(() => { asking = false; });
+            }),
+        );
     };
 
     // Seen through to the end, as Anthropic's own wizard is.

@@ -19,6 +19,7 @@ import type {
     WatcherErrorMessage,
     ElementFiredMessage,
     WatcherQueueStatusMessage,
+    VersionMessage,
 } from '../../types/websocket';
 import type { RichSearchResultsMessage } from '../generated/proto/plugin/grpc/protocol/server.ts';
 import { handleJobNotification, handleDaemonStatusNotification } from '../tauri-notifications';
@@ -40,6 +41,33 @@ let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let reconnectAttempt = 0;
 let authStopped = false; // true when reconnect was stopped because no session is admitted
 let messageHandlers: MessageHandlers = {};
+// The socket this page holds, as the node named it in its first message there:
+// a stream asked for over HTTP names it, and is sent to it alone. Empty while
+// no socket is open, and a request then names none.
+let socket = '';
+
+/** The socket this page holds, or empty when it holds none the node has named. */
+export function ownSocket(): string {
+    return socket;
+}
+
+// Who is told when the socket the node named closes, with the name it had.
+const socketGone = new Set<(gone: string) => void>();
+
+/** Tells told, with the name it had, each time the socket the node named closes. */
+export function whenSocketGone(told: (gone: string) => void): void {
+    socketGone.add(told);
+}
+
+/** The socket closed: the next is a new one, named by the node when it opens. */
+export function socketClosed(): void {
+    const gone = socket;
+    socket = '';
+    if (!gone) return;
+    for (const told of socketGone) {
+        try { told(gone); } catch (err: unknown) { log.error(SEG.WS, 'A listener for the socket closing failed:', err); }
+    }
+}
 
 // When authentication is restored (e.g. user logged in via another tab),
 // resume WebSocket reconnection if it was stopped by a 401.
@@ -340,6 +368,10 @@ export function routeMessage(
     data: WebSocketMessage,
     registeredHandlers: MessageHandlers
 ): { handled: boolean; handlerType: 'builtin' | 'registered' | 'default' | 'none' } {
+    // "3. who? the receiver?"
+    // The node's first message names the socket it came on; it is then handled as ever.
+    if (data.type === 'version') socket = (data as VersionMessage).socket ?? '';
+
     // Look up built-in handler first
     const builtInHandler = MESSAGE_HANDLERS[data.type as keyof typeof MESSAGE_HANDLERS];
     if (builtInHandler) {
@@ -420,6 +452,7 @@ export function connectWebSocket(handlers: MessageHandlers): void {
     };
 
     ws.onclose = function(event: CloseEvent): void {
+        socketClosed();
         log.info(SEG.WS, 'WebSocket disconnected', {
             code: event.code,
             reason: event.reason || '(no reason)',

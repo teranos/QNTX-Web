@@ -416,3 +416,26 @@ describe('Spike: sendMessage', () => {
         }
     });
 });
+
+// "3. who? the receiver?"
+// The node names the socket in its first message, and what is asked for over
+// HTTP names it back, so a stream comes to this socket alone.
+describe('The socket this page holds', () => {
+    test('the version message names it, and the version handler handed to routing still hears it', () => {
+        const { routeMessage, ownSocket } = require('./client/ws');
+        const heard = mock(() => {});
+        routeMessage({ type: 'version', version: 'v1', commit: 'abc1234', socket: '10.0.0.1:5000_42' }, { version: heard });
+        expect(ownSocket()).toBe('10.0.0.1:5000_42');
+        expect(heard).toHaveBeenCalledTimes(1);
+    });
+
+    test('none is named before the node names one, and none once it closed', () => {
+        const { routeMessage, ownSocket, socketClosed } = require('./client/ws');
+        routeMessage({ type: 'version', version: 'v1', commit: 'abc1234' }, {});
+        expect(ownSocket()).toBe('');
+        routeMessage({ type: 'version', version: 'v1', commit: 'abc1234', socket: '10.0.0.1:5000_43' }, {});
+        expect(ownSocket()).toBe('10.0.0.1:5000_43');
+        socketClosed();
+        expect(ownSocket()).toBe('');
+    });
+});

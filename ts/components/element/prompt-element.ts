@@ -17,7 +17,7 @@
 import type { Element } from '@teranos/elements';
 import { SO, Doc, Prose } from '../../sym';
 import { log, SEG } from '../../logger';
-import { apiFetch } from '../../client';
+import { apiFetch, ownSocket } from '../../client';
 import { jsonBody } from '../../http-utils';
 import { preventDrag, storeCleanup } from '@teranos/elements';
 import { canvasPlaced } from '@teranos/elements';
@@ -26,7 +26,8 @@ import { uiState } from '../../state/ui';
 import { createAutoSave } from './element-autosave';
 import { tooltip } from '../tooltip';
 import { findCompositionByElement, extractElementIds } from '../../state/compositions';
-import { createResultElement, getResponseTokenCount, unsubscribeStream, populateStaticContent } from './result-element';
+import { createResultElement, getResponseTokenCount, unsubscribeStream } from './result-element';
+import { answerArrived } from './whole-answer';
 
 /**
  * Prompt element execution status
@@ -212,6 +213,8 @@ export async function setupPromptElement(element: HTMLElement, item: Element): P
             timestamp: startTime,
         });
 
+        // The result this run is drawn in, once spawned: a run that fails lets go of it.
+        let responseElement: HTMLElement | null = null;
         try {
             // Collect attachments from melded elements
             // TODO [TS-4]: Extract shared collectMeldedAttachments(elementId) — identical
@@ -246,18 +249,21 @@ export async function setupPromptElement(element: HTMLElement, item: Element): P
             }
 
             // Spawn response element below prompt before fetch starts
-            const responseElement = spawnResponseBelow(element, item.id, template);
+            responseElement = spawnResponseBelow(element, item.id, template);
 
+            // The socket the stream is asked on: it is sent there and nowhere else.
+            const asked = ownSocket();
             const response = await apiFetch('/api/prompt/direct', jsonBody('POST', {
                 template: finalTemplate,
                 element_id: item.id,
                 ...(fileIds.length > 0 && { file_ids: fileIds }),
+                ...(asked && { socket: asked }),
             }));
 
             if (!response.ok) {
                 const errorText = await response.text();
                 if (responseElement) {
-                    unsubscribeStream(item.id);
+                    unsubscribeStream(item.id, responseElement);
                     responseElement.remove();
                 }
                 throw new Error(`API error: ${response.status} - ${errorText}`);
@@ -275,21 +281,20 @@ export async function setupPromptElement(element: HTMLElement, item: Element): P
 
             if (data.error) {
                 if (responseElement) {
-                    unsubscribeStream(item.id);
+                    unsubscribeStream(item.id, responseElement);
                     responseElement.remove();
                 }
                 return;
             }
 
-            // If no tokens arrived (non-streaming provider), populate with response text
+            // The answer whole, drawn in place of the stream when that cannot finish where it was sent.
             const tokenCount = responseElement ? getResponseTokenCount(responseElement) : 0;
-            if (tokenCount === 0 && data.response && responseElement) {
-                populateStaticContent(responseElement, data.response);
-            }
+            if (data.response && responseElement) answerArrived(responseElement, asked, data.response, data.streamed, tokenCount > 0);
             log.debug(SEG.ELEMENT, `[Prompt] Response complete, ${tokenCount} tokens`);
 
         } catch (error) {
             log.error(SEG.ELEMENT, '[Prompt] Execution failed:', error);
+            if (responseElement) unsubscribeStream(item.id, responseElement);
             const errorMsg = error instanceof Error ? error.message : String(error);
             updateStatus({
                 state: 'error',

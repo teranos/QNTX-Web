@@ -23,7 +23,8 @@ import { unmeldComposition, makeDraggable, storeCleanup, preventDrag, wireExpand
 import { autoMeldResultBelow } from './meld/auto-meld-result';
 import { setResponseState } from './response-state';
 import { uiState } from '../../state/ui';
-import { registerHandler, unregisterHandler, apiFetch, backendWsUrl } from '../../client';
+import { registerHandler, unregisterHandler, apiFetch, backendWsUrl, ownSocket } from '../../client';
+import { awaitWhole, answerArrived, streamDone } from './whole-answer';
 import { assertOk, jsonBody } from '../../http-utils';
 import { canvasSyncQueue } from '../../api/canvas-sync';
 import { createFollowUpZone, type FollowUpRequest, type FollowUpControls } from './element-followup';
@@ -97,8 +98,10 @@ export function subscribeStream(jobId: string, callback: StreamCallback): void {
     subscribers.set(jobId, callback);
 }
 
-export function unsubscribeStream(jobId: string): void {
+/** Stops listening for jobId; owner is the result element whose run is over, so a later run of the same prompt keeps its own. */
+export function unsubscribeStream(jobId: string, owner?: HTMLElement): void {
     subscribers.delete(jobId);
+    streamDone(jobId, owner);
     if (subscribers.size === 0) {
         unregisterHandler('llm_stream');
         log.debug(SEG.ELEMENT, '[ResultElement] Unregistered llm_stream handler');
@@ -362,7 +365,7 @@ export function createResultElement(
     // Close — always visible, composition-aware
     const closeBtn = headerBtn('×', 'Close');
     closeBtn.addEventListener('click', () => {
-        if (streamJobId) unsubscribeStream(streamJobId);
+        if (streamJobId) unsubscribeStream(streamJobId, element);
 
         const composition = element.closest('.melded-composition') as HTMLElement | null;
         if (composition) {
@@ -727,16 +730,22 @@ export function createResultElement(
 
         let streamStartMs = 0;
 
+        // The stream is over, whole or not: what it drew stands and is kept.
+        const finish = () => {
+            unsubscribeStream(streamJobId!, element);
+            isStreaming = false;
+            // Reveal copy + expand buttons
+            copyBtn.style.display = '';
+            toWindowBtn.style.display = '';
+            // Disconnect from Metal renderer — keep last frame as static image
+            closeNebula();
+            persistContent();
+        };
+
         subscribeStream(streamJobId, (msg: LLMStreamMessage) => {
             if (msg.model) streamModel = msg.model;
 
             if (msg.done) {
-                unsubscribeStream(streamJobId!);
-                isStreaming = false;
-                // Reveal copy + expand buttons
-                copyBtn.style.display = '';
-                toWindowBtn.style.display = '';
-
                 // Compute and persist generation stats
                 const tokenCount = msg.completion_tokens || tokens.length;
                 if (tokenCount > 0) {
@@ -745,11 +754,7 @@ export function createResultElement(
                     savedStats = { tokenCount, tokPerSec, model: streamModel };
                     renderStatsLine(output, savedStats);
                 }
-
-                // Disconnect from Metal renderer — keep last frame as static image
-                closeNebula();
-
-                persistContent();
+                finish();
                 log.debug(SEG.ELEMENT, `[ResultElement] Stream complete for ${streamJobId}, ${tokens.length} tokens`);
                 return;
             }
@@ -766,6 +771,15 @@ export function createResultElement(
 
             }
             output.scrollTop = output.scrollHeight;
+        });
+
+        // A stream that cannot finish where it was sent: the answer whole, in place of what streamed.
+        awaitWhole(streamJobId, element, (text: string) => {
+            const token: StreamToken = { text };
+            tokens.splice(0, tokens.length, token);
+            output.replaceChildren(renderToken(token, 0, colorMode));
+            finish();
+            log.debug(SEG.ELEMENT, `[ResultElement] Stream for ${streamJobId} could not finish; drawn whole from the response`);
         });
     }
 
@@ -790,7 +804,7 @@ export function createResultElement(
     // ── Cleanup ─────────────────────────────────────────────────────
 
     storeCleanup(element, () => {
-        if (streamJobId) unsubscribeStream(streamJobId);
+        if (streamJobId) unsubscribeStream(streamJobId, element);
         if (streamInstance) {
             visibilityObserver?.unobserve(output);
             instances.delete(streamInstance);
@@ -952,16 +966,6 @@ export function getResponseTokenCount(elementEl: HTMLElement): number {
     const output = elementEl.querySelector('.result-element-output');
     if (!output) return 0;
     return output.children.length;
-}
-
-/**
- * Populate a streaming response element with static text
- * (for non-streaming providers that return a full response).
- */
-export function populateStaticContent(elementEl: HTMLElement, text: string): void {
-    const output = elementEl.querySelector('.result-element-output');
-    if (!output) return;
-    output.appendChild(el('span', { text }));
 }
 
 /**
@@ -1142,6 +1146,10 @@ async function executeStreamFollowUp(
     if (request.provider) body.provider = request.provider;
     if (request.fileIds.length > 0) body.file_ids = request.fileIds;
 
+    // The socket the stream is asked on: it is sent there and nowhere else.
+    const asked = ownSocket();
+    if (asked) body.socket = asked;
+
     const startTime = Date.now();
 
     apiFetch('/api/prompt/direct', jsonBody('POST', body))
@@ -1154,22 +1162,20 @@ async function executeStreamFollowUp(
             controls.success(elapsedMs);
 
             if (data.error) {
-                unsubscribeStream(responseElementId);
+                unsubscribeStream(responseElementId, responseElement);
                 responseElement.remove();
                 uiState.removeCanvasElement(responseElementId);
                 controls.error(`Failed: ${data.error}`);
                 return;
             }
 
-            const tokenCount = getResponseTokenCount(responseElement);
-            if (tokenCount === 0 && data.response) {
-                populateStaticContent(responseElement, data.response);
-            }
+            if (data.response) answerArrived(responseElement, asked, data.response, data.streamed, getResponseTokenCount(responseElement) > 0);
 
-            log.debug(SEG.ELEMENT, `[ResultElement] Follow-up complete, ${tokenCount} streamed tokens`);
+            log.debug(SEG.ELEMENT, `[ResultElement] Follow-up complete, ${getResponseTokenCount(responseElement)} streamed tokens`);
         })
         .catch((err) => {
-            unsubscribeStream(request.itemId);
+            // The run that failed is this result's, by its own id: what waited for it is let go with it.
+            unsubscribeStream(responseElementId, responseElement);
             responseElement.remove();
             uiState.removeCanvasElement(responseElementId);
 

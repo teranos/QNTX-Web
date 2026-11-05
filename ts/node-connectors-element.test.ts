@@ -67,6 +67,8 @@ beforeEach(() => {
         }
         if (method === 'POST' && String(url).endsWith('/api/anthropic/order')) {
             atAnthropic = { ...atAnthropic, first: body.first, then: body.then === 'true' };
+        } else if (method === 'POST' && String(url).endsWith('/api/anthropic/cap')) {
+            atAnthropic = { ...atAnthropic, cap: body.amount, cap_default: false };
         } else if (method === 'POST') {
             // Anthropic accepts the node at any rule but fdrl_refused.
             const ids = idsIn(body.given);
@@ -259,6 +261,30 @@ describe('Tim: ROOT orders what its agents spend (stories/29)', () => {
         const held = await drawn();
         expect((held.querySelector('[data-light="anthropic-session"]') as HTMLElement).dataset.state).toBe('refused');
         expect(inUse(held)?.dataset.source).toBe('console');
+    });
+});
+
+// "make 6SION set one, prep a pr"
+// "what  is max cap? like set it in the ui and make default of 200"
+describe('Tim: ROOT caps what a Session at Anthropic may spend', () => {
+    test("the cap shows in the node's currency, and the node's default says it is one", async () => {
+        atAnthropic = { ...atAnthropic, asked: true, accepted: true, first: 'console', then: false, cap: '200', cap_currency: 'USD', cap_default: true };
+        const held = await drawn();
+        const cap = held.querySelector('[data-cap]') as HTMLElement;
+        expect(cap.textContent).toContain('Cap per Session at Anthropic, USD');
+        expect((held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement).value).toBe('200');
+        expect(held.querySelector('[data-cap-default]')).not.toBeNull();
+    });
+
+    test('ROOT sets the cap here, and the row answers with it', async () => {
+        atAnthropic = { ...atAnthropic, asked: true, accepted: true, first: 'console', then: false, cap: '200', cap_currency: 'USD', cap_default: true };
+        const held = await drawn();
+        (held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement).value = ' 50 ';
+        await press(held, 'anthropic-cap-set');
+        expect(asked.at(-1)!.url).toEndWith('/api/anthropic/cap');
+        expect(asked.at(-1)!.body).toEqual({ amount: '50' });
+        expect((held.querySelector('[data-ask="anthropic-cap"]') as HTMLInputElement).value).toBe('50');
+        expect(held.querySelector('[data-cap-default]')).toBeNull();
     });
 });
 

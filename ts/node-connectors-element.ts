@@ -297,6 +297,28 @@ function spendRows(am: NodeAnthropic, console_: Light, ordered: (first: string, 
     return rows;
 }
 
+/**
+ * The most each Session an element's agent runs in at Anthropic may spend, in the currency the node names.
+ * "what  is max cap? like set it in the ui and make default of 200"
+ */
+function capLine(am: NodeAnthropic, capped: (amount: string) => void): HTMLElement {
+    const line = document.createElement('div');
+    line.dataset.cap = '';
+    line.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end';
+    const field = fieldFrom({ id: 'anthropic-cap', label: `Cap per Session at Anthropic, ${am.cap_currency}` });
+    field.input.dataset.ask = 'anthropic-cap';
+    field.element.style.cssText = 'width:16em';
+    field.input.style.width = '100%';
+    field.input.value = am.cap;
+    line.append(field.element, pressFrom({ id: 'anthropic-cap-set', title: 'Set cap', does: () => capped(field.input.value.trim()) }).element);
+    if (am.cap_default) {
+        const held = note("The node's default: no cap was set.");
+        held.dataset.capDefault = '';
+        line.append(held);
+    }
+    return line;
+}
+
 /** The Anthropic row: what ROOT's agents spend, each namespace's OIDC, and the set-up flow or what was set up. */
 function anthropicRow(node: NodeIdentity): HTMLElement {
     const row = document.createElement('div');
@@ -326,15 +348,19 @@ function anthropicRow(node: NodeIdentity): HTMLElement {
     let setting = false;
     const drawSpend = (am: NodeAnthropic) => {
         lit(light, am);
-        spend.replaceChildren(spendRows(am, light, (first, then) => {
-            apiJson<NodeAnthropic>('/api/anthropic/order', {
+        const asked = (path: string, sent: Record<string, string>) => {
+            apiJson<NodeAnthropic>(path, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ first, then: String(then) }),
+                body: JSON.stringify(sent),
             }).then(drawSpend).catch((err: unknown) => {
                 spend.appendChild(errorOf(err instanceof Error ? err.message : String(err)));
             });
-        }, am.accepted && !setting ? () => flow(am) : null));
+        };
+        spend.replaceChildren(
+            spendRows(am, light, (first, then) => asked('/api/anthropic/order', { first, then: String(then) }), am.accepted && !setting ? () => flow(am) : null),
+            capLine(am, (amount) => asked('/api/anthropic/cap', { amount })),
+        );
     };
 
     // Seen through to the end, as Anthropic's own wizard is.

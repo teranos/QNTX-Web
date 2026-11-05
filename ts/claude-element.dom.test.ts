@@ -435,10 +435,11 @@ describe('Claude - Jenny', () => {
             expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('third');
 
             body.querySelector<HTMLButtonElement>('.claude-send')!.click();
+            // Each say answered once it has been made, in the order made; one never made fails here.
             for (let i = 1; i <= 3; i++) {
-                await settled();
-                await new Promise(resolve => setTimeout(resolve, 5));
-                answers[i]?.resolve(answered);
+                for (let tries = 0; answers.length <= i && tries < 50; tries++) await settled();
+                expect(answers.length).toBeGreaterThan(i);
+                answers[i].resolve(answered);
             }
             await settled();
             expect(sent).toEqual([['first', 'f-one'], ['first', 'f-one'], ['second', 'f-two'], ['third', 'f-three']]);

@@ -40,6 +40,8 @@ Dark-mode first. Design tokens in `tokens.css`. Fix specificity at the source.
 
 Inside an element, text is sized with `sizeText(node, 'xs' | 'sm' | 'md' | 'lg')`. A stylesheet or `index.html` picks one of the package's sizes by its token, `font-size: var(--font-size-xs | sm | md | lg | field)`, and `tokens.css` says the package's number for each.
 
+**Contrast is a test.** `ts/contrast.test.ts` computes WCAG contrast (4.5, every size here is small text) for each text/surface pairing declared in `contrast-pairs.json` and for every css rule that sets both a colour and an opaque background. What fails today is frozen in `contrast-baseline.json`; a new failure fails `bun test`. `bun run contrast` prints the full list, lowest first; `--update` only shrinks the baseline unless `--force`. Fixing a baselined entry is a colour decision, not a lint fix.
+
 The z-index stack is read from the source, never written down here: `bun run z-order` prints every declaration, highest first. Windows are raised above each other in `ts/z-order.ts`.
 
 ## Logging

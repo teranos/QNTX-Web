@@ -17,7 +17,7 @@ function turn(speaker: string, text: string, of = ''): Turn {
 
 function session(id: string, subjects: string[], turns: Turn[]): TranscriptRead {
     return {
-        session: id, subjects, turns, folded: 0, model: 'claude-opus-5-5', effort: 'xhigh',
+        session: id, subjects, turns, model: 'claude-opus-5-5', effort: 'xhigh',
         started: '2026-10-03T12:00:00Z', ended: '2026-10-03T13:00:00Z',
     };
 }

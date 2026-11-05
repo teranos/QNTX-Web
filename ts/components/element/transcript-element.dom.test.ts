@@ -17,7 +17,6 @@ const read: TranscriptRead = {
     subjects: ['user/QNTX:datapunt-owns-the-reference'],
     started: '2026-10-01T22:00:00Z',
     ended: '2026-10-02T01:00:06Z',
-    folded: 0,
     model: 'claude-opus-5-5',
     effort: 'xhigh',
     turns: [

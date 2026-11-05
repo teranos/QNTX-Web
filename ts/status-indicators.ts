@@ -7,7 +7,7 @@
  */
 
 import { connectivity, type Admission, type ConnectivityState } from './client';
-import { DB, Sigma } from './sym';
+import { DB } from './sym';
 import { openDoor, signedIn, standAtTheDoor } from './signin';
 import { log, SEG } from './logger';
 import { signalConnectivityInTray, spawnConnectivityElement } from './components/element/connectivity-element';
@@ -57,7 +57,6 @@ class StatusIndicatorManager {
         // Add default indicators
         this.addConnectionIndicator();
         this.addDatabaseIndicator();
-        this.addSigmaIndicator();
 
         // Auth: spawn auth element when unauthenticated, add logout to connection context menu
         this.setupAuthIntegration();
@@ -310,19 +309,6 @@ class StatusIndicatorManager {
     }
 
     /**
-     * Add Sigma indicator
-     */
-    private addSigmaIndicator(): void {
-        this.addIndicator({
-            id: 'sigma',
-            label: `${Sigma}`,
-            clickable: true,
-            onClick: () => openElement('sigma-panel'),
-            initialState: 'inactive'
-        });
-    }
-
-    /**
      * Handle database stats update
      */
     handleDatabaseStats(count: number | undefined): void {
@@ -332,26 +318,10 @@ class StatusIndicatorManager {
     }
 
     /**
-     * Handle sigma stats from distillation data
-     */
-    handleSigmaStats(distillation: any): void {
-        if (!distillation) return;
-        const count = distillation.sigmas || 0;
-        const topSigmas = distillation.top_sigmas || [];
-        const bigCount = topSigmas.length;
-        if (count > 0) {
-            this.updateIndicator('sigma', 'active', `${Sigma} ${bigCount}`);
-        } else {
-            this.updateIndicator('sigma', 'inactive', `${Sigma}`);
-        }
-    }
-
-    /**
      * These count things a node told us. With the socket down nothing is
      * telling us anything.
      */
     private markLiveDataStale(): void {
-        this.updateIndicator('sigma', 'inactive', `${Sigma}`);
         this.updateIndicator('database', 'inactive', `${DB}`);
     }
 }

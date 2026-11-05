@@ -24,7 +24,6 @@ export const OF = '∈';         // of — membership/belonging
 export const Attestation = '⎔'; // one claim whole, slots and attributes together
 export const Triplet = '⫶';    // grouped attestations sharing subject+predicate+context
 export const Type = '⊢';       // an actor's judgment that a pattern deserves a name
-export const Sigma = 'Σ';      // distilled attestation, the sum of many observations
 
 // System infrastructure.
 export const Watcher = '⏿';    // observer/monitor for attestation patterns

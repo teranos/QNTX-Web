@@ -45,7 +45,6 @@ import {
     handlePulseExecutionCompleted,
     handlePulseExecutionLogStream
 } from './pulse/realtime-handlers.ts';
-import { handleStorageEviction } from './websocket-handlers/storage-eviction.ts';
 // ai-provider-window.ts removed — LLM provider is now a tray element (llm-provider-element.ts)
 // Note: Panel toggle functions are dynamically imported in Tauri event listeners below
 // to avoid unused import warnings. Menu items use "show" events with dynamic imports,
@@ -226,7 +225,6 @@ async function init(): Promise<void> {
         'pulse_execution_failed': handlePulseExecutionFailed,
         'pulse_execution_completed': handlePulseExecutionCompleted,
         'pulse_execution_log_stream': handlePulseExecutionLogStream,
-        'storage_eviction': handleStorageEviction,
     };
 
     connectWebSocket(handlers);

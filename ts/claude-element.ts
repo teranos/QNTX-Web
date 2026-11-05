@@ -190,9 +190,12 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     // The turn going, as it is said: deltas as they land, each message whole
     // when it is, each tool as it is reached for. Emptied when the turn ends.
     const live = part('div', 'chat-live');
-    // One conversation that scrolls: what was said, then what is being said.
+    // What was said while it answers, each said when the turn before it ends.
+    // "i wish to be able to send multipl emessahes, like i do now, here in claude code, if you get me"
+    const queued = part('div', 'chat-queued');
+    // One conversation that scrolls: what was said, then what is being said, then what waits.
     const scroller = part('div', 'chat-scroll');
-    scroller.append(session, live);
+    scroller.append(session, live, queued);
     const status = part('div', 'claude-status');
     // The context the last message was answered on, in tokens.
     const context = part('span', 'claude-context');
@@ -233,6 +236,9 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     let listening: (() => void) | null = null;
     let draft: HTMLElement | null = null;
     let drafted = '';
+    // One thing said: its words, what was typed for them, its picture, the mode and model it was said in, and its row while it waits.
+    interface Said { words: string; typed: string; picture: Blob | null; mode: string; model: string; row?: HTMLElement }
+    const waiting: Said[] = [];
 
     // A row of the live view: the thing itself, with no speaker in front of it.
     // "i dont want [tool] [read] [write] etc. because im in a convo, i prefer to
@@ -337,7 +343,6 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         if (tokens > 0) context.textContent = `${Math.round(tokens / 1000)}k of context`;
     };
     const hold = (answering: boolean) => {
-        send.disabled = answering;
         if (answering) { const said = part('span', 'claude-status-text'); said.textContent = 'answering…'; status.replaceChildren(spark(), said, context); }
         else status.replaceChildren(context);
     };
@@ -345,8 +350,10 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     const settle = () => {
         if (following) { clearInterval(following); following = null; }
         if (listening) { listening(); listening = null; }
-        // The turn is in the session now, read whole: the live view is done once it is drawn.
-        if (reading) void read().then(() => { live.replaceChildren(); });
+        // The turn is in the session now, read whole: its rows of the live view are done once it is drawn,
+        // and the rows of a turn said after it are that turn's.
+        const done = Array.from(live.children);
+        if (reading) void read().then(() => { for (const row of done) row.remove(); });
         else live.replaceChildren();
         draft = null;
         hold(false);
@@ -368,36 +375,58 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         }, every);
     };
 
-    // The picture goes up first, as a file of the node's; what comes back names it to say.
-    const carried = (): Promise<Carried | undefined> => {
-        if (!picture) return Promise.resolve(undefined);
-        const file = new File([picture], 'said.png', { type: picture.type || 'image/png' });
-        return uploadFile(file).then(stored => ({ file_id: stored.id }));
-    };
-
-    const sendIt = () => {
-        const words = says.value.trim() || (picture ? LOOK : '');
-        if (!words || sending) return;
+    // One thing said, as one turn of the node's.
+    const sayIt = (it: Said) => {
         sending = true;
         hold(true);
         failed.replaceChildren();
         denied.textContent = '';
         // Your words, at once, where the turn goes on from.
-        if (node.live) liveRow('you', chatText(words));
+        if (node.live) liveRow('you', chatText(it.words));
         follow();
-        carried()
-            .then(carries => node.say(words, mode.value, carries, model.hidden ? '' : model.value))
+        // The picture goes up first, as a file of the node's; what comes back names it to say.
+        const carries: Promise<Carried | undefined> = it.picture
+            ? uploadFile(new File([it.picture], 'said.png', { type: it.picture.type || 'image/png' })).then(stored => ({ file_id: stored.id }))
+            : Promise.resolve(undefined);
+        carries
+            .then(carried => node.say(it.words, it.mode, carried, it.model))
             .then(answer => {
-                says.value = '';
-                carry(null);
                 reading = answer.session;
                 if (answer.denied.length > 0) denied.textContent = `It reached for ${answer.denied.join(', ')} and was not allowed.`;
                 if (answer.unwritten) fails('session', new Error(`a row of the session was not written down: ${answer.unwritten}`));
                 return read();
             })
-            // What was typed stays in the box: a refusal does not cost the words.
-            .catch((err: unknown) => fails('say', err))
-            .finally(() => { sending = false; settle(); });
+            .then(() => {
+                sending = false;
+                settle();
+                const next = waiting.shift();
+                if (next) { next.row?.remove(); sayIt(next); }
+            }, (err: unknown) => {
+                fails('say', err);
+                // A refusal does not cost the words: what was refused and what waited behind it
+                // are back in the box, ahead of anything typed since, and none of it is said.
+                const back = [it, ...waiting.splice(0)];
+                for (const one of back) one.row?.remove();
+                says.value = [...back.map(one => one.typed), says.value].filter(Boolean).join('\n\n');
+                if (!picture) carry(back.find(one => one.picture)?.picture ?? null);
+                sending = false;
+                settle();
+            });
+    };
+
+    const sendIt = () => {
+        const words = says.value.trim() || (picture ? LOOK : '');
+        if (!words) return;
+        const it: Said = { words, typed: says.value.trim(), picture, mode: mode.value, model: model.hidden ? '' : model.value };
+        // "kinda buggy still is, the text linger even after i sent it": said is out of the box.
+        says.value = '';
+        carry(null);
+        if (!sending) { sayIt(it); return; }
+        it.row = chatRow('you', chatText(words), part('span', 'chat-waiting-said'));
+        it.row.classList.add('chat-waiting');
+        it.row.querySelector('.chat-waiting-said')!.textContent = 'waiting';
+        keepingBottom(scroller, () => queued.appendChild(it.row!));
+        waiting.push(it);
     };
     send.addEventListener('click', sendIt);
     says.addEventListener('keydown', (e) => {

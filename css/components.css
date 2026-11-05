@@ -350,11 +350,14 @@
 .claude-who { padding: 3px 6px; border-bottom: 1px solid var(--border-on-dark); color: var(--text-on-dark-secondary); font-size: var(--font-size-xs); white-space: normal; overflow-wrap: break-word; word-break: break-word; flex-shrink: 0; }
 /* The chat: one conversation that scrolls, yours on the right, the agent's on the left, what it did small between. */
 .chat-scroll { flex: 1; min-height: 0; overflow-y: auto; scroll-behavior: smooth; display: flex; flex-direction: column; padding: 6px 10px; user-select: text; -webkit-user-select: text; cursor: text; font-size: var(--font-size-sm); line-height: 1.45; background: color-mix(in srgb, var(--bg-almost-black) 85%, black); color: color-mix(in srgb, var(--text-on-dark) 80%, white); }
-.claude-session, .chat-col, .chat-live { display: flex; flex-direction: column; flex-shrink: 0; }
-.chat-live:empty { display: none; }
+.claude-session, .chat-col, .chat-live, .chat-queued { display: flex; flex-direction: column; flex-shrink: 0; }
+.chat-live:empty, .chat-queued:empty { display: none; }
 .chat-row { margin: 3px 0; white-space: pre-wrap; overflow-wrap: anywhere; animation: chat-arrive 160ms ease-out; }
 @keyframes chat-arrive { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .chat-you { align-self: flex-end; max-width: 82%; margin: 10px 0 6px auto; padding: 6px 10px; border-radius: 14px 14px 4px 14px; background: var(--accent-on-dark); color: var(--bg-almost-black); }
+/* Said while it answers: yours, not yet the node's. */
+.chat-waiting { opacity: 0.55; }
+.chat-waiting-said { display: block; text-align: right; font-size: var(--font-size-xs); }
 .chat-said { align-self: flex-start; max-width: 92%; padding: 2px 0; color: inherit; }
 .chat-did, .chat-got, .chat-thought, .chat-marker { align-self: flex-start; max-width: 92%; font-size: var(--font-size-xs); color: var(--text-on-dark-secondary); }
 .chat-did { border-left: 2px solid var(--border-on-dark); padding-left: 6px; }

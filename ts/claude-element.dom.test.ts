@@ -284,19 +284,74 @@ describe('Claude - Jenny', () => {
         stop();
     });
 
-    // Jenny: while it answers, a second thing cannot be said from here.
-    test('the box is held while it answers', async () => {
+    // "kinda buggy still is, the text linger even after i sent it"
+    test('the box empties when it is said, before the agent answers', async () => {
         const body = document.createElement('div');
-        let answer: (said: ClaudeSaid) => void = () => {};
-        const asked = node({ say: () => new Promise<ClaudeSaid>(resolve => { answer = resolve; }) });
+        const asked = node({ say: () => new Promise<ClaudeSaid>(() => {}) });
         const stop = drawClaude(body, asked, 1);
+        await settled();
+        say(body, 'hey, own https://github.com/teranos/QNTX/pull/1508 please');
+        await settled();
+        expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('');
+        expect(body.querySelector('.claude-status')?.textContent).toContain('answering');
+        stop();
+    });
+
+    // "i wish to be able to send multipl emessahes, like i do now, here in claude code, if you get me"
+    test('what is said while it answers waits, shown as waiting, and is said when the turn before it ends', async () => {
+        const body = document.createElement('div');
+        const answers: Array<(said: ClaudeSaid) => void> = [];
+        const sent: string[] = [];
+        const stop = drawClaude(body, node({
+            say: (says) => { sent.push(says); return new Promise<ClaudeSaid>(resolve => { answers.push(resolve); }); },
+        }), 1);
         await settled();
         say(body, 'first');
         await settled();
-        expect(body.querySelector<HTMLButtonElement>('.claude-send')!.disabled).toBe(true);
-        answer(answered);
-        await settled();
         expect(body.querySelector<HTMLButtonElement>('.claude-send')!.disabled).toBe(false);
+        say(body, 'second');
+        say(body, 'third');
+        await settled();
+        const waiting = () => Array.from(body.querySelectorAll('.chat-waiting')).map(r => r.querySelector('.chat-text')?.textContent);
+        expect(sent).toEqual(['first']);
+        expect(waiting()).toEqual(['second', 'third']);
+        expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('');
+
+        answers[0](answered);
+        await settled();
+        expect(sent).toEqual(['first', 'second']);
+        expect(waiting()).toEqual(['third']);
+        expect(body.querySelector('.claude-status')?.textContent).toContain('answering');
+
+        answers[1](answered);
+        await settled();
+        expect(sent).toEqual(['first', 'second', 'third']);
+        expect(waiting()).toEqual([]);
+
+        answers[2](answered);
+        await settled();
+        expect(body.querySelector('.claude-status')?.textContent).not.toContain('answering');
+        stop();
+    });
+
+    // A refusal does not cost the words: what was refused and what waited behind it are back in the box, and none of it is said.
+    test('a refusal puts what was refused and what waited back in the box, and says none of it', async () => {
+        const body = document.createElement('div');
+        let refuse: (err: Error) => void = () => {};
+        const sent: string[] = [];
+        const stop = drawClaude(body, node({
+            say: (says) => { sent.push(says); return new Promise<ClaudeSaid>((_resolve, reject) => { refuse = reject; }); },
+        }), 1);
+        await settled();
+        say(body, 'first');
+        await settled();
+        say(body, 'second');
+        await settled();
+        refuse(new Error('/api/agent/say: HTTP 500 Claude Code did not answer: exit status 1'));
+        await settled();
+        expect(sent).toEqual(['first']);
+        expect(body.querySelectorAll('.chat-waiting')).toHaveLength(0);
+        expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('first\n\nsecond');
         stop();
     });
 });
@@ -338,7 +393,7 @@ describe('Claude - the session while it runs', () => {
         expect(rows).toEqual(['how long has the box been up?', '$ uptime', 'up 3 days, 2 users', 'Up 3 days.']);
         expect(live.textContent).not.toContain('[tool]');
         // Still answering: say has not come back.
-        expect(body.querySelector<HTMLButtonElement>('.claude-send')!.disabled).toBe(true);
+        expect(body.querySelector('.claude-status')?.textContent).toContain('answering');
 
         landed!(event('text', 'Up 3 days.'));
         expect(live.querySelectorAll('.chat-said').length).toBe(1);

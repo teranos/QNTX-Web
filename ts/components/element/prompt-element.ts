@@ -286,8 +286,8 @@ export async function setupPromptElement(element: HTMLElement, item: Element): P
             }
 
             // The answer whole, drawn in place of the stream when that cannot finish where it was sent.
-            if (data.response) answerArrived(item.id, asked, data.response);
             const tokenCount = responseElement ? getResponseTokenCount(responseElement) : 0;
+            if (data.response) answerArrived(item.id, asked, data.response, data.streamed, tokenCount > 0);
             log.debug(SEG.ELEMENT, `[Prompt] Response complete, ${tokenCount} tokens`);
 
         } catch (error) {

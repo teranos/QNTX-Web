@@ -35,16 +35,19 @@ export function streamDone(jobId: string): void {
 }
 
 /**
- * The response for jobId is in, asked on the socket named asked ('' for none).
- * It is drawn whole now when no stream was sent or its socket is gone, and
- * when that socket closes before the stream finishes otherwise.
+ * The response for jobId is in, asked on the socket named asked ('' for none);
+ * streamed is what the node said of it, and undefined from a node that says
+ * nothing, which is drawn whole when drewAny says nothing streamed. It is drawn
+ * whole now when no stream was sent or its socket is gone, and when that
+ * socket closes before the stream finishes otherwise.
  */
-export function answerArrived(jobId: string, asked: string, answer: string): void {
+export function answerArrived(jobId: string, asked: string, answer: string, streamed: boolean | undefined, drewAny = false): void {
     const stream = going.get(jobId);
     if (!stream) return;
     stream.asked = asked;
     stream.answer = answer;
-    if (!asked || ownSocket() !== asked) whole(jobId);
+    const noStream = streamed === false || (streamed === undefined && !drewAny);
+    if (noStream || !asked || ownSocket() !== asked) whole(jobId);
 }
 
 function whole(jobId: string): void {

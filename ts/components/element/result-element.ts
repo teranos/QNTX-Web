@@ -1168,7 +1168,7 @@ async function executeStreamFollowUp(
                 return;
             }
 
-            if (data.response) answerArrived(responseElementId, asked, data.response);
+            if (data.response) answerArrived(responseElementId, asked, data.response, data.streamed, getResponseTokenCount(responseElement) > 0);
 
             log.debug(SEG.ELEMENT, `[ResultElement] Follow-up complete, ${getResponseTokenCount(responseElement)} streamed tokens`);
         })

@@ -76,7 +76,7 @@ describe('Tim: what the node says is a card', () => {
     test('the card carries the title, the link, the age and the checks', () => {
         const card = cardOf(pr29(), document.createElement('div'), Date.parse('2026-10-10T15:52:09Z'));
         expect(card.title).toBe('A panel on a phone reads at a phone’s size');
-        expect(card.link).toEqual({ label: 'GitHub', href: 'https://github.com/teranos/elements/pull/29' });
+        expect(card.link).toEqual({ label: 'codevault', href: 'https://github.com/teranos/elements/pull/29' });
         expect(card.arrivedMinutesAgo).toBe(15);
         expect(card.checks).toEqual([{ name: 'TypeScript', state: 'done' }, { name: 'Browser', state: 'done' }]);
         expect(card.options.map((o) => o.label)).toEqual(['YES', 'NO']);

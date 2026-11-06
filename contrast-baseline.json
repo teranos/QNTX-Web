@@ -28,10 +28,6 @@
   "rules": [
     "css/canvas.css | .canvas-action-button | color:var(--text-primary) on var(--bg-tertiary)",
     "css/canvas.css | .canvas-action-delete:hover | color:#d45030 on #3d1a0a",
-    "css/docs.css | .download-btn | color:#fff on var(--accent-color)",
-    "css/docs.css | .home-link | color:#fff on var(--accent-color)",
-    "css/docs.css | .latest-badge | color:#fff on var(--accent-color)",
-    "css/docs.css | .quick-link | color:var(--accent-color) on var(--bg-almost-white)",
     "css/loading.css | #loader-logs | color:var(--text-secondary) on #0f0f0f",
     "css/panel-base.css | .panel-badge-completed | color:var(--status-completed-text) on var(--status-completed-bg)",
     "css/panel-base.css | .panel-badge-failed | color:var(--status-failed-text) on var(--status-failed-bg)",
@@ -42,22 +38,6 @@
     "css/panel-base.css | .panel-btn-success | color:var(--status-completed-text) on var(--status-completed-bg)",
     "css/panel-base.css | .panel-btn-warning | color:var(--status-pending-text) on var(--status-pending-bg)",
     "css/panel-base.css | .panel-error-inline | color:var(--status-failed-text) on var(--status-failed-bg)",
-    "css/panel-base.css | .panel-error-retry | color:#fff on var(--status-failed-text)",
-    "css/pulse-panel.css | .child-error | color:var(--status-failed-text) on var(--status-failed-bg)",
-    "css/pulse-panel.css | .child-status-completed | color:#388e3c on var(--status-completed-bg)",
-    "css/pulse-panel.css | .child-status-failed | color:var(--status-failed-text) on var(--status-failed-bg)",
-    "css/pulse-panel.css | .child-status-queued, .child-status-paused | color:#f57c00 on var(--status-pending-bg)",
-    "css/pulse-panel.css | .child-status-running | color:var(--status-running-text) on var(--status-running-bg)",
-    "css/pulse-panel.css | .pulse-btn-delete.pulse-btn-confirming | color:var(--status-failed-text) on var(--status-failed-bg)",
-    "css/pulse-panel.css | .pulse-btn-force | color:white on #ff6b00",
-    "css/pulse-panel.css | .pulse-btn-force.pulse-btn-confirming | color:var(--status-pending-text) on var(--status-pending-bg)",
-    "css/pulse-scheduling.css | .pulse-btn-confirm | color:white on var(--color-success)",
-    "css/pulse-scheduling.css | .pulse-btn-confirm-active | color:var(--status-pending-text) on var(--status-pending-bg)",
-    "css/pulse-scheduling.css | .pulse-schedule-badge.active | color:var(--status-completed-text) on var(--status-completed-bg)",
-    "css/pulse-scheduling.css | .pulse-schedule-badge.paused | color:#757575 on var(--bg-almost-white)",
-    "css/type-definition-window.css | .add-field-btn | color:white on var(--accent-color)",
-    "css/type-definition-window.css | .type-definition-content .btn-primary | color:white on var(--accent-color)",
-    "css/window.css | .btn--primary | color:#fff on var(--accent-color)",
-    "css/window.css | .element-error | color:#ffe4ec on var(--color-error)"
+    "css/panel-base.css | .panel-error-retry | color:#fff on var(--status-failed-text)"
   ]
 }

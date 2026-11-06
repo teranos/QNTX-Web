@@ -72,6 +72,19 @@ describe('Agents', () => {
         stop();
     });
 
+    // "We shouldn't be displaying unavailable things to people"
+    test('a harness the node does not answer for is not a tab', async () => {
+        const { drawAgentChat } = await import('./agents-element');
+        const body = document.createElement('div');
+        const only = (agent: Reachable, harness: Harness): NodeAgent => harness === 'pi' || harness === 'agy'
+            ? { am: () => Promise.reject(new Error('/api/agent?harness=pi: HTTP 404')), say: () => Promise.resolve(said), read: () => Promise.resolve(undefined) }
+            : chatOf(agent, harness);
+        const stop = drawAgentChat(body, reached[0]!, only);
+        await settled();
+        expect(Array.from(body.querySelectorAll('.agents-tab')).map(t => t.textContent)).toEqual(['claude', 'codex']);
+        stop();
+    });
+
     // "each element is an agent as well": every element the viewer was given is listed, shaken or not.
     test('every element the viewer was given is an agent to talk to, the held ones beside them, none twice', async () => {
         const { reachableAgents } = await import('./agents-element');

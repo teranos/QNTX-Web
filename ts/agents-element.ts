@@ -280,17 +280,36 @@ export function drawAgentChat(body: HTMLElement, agent: Reachable, chatOf: (agen
             .catch((err: unknown) => { log.info(SEG.ELEMENT, `[Agents] no sessions listed for ${agent.called}: ${err instanceof Error ? err.message : String(err)}`); sessions.remove(); });
     }
 
-    for (const harness of harnessesOf(agent)) {
+    const tabFor = (harness: Harness) => {
         const tab = part('button', 'qntx-btn qntx-btn-small agents-tab');
         tab.type = 'button';
         tab.dataset.harness = harness;
         tab.textContent = harness;
+        tab.classList.toggle('agents-tab-on', harness === chosen);
         tab.addEventListener('click', () => { if (chosen !== harness) { chosen = harness; draw(); } });
-        tabs.append(tab);
+        return tab;
+    };
+    // Claude is where a chat begins and always has its tab. A harness the node
+    // does not answer for (this node names no Pi, say) is not offered at all:
+    // its tab appears only once its am has answered.
+    const [first, ...others] = harnessesOf(agent);
+    tabs.append(tabFor(first!));
+    let gone = false;
+    for (const harness of others) {
+        chatOf(agent, harness).am().then(() => {
+            if (gone) return;
+            const tab = tabFor(harness);
+            // Keep the harnesses in their order however the answers arrive.
+            const after = Array.from(tabs.querySelectorAll<HTMLElement>('.agents-tab'))
+                .find(each => harnessesOf(agent).indexOf(each.dataset.harness as Harness) > harnessesOf(agent).indexOf(harness));
+            tabs.insertBefore(tab, after ?? null);
+        }).catch((err: unknown) => {
+            log.info(SEG.ELEMENT, `[Agents] ${agent.called} is not offered in ${harness}: ${err instanceof Error ? err.message : String(err)}`);
+        });
     }
     preventDrag(tabs);
     draw();
-    return () => settle();
+    return () => { gone = true; settle(); };
 }
 
 /** Where an agent's chat rests in the tray: the namespace agent's under the id the Connectors flow opens. */

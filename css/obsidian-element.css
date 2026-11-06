@@ -18,7 +18,6 @@
     background: var(--bg-secondary);
 }
 
-.obsidian-setup-not-built,
 .obsidian-vault-path,
 .obsidian-record-title,
 .obsidian-cancel {
@@ -286,4 +285,9 @@
 .obsidian-record-title {
     text-transform: uppercase;
     letter-spacing: 0.06em;
+}
+
+.obsidian-not-set-up {
+    color: var(--text-on-dark-tertiary);
+    font-size: var(--font-size-xs);
 }

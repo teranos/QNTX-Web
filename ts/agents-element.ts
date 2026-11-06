@@ -21,6 +21,7 @@ import { backendPath } from './client/url';
 import { drawNamespaceAgent, agentOf } from './agent-element';
 import { storyAgent, type Story } from './stories-element';
 import { elementsOfTheViewer } from './default-elements';
+import { errorOf } from './node-connectors-element';
 
 export const ELEMENT_ID = 'agent-element';
 // The Agents level's own row in the sidebar; the id above is the namespace agent's chat, as the Connectors flow opens it.
@@ -30,12 +31,28 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' };
 const PHONE = '(max-width: 768px)';
 
 /** The harnesses a chat can run in, as the node names them. */
-export const HARNESSES = ['claude', 'pi', 'codex', 'agy'] as const;
-export type Harness = (typeof HARNESSES)[number];
+const KNOWN = ['claude', 'pi', 'codex', 'agy'] as const;
+export type Harness = (typeof KNOWN)[number];
 
-/** The harnesses an agent's chat offers: agy is the Node Agent's so far, and the node refuses it of any other. */
-export function harnessesOf(agent: Reachable): readonly Harness[] {
-    return agent.kind === 'node' ? HARNESSES : HARNESSES.filter(harness => harness !== 'agy');
+// "We shouldn't be displaying unavailable things to people"
+// "Let's say that I don't like how it's putting Claude on a pedestal."
+
+/**
+ * The harnesses an agent can be spoken to in, as the node answers am asked in
+ * none (QNTX server/agent_harness.go amInEvery): each harness am.toml names it
+ * in and whose binary the node holds, in the node's order. The page keeps no
+ * list of its own.
+ */
+export function harnessesIn(answer: AmAnswer): Harness[] {
+    return Object.keys(answer).filter((key): key is Harness =>
+        (KNOWN as readonly string[]).includes(key) && answer[key as Harness] != null);
+}
+
+/** What the agent offers, asked of the node once. */
+export function offeredBy(agent: Reachable, ask: <T>(path: string) => Promise<T> = apiJson): Promise<Harness[]> {
+    // The namespace agent's am takes a harness still: its claude is where it is set and signed in.
+    if (agent.kind === 'namespace') return Promise.resolve(['claude', 'pi', 'codex']);
+    return ask<AmAnswer>(agent.at).then(harnessesIn);
 }
 
 // Who the Node Agent is in Pi (pi am), and what it answered there (pi say).
@@ -128,7 +145,7 @@ export function codexAsSaid(said: CodexSaid): ClaudeSaid {
 }
 
 /** What the node answers of an agent, by harness. */
-interface AmAnswer { claude?: ClaudeAm | null; pi?: PiAm | null; codex?: CodexAm | null; agy?: AgyAm | null }
+export interface AmAnswer { claude?: ClaudeAm | null; pi?: PiAm | null; codex?: CodexAm | null; agy?: AgyAm | null }
 interface SaidAnswer { claude?: ClaudeSaid | null; pi?: PiSaid | null; codex?: CodexSaid | null; agy?: AgySaid | null }
 
 /** One agent at its path, in one harness, as the chat asks it. */
@@ -180,7 +197,7 @@ function part<K extends keyof HTMLElementTagNameMap>(tag: K, className: string):
 export async function reachableAgents(namespace: string, ask: <T>(path: string) => Promise<T> = apiJson): Promise<Reachable[]> {
     const found: Reachable[] = [];
     const tryOne = async (agent: Reachable) => {
-        try { await ask(`${agent.at}?harness=claude`); found.push(agent); }
+        try { await ask(agent.at); found.push(agent); }
         catch (err: unknown) { log.info(SEG.ELEMENT, `[Agents] ${agent.called} is not reached: ${err instanceof Error ? err.message : String(err)}`); }
     };
     await tryOne({ id: 'node', called: 'Node Agent', at: '/api/agent', kind: 'node' });
@@ -230,23 +247,31 @@ export async function reachableAgents(namespace: string, ask: <T>(path: string) 
  * One agent's chat drawn into body, with its harness picked as a tab: the chat
  * is drawn anew for the harness chosen, each harness its own session.
  */
-export function drawAgentChat(body: HTMLElement, agent: Reachable, chatOf: (agent: Reachable, harness: Harness) => NodeAgent = (a, h) => agentIn(a.at, h, a.unwrap)): () => void {
+export function drawAgentChat(
+    body: HTMLElement, agent: Reachable,
+    chatOf: (agent: Reachable, harness: Harness) => NodeAgent = (a, h) => agentIn(a.at, h, a.unwrap),
+    offered: (agent: Reachable) => Promise<Harness[]> = offeredBy,
+): () => void {
     const tabs = part('div', 'agents-tabs');
     const talk = part('div', 'agents-talk');
     body.replaceChildren(tabs, talk);
     let settle = () => {};
-    let chosen: Harness = 'claude';
+    let gone = false;
+    // The first harness the node offers it in, until another is pressed.
+    let chosen: Harness | undefined;
 
     const draw = () => {
         settle();
-        for (const tab of tabs.querySelectorAll<HTMLButtonElement>('.agents-tab')) tab.classList.toggle('agents-tab-on', tab.dataset.harness === chosen);
-        if (agent.kind === 'namespace' && chosen === 'claude') {
+        const harness = chosen;
+        if (!harness) return;
+        for (const tab of tabs.querySelectorAll<HTMLButtonElement>('.agents-tab')) tab.classList.toggle('agents-tab-on', tab.dataset.harness === harness);
+        if (agent.kind === 'namespace' && harness === 'claude') {
             // The namespace agent signs in on its own account first (ADR-048).
             const namespace = decodeURIComponent(agent.at.slice('/api/agents/'.length));
             settle = drawNamespaceAgent(talk, namespace, agentOf(namespace));
             return;
         }
-        settle = drawClaude(talk, chatOf(agent, chosen));
+        settle = drawClaude(talk, chatOf(agent, harness));
         const says = talk.querySelector<HTMLTextAreaElement>('.claude-says');
         if (says) says.placeholder = `Say something to ${agent.called}`;
     };
@@ -280,35 +305,25 @@ export function drawAgentChat(body: HTMLElement, agent: Reachable, chatOf: (agen
             .catch((err: unknown) => { log.info(SEG.ELEMENT, `[Agents] no sessions listed for ${agent.called}: ${err instanceof Error ? err.message : String(err)}`); sessions.remove(); });
     }
 
-    const tabFor = (harness: Harness) => {
-        const tab = part('button', 'qntx-btn qntx-btn-small agents-tab');
-        tab.type = 'button';
-        tab.dataset.harness = harness;
-        tab.textContent = harness;
-        tab.classList.toggle('agents-tab-on', harness === chosen);
-        tab.addEventListener('click', () => { if (chosen !== harness) { chosen = harness; draw(); } });
-        return tab;
-    };
-    // Claude is where a chat begins and always has its tab. A harness the node
-    // does not answer for (this node names no Pi, say) is not offered at all:
-    // its tab appears only once its am has answered.
-    const [first, ...others] = harnessesOf(agent);
-    tabs.append(tabFor(first!));
-    let gone = false;
-    for (const harness of others) {
-        chatOf(agent, harness).am().then(() => {
-            if (gone) return;
-            const tab = tabFor(harness);
-            // Keep the harnesses in their order however the answers arrive.
-            const after = Array.from(tabs.querySelectorAll<HTMLElement>('.agents-tab'))
-                .find(each => harnessesOf(agent).indexOf(each.dataset.harness as Harness) > harnessesOf(agent).indexOf(harness));
-            tabs.insertBefore(tab, after ?? null);
-        }).catch((err: unknown) => {
-            log.info(SEG.ELEMENT, `[Agents] ${agent.called} is not offered in ${harness}: ${err instanceof Error ? err.message : String(err)}`);
-        });
-    }
+    // A tab for each harness the node offers the agent in, and no other.
+    offered(agent).then(harnesses => {
+        if (gone) return;
+        for (const harness of harnesses) {
+            const tab = part('button', 'qntx-btn qntx-btn-small agents-tab');
+            tab.type = 'button';
+            tab.dataset.harness = harness;
+            tab.textContent = harness;
+            tab.addEventListener('click', () => { if (chosen !== harness) { chosen = harness; draw(); } });
+            tabs.append(tab);
+        }
+        chosen = harnesses[0];
+        draw();
+    }).catch((err: unknown) => {
+        if (gone) return;
+        // Offered in none: the node says why, where the chat would be.
+        talk.replaceChildren(errorOf(err instanceof Error ? err.message : String(err)));
+    });
     preventDrag(tabs);
-    draw();
     return () => { gone = true; settle(); };
 }
 

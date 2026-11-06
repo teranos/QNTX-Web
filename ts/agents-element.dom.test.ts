@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { agyAsAm, agyAsSaid, harnessesOf, piAsAm, piAsSaid, type Reachable, type Harness } from './agents-element';
+import { agyAsAm, agyAsSaid, piAsAm, piAsSaid, type Reachable, type Harness } from './agents-element';
 import type { ClaudeAm, ClaudeSaid, NodeAgent } from './claude-element';
 
 const USE_JSDOM = process.env.USE_JSDOM === '1';
@@ -59,7 +59,7 @@ describe('Agents', () => {
         const { drawAgentChat } = await import('./agents-element');
         const body = document.createElement('div');
         asked.length = 0;
-        const stop = drawAgentChat(body, reached[0]!, chatOf);
+        const stop = drawAgentChat(body, reached[0]!, chatOf, () => Promise.resolve(['claude', 'pi', 'codex', 'agy']));
         await settled();
         const tabs = Array.from(body.querySelectorAll('.agents-tab')).map(t => t.textContent);
         expect(tabs).toEqual(['claude', 'pi', 'codex', 'agy']);
@@ -73,16 +73,37 @@ describe('Agents', () => {
     });
 
     // "We shouldn't be displaying unavailable things to people"
-    test('a harness the node does not answer for is not a tab', async () => {
+    // "Let's say that I don't like how it's putting Claude on a pedestal."
+    test('the tabs are the harnesses the node offers, the first of them chosen, and no other', async () => {
         const { drawAgentChat } = await import('./agents-element');
         const body = document.createElement('div');
-        const only = (agent: Reachable, harness: Harness): NodeAgent => harness === 'pi' || harness === 'agy'
-            ? { am: () => Promise.reject(new Error('/api/agent?harness=pi: HTTP 404')), say: () => Promise.resolve(said), read: () => Promise.resolve(undefined) }
-            : chatOf(agent, harness);
-        const stop = drawAgentChat(body, reached[0]!, only);
+        asked.length = 0;
+        const stop = drawAgentChat(body, reached[0]!, chatOf, () => Promise.resolve(['pi', 'codex']));
         await settled();
-        expect(Array.from(body.querySelectorAll('.agents-tab')).map(t => t.textContent)).toEqual(['claude', 'codex']);
+        expect(Array.from(body.querySelectorAll('.agents-tab')).map(t => t.textContent)).toEqual(['pi', 'codex']);
+        expect(body.querySelector('.agents-tab-on')?.textContent).toBe('pi');
+        expect(asked).toEqual([['node', 'pi']]);
         stop();
+    });
+
+    test('an agent offered in no harness has no tab, and the node says why where the chat would be', async () => {
+        const { drawAgentChat } = await import('./agents-element');
+        const body = document.createElement('div');
+        const stop = drawAgentChat(body, reached[0]!, chatOf, () => Promise.reject(new Error("/api/agent: HTTP 404 this node's am.toml names no Node Agent")));
+        await settled();
+        expect(body.querySelectorAll('.agents-tab').length).toBe(0);
+        expect(body.querySelector('[data-error]')?.textContent).toContain('names no Node Agent');
+        stop();
+    });
+
+    test('what the node offers is each harness its am answers in, in its order', async () => {
+        const { harnessesIn, offeredBy } = await import('./agents-element');
+        expect(harnessesIn({ claude: am, pi: null, codex: { did: 'd', model: 'm', gateway: 'g', sandbox: 's', session: '', answering: false } })).toEqual(['claude', 'codex']);
+        expect(harnessesIn({ pi: { did: 'd', model: 'm', thinking: '', gateway: 'g', session: '', answering: false, pi: '', pi_version: '', not_ready: '' } })).toEqual(['pi']);
+        const paths: string[] = [];
+        const ask = (async (path: string) => { paths.push(path); return { claude: am }; }) as <T>(path: string) => Promise<T>;
+        expect(await offeredBy(reached[0]!, ask)).toEqual(['claude']);
+        expect(paths).toEqual(['/api/agent']);
     });
 
     // "each element is an agent as well": every element the viewer was given is listed, shaken or not.
@@ -92,7 +113,7 @@ describe('Agents', () => {
         elementsOfTheViewer.length = 0;
         elementsOfTheViewer.push({ id: 'db-element', title: 'Database' }, { id: 'agent-element', title: 'Agents' }, { id: 'ground-element', title: 'Ground' });
         const ask = (async (path: string) => {
-            if (path === '/api/agent?harness=claude') return { claude: am };
+            if (path === '/api/agent') return { claude: am };
             if (path === '/api/elements') return { agents: [{ element: 'ground-element', session: 's-g', answering: false }, { element: 'shaken-thing', session: 's-x', answering: false }, { element: 'story-1-x', session: '', answering: false }] };
             throw new Error(`${path}: not in this test`);
         }) as <T>(path: string) => Promise<T>;
@@ -100,15 +121,6 @@ describe('Agents', () => {
         const elements = found.filter(a => a.kind === 'element').map(a => a.called);
         expect(elements).toEqual(['Database', 'Ground', 'shaken-thing']);
         expect(found.filter(a => a.kind === 'element').map(a => a.at)).toContain('/api/elements/shaken-thing');
-    });
-
-    // "make sure agy is an option for Node Agent talks": the namespace's agent in
-    // agy is its own PR, and the node refuses it until then.
-    test('agy is a tab on the Node Agent, and on nothing else yet', () => {
-        expect(harnessesOf({ id: 'node', called: 'Node Agent', at: '/api/agent', kind: 'node' })).toContain('agy');
-        for (const kind of ['namespace', 'element', 'story'] as const) {
-            expect(harnessesOf({ id: kind, called: kind, at: `/api/x`, kind })).not.toContain('agy');
-        }
     });
 
     test('agy am and agy say are drawn as the chat draws any harness', () => {

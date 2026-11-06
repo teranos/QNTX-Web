@@ -47,15 +47,30 @@ function broadcastReload(): void {
     clients.forEach(client => client.write(message));
 }
 
+// "log once per build, not once per event"
+// A file rewritten in a loop on k printed "Changed:" 411,167 times in 14
+// minutes, into a journal on a spinning disk. What changed is said once, as
+// its build starts, with how many times each file was seen.
+const changed: Map<string, number> = new Map();
+
+/** The one line a build's changes are said in: each file once, with its count when it is more than one. */
+export function changedLine(seen: ReadonlyMap<string, number>): string {
+    return [...seen].map(([file, times]) => times > 1 ? `${file} (${times}x)` : file).join(", ");
+}
+
 /** Rebuilds on a change under ts/, css/ or to index.html. */
 export function setupWatcher(): void {
     const dirs = ["./ts", "./css", "./index.html"];
     dirs.forEach(dir => {
         watch(dir, { recursive: true }, (_eventType, filename) => {
             if (filename?.endsWith('.ts') || filename?.endsWith('.css') || filename?.endsWith('.html')) {
-                console.log(`${pink}Changed: ${filename}${reset}`);
+                changed.set(filename, (changed.get(filename) ?? 0) + 1);
                 if (buildTimeout) clearTimeout(buildTimeout);
-                buildTimeout = setTimeout(build, BUILD_DEBOUNCE);
+                buildTimeout = setTimeout(() => {
+                    console.log(`${pink}Changed: ${changedLine(changed)}${reset}`);
+                    changed.clear();
+                    void build();
+                }, BUILD_DEBOUNCE);
             }
         });
     });

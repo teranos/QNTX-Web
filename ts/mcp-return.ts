@@ -1,8 +1,8 @@
 /**
- * An MCP server's yes, coming back to the app. The person says yes at the
- * server in the browser; the server sends that browser to the node's return,
- * which holds no session here and so hands the code on through qntx://mcp.
- * The app is logged in, and posts it to the node as the person at ROOT.
+ * 「[Opus 5.5] An MCP server's yes, coming back to the app. The person says yes at the」
+ * 「[Opus 5.5] server in the browser; the server sends that browser to the node's return,」
+ * 「[Opus 5.5] which holds no session here and so hands the code on through qntx://mcp.」
+ * 「[Opus 5.5] The app is logged in, and posts it to the node as the person at ROOT.」
  */
 
 import { invoke } from '@tauri-apps/api/core';
@@ -60,8 +60,8 @@ export async function finishMcpYes(yes: McpYes): Promise<void> {
 }
 
 /**
- * Takes every yes the app is handed: the one that launched it, and each after.
- * Nothing outside the app: a browser has no qntx:// to be handed.
+ * 「[Opus 5.5] Takes every yes the app is handed: the one that launched it, and each after.」
+ * 「[Opus 5.5] Nothing outside the app: a browser has no qntx:// to be handed.」
  */
 export function receiveMcpYeses(): void {
     if (!inApp()) return;

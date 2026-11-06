@@ -72,7 +72,8 @@ function lines(texts: string[]): HTMLElement {
 export function cardOf(approval: Approval, said: HTMLElement, now = Date.now()): Card {
     return {
         title: approval.title || approval.subject,
-        link: { label: 'GitHub', href: approval.link },
+        // "github is github, its codevault": what the checks button is called, said to a screen reader, never drawn.
+        link: { label: 'codevault', href: approval.link },
         arrivedMinutesAgo: minutesAgo(approval.asked_at, now),
         context: () => {
             const context = document.createElement('div');

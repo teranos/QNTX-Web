@@ -133,6 +133,44 @@ describe('Agents', () => {
         stop();
     });
 
+    test('each answer is what is offered now: a harness no longer offered loses its tab, and the chat moves to one that is', async () => {
+        const { drawAgentChat } = await import('./agents-element');
+        const body = document.createElement('div');
+        const answers: Array<{ harnesses: Harness[]; arriving: string[] }> = [
+            { harnesses: ['claude', 'pi'], arriving: ['codex'] },
+            { harnesses: ['pi'], arriving: ['codex'] },
+            { harnesses: ['pi', 'codex'], arriving: [] },
+        ];
+        let asks = 0;
+        const offered = () => Promise.resolve(answers[Math.min(asks++, answers.length - 1)]!);
+        const stop = drawAgentChat(body, reached[0]!, chatOf, offered, 1);
+        await settled();
+        await new Promise(resolve => setTimeout(resolve, 30));
+        await settled();
+        expect(Array.from(body.querySelectorAll('.agents-tab')).map(t => t.textContent)).toEqual(['pi', 'codex']);
+        expect(body.querySelector('.agents-tab-on')?.textContent).toBe('pi');
+        expect(body.querySelector('.claude-says')).not.toBeNull();
+        stop();
+    });
+
+    test('an answer with nothing offered and nothing arriving says so, and asking stops', async () => {
+        const { drawAgentChat } = await import('./agents-element');
+        const body = document.createElement('div');
+        const answers: Array<{ harnesses: Harness[]; arriving: string[] }> = [
+            { harnesses: [], arriving: ['claude'] },
+            { harnesses: [], arriving: [] },
+        ];
+        let asks = 0;
+        const offered = () => Promise.resolve(answers[Math.min(asks++, answers.length - 1)]!);
+        const stop = drawAgentChat(body, reached[0]!, chatOf, offered, 1);
+        await settled();
+        await new Promise(resolve => setTimeout(resolve, 30));
+        await settled();
+        expect(body.querySelector('.agents-arriving')?.textContent).toBe('Node Agent is offered in no harness');
+        expect(asks).toBe(2);
+        stop();
+    });
+
     test('while nothing has arrived, the chat says what is arriving', async () => {
         const { drawAgentChat } = await import('./agents-element');
         const body = document.createElement('div');

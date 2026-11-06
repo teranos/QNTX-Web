@@ -324,6 +324,11 @@ export function drawAgentChat(
     let again: ReturnType<typeof setTimeout> | undefined;
     const ask = () => offered(agent).then(({ harnesses, arriving }) => {
         if (gone) return;
+        // Each answer is what is offered now: a tab no longer offered goes.
+        for (const tab of tabs.querySelectorAll<HTMLElement>('.agents-tab')) {
+            if (!harnesses.includes(tab.dataset.harness as Harness)) tab.remove();
+        }
+        if (chosen && !harnesses.includes(chosen)) { chosen = undefined; settle(); settle = () => {}; }
         const has = (harness: Harness) => tabs.querySelector(`.agents-tab[data-harness="${harness}"]`) !== null;
         for (const [at, harness] of harnesses.entries()) {
             if (has(harness)) continue;
@@ -341,7 +346,7 @@ export function drawAgentChat(
             draw();
         } else if (!chosen) {
             const note = part('div', 'agents-arriving');
-            note.textContent = `${arriving.join(', ')} still arriving`;
+            note.textContent = arriving.length > 0 ? `${arriving.join(', ')} still arriving` : `${agent.called} is offered in no harness`;
             talk.replaceChildren(note);
         }
         if (arriving.length > 0) again = setTimeout(ask, arrivingMs);

@@ -5,7 +5,20 @@
 import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
 // The Obsidian element asks the node through ./client, which the preload stands in for: here it answers the vault.
 mock.module('./client', () => ({
-    connectivity: { get state() { return 'online' as const; }, get authenticated() { return true; }, subscribe: () => () => {}, subscribeAuth: () => () => {} },
+    connectivity: {
+        get state() { return 'online' as const; },
+        get authenticated() { return true; },
+        subscribe: () => () => {},
+        subscribeAuth: () => () => {},
+        subscribeFailures: () => () => {},
+        failures: [],
+        reportReachable: () => {},
+        reportHttpFailure: () => {},
+        reportWsFailure: () => {},
+        reportUnauthenticated: () => {},
+        reportAuthenticated: () => {},
+        setWebSocketConnected: () => {},
+    },
     apiFetch: () => Promise.resolve(new Response()),
     apiJson: (path: string) => {
         const answered = vaultAnswers[path.split('?')[0]!];
@@ -13,6 +26,12 @@ mock.module('./client', () => ({
     },
     backendUrl: () => 'http://localhost',
     backendPath: (path: string) => 'http://localhost' + path,
+    backendWsUrl: () => 'ws://localhost',
+    sendMessage: () => false,
+    connectWebSocket: () => {},
+    registerHandler: () => {},
+    unregisterHandler: () => {},
+    ownSocket: () => '',
 }));
 
 const { idsIn, renderNodeConnectors, wizardName } = await import('./node-connectors-element');

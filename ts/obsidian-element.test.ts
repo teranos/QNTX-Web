@@ -33,7 +33,7 @@ mock.module('./client', () => ({
     unregisterHandler: () => {},
 }));
 
-const { renderVault, load, createObsidianElement, SETUP_NOT_BUILT } = await import('./obsidian-element');
+const { renderVault, load, createObsidianElement, NOT_SET_UP } = await import('./obsidian-element');
 
 afterEach(() => {
     answer = noAnswer;
@@ -64,14 +64,26 @@ const click = (container: HTMLElement, text: string) => {
     button.click();
 };
 
-describe('setting a vault up is not built yet', () => {
-    // 1.0.0 blocker (#1091): said in the element, not left for somebody to find out.
-    test('the element says so, and names the issue', () => {
+describe('a vault not set up yet', () => {
+    // "the real claim is one thing"
+    test('a node that keeps no vault says it is not set up yet', async () => {
         answers = { '/api/vault': { vaults: [] } };
         const body = createObsidianElement().renderContent();
-        expect(body.querySelector('.obsidian-setup-not-built')?.textContent).toBe(SETUP_NOT_BUILT);
-        expect(SETUP_NOT_BUILT).toContain('#1091');
-        expect(SETUP_NOT_BUILT).toContain('1.0.0 blocker');
+        await flush();
+        expect(body.querySelector('.obsidian-not-set-up')?.textContent).toBe(NOT_SET_UP);
+    });
+
+    // "why cant it be conditional"
+    test('a node that keeps a vault says nothing of setting one up', async () => {
+        answers = {
+            '/api/vault': { vaults: [vault] },
+            '/api/vault/dirs?name=abcd': { dirs },
+            '/api/vault/states?name=abcd': { folders: [] },
+        };
+        const body = createObsidianElement().renderContent();
+        await flush();
+        expect(body.querySelector('.obsidian-vault-name')?.textContent).toBe('abcd');
+        expect(body.querySelector('.obsidian-not-set-up')).toBeNull();
     });
 });
 
@@ -116,7 +128,7 @@ describe('the vault is its folders', () => {
         answers = { '/api/vault': { vaults: [] } };
         const container = document.createElement('div');
         await load(container);
-        expect(container.textContent).toContain('The node keeps no vault yet.');
+        expect(container.textContent).toBe(NOT_SET_UP);
     });
 });
 

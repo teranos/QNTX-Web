@@ -61,8 +61,13 @@ const ELEMENT_ID = 'obsidian-element';
 
 // "the real story should not have to depend on having claude already setup in the system"
 
-/** 1.0.0 BLOCKER (#1091): what the element says while a vault is set up by hand. */
-export const SETUP_NOT_BUILT = 'Setting up a vault here is not built yet: signing in to Obsidian Sync, choosing a vault and keeping it syncing (#1091, 1.0.0 blocker).';
+// 1.0.0 BLOCKER (#1091): a vault is set up on the box by hand, not from here.
+
+// "make the notices much smallert and say much less"
+// "the real claim is one thing"
+// "its nto set up yet"
+/** What the element says while the node keeps no vault. */
+export const NOT_SET_UP = 'Not set up yet';
 
 function div(className: string, text = ''): HTMLDivElement {
     const d = document.createElement('div');
@@ -360,8 +365,10 @@ export async function load(container: HTMLElement): Promise<void> {
     try {
         const { vaults } = await apiJson<{ vaults: Vault[] }>('/api/vault');
         container.innerHTML = '';
+        // "why cant it be conditional"
+        // "its not like its not wanted"
         if (vaults.length === 0) {
-            container.appendChild(div('element-loading', 'The node keeps no vault yet.'));
+            container.append(div('obsidian-not-set-up', NOT_SET_UP));
             return;
         }
         for (const vault of vaults) {
@@ -393,7 +400,7 @@ export function createObsidianElement(): Element {
             const content = div('obsidian-element-content');
             const vaults = div('obsidian-vaults');
             vaults.appendChild(div('element-loading', 'Loading the node’s vaults…'));
-            content.append(div('obsidian-setup-not-built', SETUP_NOT_BUILT), vaults);
+            content.append(vaults);
             void load(vaults);
             return content;
         },

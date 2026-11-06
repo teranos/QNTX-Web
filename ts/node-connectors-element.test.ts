@@ -3,7 +3,20 @@
 // Spike: part of what the node needs, a refused rule, Done pressed too soon, what the Console puts around an ID.
 
 import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
-import { idsIn, renderNodeConnectors, wizardName, type NodeIdentity } from './node-connectors-element';
+// The Obsidian element asks the node through ./client, which the preload stands in for: here it answers the vault.
+mock.module('./client', () => ({
+    connectivity: { get state() { return 'online' as const; }, get authenticated() { return true; }, subscribe: () => () => {}, subscribeAuth: () => () => {} },
+    apiFetch: () => Promise.resolve(new Response()),
+    apiJson: (path: string) => {
+        const answered = vaultAnswers[path.split('?')[0]!];
+        return answered ? Promise.resolve(answered) : Promise.reject(new Error(`nothing answers ${path}`));
+    },
+    backendUrl: () => 'http://localhost',
+    backendPath: (path: string) => 'http://localhost' + path,
+}));
+
+const { idsIn, renderNodeConnectors, wizardName } = await import('./node-connectors-element');
+type NodeIdentity = import('./node-connectors-element').NodeIdentity;
 
 const originalFetch = globalThis.fetch;
 let asked: { url: string; method: string; body: Record<string, string> }[] = [];
@@ -22,6 +35,13 @@ let capHeld: Promise<void> | null = null;
 
 /** While set, an order asked of the node is answered only once this settles. */
 let orderHeld: Promise<void> | null = null;
+
+/** What the node answers of its vaults, by path. */
+const vaultAnswers: Record<string, unknown> = {
+    '/api/vault': { vaults: [{ name: 'abcd', path: '/var/lib/obsidian/abcd', folders: [] }] },
+    '/api/vault/dirs': { dirs: ['Course Material'] },
+    '/api/vault/states': { folders: [] },
+};
 
 /** Where a press sent ROOT. */
 let wentTo: string[] = [];
@@ -538,5 +558,15 @@ describe('Spike: Google Cloud does not accept the node', () => {
         expect((row.querySelector('[data-error]') as HTMLElement).textContent).toContain("Google's token exchange");
         await press(held, 'google-connect');
         expect(wentTo).toEqual([`${NODE.issuer}/auth/google/cloud?page=${encodeURIComponent(window.location.pathname)}`]);
+    });
+});
+
+// "i expect to manage Node Obsidian Vault bindings from the Connectors found in am"
+describe('Tim: ROOT manages the node\'s Obsidian vault in Node Connectors', () => {
+    test('the Obsidian row holds the node\'s vault and its folders, as the Obsidian element draws them', async () => {
+        const held = await drawn();
+        const row = held.querySelector('[data-platform="Obsidian"]') as HTMLElement;
+        expect(row).not.toBeNull();
+        expect(row.querySelector('.obsidian-row[data-place="Course Material"]')).not.toBeNull();
     });
 });

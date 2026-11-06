@@ -7,9 +7,10 @@ import { fieldFrom, flowFrom, pressFrom, tray, type FlowHandle, type FlowStep } 
 import { apiJson } from './client/http';
 import { log, SEG } from './logger';
 import type { AgyAm } from './agents-element';
-import { ANTHROPIC, GOOGLE, markOf } from './brand-marks';
+import { ANTHROPIC, GOOGLE, OBSIDIAN, markOf } from './brand-marks';
 import { copied, goTo, note, valueRow } from './connector-element';
 import { copyable } from './copyable';
+import { createObsidianElement } from './obsidian-element';
 import { lightFrom, type Light } from './light';
 import { CONNECTOR } from './sym';
 import type { NodeAnthropic, NodeGoogle } from './generated/proto/plugin/grpc/protocol/sigil';
@@ -541,9 +542,27 @@ function googleRow(go: (url: string) => void): HTMLElement {
     return row;
 }
 
+// "i expect to manage Node Obsidian Vault bindings from the Connectors found in am"
+
+/** The Obsidian row: the node's vaults and their bindings, as the Obsidian element draws them (ADR-049). */
+function obsidianRow(): HTMLElement {
+    const row = document.createElement('div');
+    row.dataset.platform = 'Obsidian';
+    row.style.cssText = 'display:flex;flex-direction:column;gap:10px;padding:8px;border:1px solid var(--border-on-dark);border-radius:var(--border-radius);background:var(--bg-dark-light);color:var(--text-on-dark)';
+    const head = document.createElement('div');
+    head.dataset.connect = 'Obsidian';
+    head.style.cssText = 'display:flex;align-items:center;gap:8px';
+    const title = document.createElement('span');
+    title.textContent = 'Obsidian';
+    title.style.flex = '1';
+    head.append(markOf(OBSIDIAN), title);
+    row.append(head, createObsidianElement().renderContent());
+    return row;
+}
+
 /** Exported for tests: the node's connectors, drawn from what the node says of itself. */
 export function renderNodeConnectors(container: HTMLElement, node: NodeIdentity, go: (url: string) => void = (url) => window.location.assign(url)): void {
-    container.append(anthropicRow(node), googleRow(go));
+    container.append(anthropicRow(node), googleRow(go), obsidianRow());
 }
 
 /** What the node says of itself: its name, its issuer, its DID and its namespaces. */

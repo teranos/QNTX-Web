@@ -17,7 +17,7 @@
   },
   "css/components.css": {
     "scale-unlimited/declaration-strict-value": 35,
-    "declaration-property-value-disallowed-list": 12,
+    "declaration-property-value-disallowed-list": 11,
     "no-descending-specificity": 3
   },
   "css/components/base-panel.css": {

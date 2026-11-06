@@ -19,7 +19,6 @@ const answered: AmCard = {
         capabilities: { extensions: [{ params: { mcp: { url: 'http://localhost:8770/mcp', protocolVersion: '2026-07-28' } } }] },
         skills: [{ name: 'staands' }, { name: 'parity' }],
     },
-    missing: ['AgentCard.name', 'AgentCard.description', 'AgentCard.skills[0].tags', 'AgentCard.skills[1].tags'],
 };
 
 describe('A2A card', () => {
@@ -37,7 +36,7 @@ describe('A2A card', () => {
     });
 
     // Tim: the card says what the node said, and nothing it did not.
-    test('the card says what the node said, and what it left empty', () => {
+    test('the card says what the node said, and nothing it did not', () => {
         renderA2ACard(container, answered);
         const text = container.textContent ?? '';
         expect(text).toContain('not said');
@@ -45,8 +44,6 @@ describe('A2A card', () => {
         expect(text).toContain('http://localhost:8770/a2a HTTP+JSON 1.0');
         expect(text).toContain('http://localhost:8770/mcp 2026-07-28');
         expect(text).toContain('staands, parity');
-        expect(text).toContain('AgentCard.name');
-        expect(text).toContain('AgentCard.skills[1].tags');
     });
 
     // Tim: in ≡ it rests as one small italic button saying A2A.

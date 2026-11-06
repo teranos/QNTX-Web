@@ -191,6 +191,35 @@ async function agentAnswer(level: Level, method: string, path: string, _url: URL
     return null;
 }
 
+/**
+ * am asked in no harness: every harness the agent can be spoken to in, in one
+ * answer, as the node answers it (QNTX server/agent_harness.go amInEvery).
+ * The mock holds the Node Agent in claude, codex and agy, and an element's in
+ * claude: the node runs an element's in claude and pi, and the mock has no Pi.
+ */
+async function amInEvery(level: Level, req: Request, url: URL): Promise<Response | null> {
+    if (req.method !== "GET" || url.searchParams.has("harness")) return null;
+    const path = url.pathname;
+    const node = path === "/api/agent";
+    const element = /^\/api\/elements\/[^/]+$/.test(path);
+    if (!node && !element) return null;
+    const inHarness = (harness: string) => {
+        const asked = new URL(url);
+        asked.searchParams.set("harness", harness);
+        return new Request(asked, { headers: req.headers });
+    };
+    const every: Record<string, unknown> = {};
+    const claude = await agentAnswer(level, "GET", path, url, req);
+    if (claude?.ok) Object.assign(every, await claude.json());
+    if (node) {
+        for (const [harness, held] of [["codex", codexAgents], ["agy", agyAgents]] as const) {
+            const answered = await held.answer(inHarness(harness));
+            if (answered?.ok) Object.assign(every, await answered.json());
+        }
+    }
+    return json(every);
+}
+
 /** The files the page sends up, kept in memory and served back by id. */
 async function filesAnswer(method: string, path: string, req: Request): Promise<Response | null> {
     if (path === "/api/files" && method === "POST") {
@@ -353,6 +382,7 @@ async function answer(req: Request, url: URL): Promise<Response> {
     }
 
     const said = worldAnswer(level, method, path, url)
+        ?? await amInEvery(level, req, url)
         ?? await codexAgents.answer(req)
         ?? await agyAgents.answer(req)
         ?? await agentAnswer(level, method, path, url, req)

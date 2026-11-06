@@ -48,11 +48,23 @@ export function harnessesIn(answer: AmAnswer): Harness[] {
         (KNOWN as readonly string[]).includes(key) && answer[key as Harness] != null);
 }
 
-/** What the agent offers, asked of the node once. */
-export function offeredBy(agent: Reachable, ask: <T>(path: string) => Promise<T> = apiJson): Promise<Harness[]> {
+/**
+ * What the agent offers now, and the harnesses still arriving: named by the
+ * node, not offered until their binary has arrived.
+ */
+export interface Offered { harnesses: Harness[]; arriving: string[] }
+
+// "My recommendation is that the node also says which harnesses are still
+// downloading, and the page asks again only while that list isn't empty."
+// "Sure"
+/** How long a chat waits before it asks again while a harness is arriving. */
+const ARRIVING_MS = 5000;
+
+/** What the agent offers, asked of the node. */
+export function offeredBy(agent: Reachable, ask: <T>(path: string) => Promise<T> = apiJson): Promise<Offered> {
     // The namespace agent's am takes a harness still: its claude is where it is set and signed in.
-    if (agent.kind === 'namespace') return Promise.resolve(['claude', 'pi', 'codex']);
-    return ask<AmAnswer>(agent.at).then(harnessesIn);
+    if (agent.kind === 'namespace') return Promise.resolve({ harnesses: ['claude', 'pi', 'codex'], arriving: [] });
+    return ask<AmAnswer>(agent.at).then(answer => ({ harnesses: harnessesIn(answer), arriving: answer.arriving ?? [] }));
 }
 
 // Who the Node Agent is in Pi (pi am), and what it answered there (pi say).
@@ -145,7 +157,7 @@ export function codexAsSaid(said: CodexSaid): ClaudeSaid {
 }
 
 /** What the node answers of an agent, by harness. */
-export interface AmAnswer { claude?: ClaudeAm | null; pi?: PiAm | null; codex?: CodexAm | null; agy?: AgyAm | null }
+export interface AmAnswer { claude?: ClaudeAm | null; pi?: PiAm | null; codex?: CodexAm | null; agy?: AgyAm | null; arriving?: string[] }
 interface SaidAnswer { claude?: ClaudeSaid | null; pi?: PiSaid | null; codex?: CodexSaid | null; agy?: AgySaid | null }
 
 /** One agent at its path, in one harness, as the chat asks it. */
@@ -250,7 +262,8 @@ export async function reachableAgents(namespace: string, ask: <T>(path: string) 
 export function drawAgentChat(
     body: HTMLElement, agent: Reachable,
     chatOf: (agent: Reachable, harness: Harness) => NodeAgent = (a, h) => agentIn(a.at, h, a.unwrap),
-    offered: (agent: Reachable) => Promise<Harness[]> = offeredBy,
+    offered: (agent: Reachable) => Promise<Offered> = offeredBy,
+    arrivingMs = ARRIVING_MS,
 ): () => void {
     const tabs = part('div', 'agents-tabs');
     const talk = part('div', 'agents-talk');
@@ -306,25 +319,43 @@ export function drawAgentChat(
     }
 
     // A tab for each harness the node offers the agent in, and no other.
-    offered(agent).then(harnesses => {
+    // A harness still arriving gets its tab once the node offers it: the
+    // chat asks again while one is arriving, and only then.
+    let again: ReturnType<typeof setTimeout> | undefined;
+    const ask = () => offered(agent).then(({ harnesses, arriving }) => {
         if (gone) return;
-        for (const harness of harnesses) {
+        const has = (harness: Harness) => tabs.querySelector(`.agents-tab[data-harness="${harness}"]`) !== null;
+        for (const [at, harness] of harnesses.entries()) {
+            if (has(harness)) continue;
             const tab = part('button', 'qntx-btn qntx-btn-small agents-tab');
             tab.type = 'button';
             tab.dataset.harness = harness;
             tab.textContent = harness;
             tab.addEventListener('click', () => { if (chosen !== harness) { chosen = harness; draw(); } });
-            tabs.append(tab);
+            // In the node's order, however late it came.
+            const next = harnesses.slice(at + 1).find(has);
+            tabs.insertBefore(tab, next ? tabs.querySelector(`.agents-tab[data-harness="${next}"]`) : null);
         }
-        chosen = harnesses[0];
-        draw();
+        if (!chosen && harnesses.length > 0) {
+            chosen = harnesses[0];
+            draw();
+        } else if (!chosen) {
+            const note = part('div', 'agents-arriving');
+            note.textContent = `${arriving.join(', ')} still arriving`;
+            talk.replaceChildren(note);
+        }
+        if (arriving.length > 0) again = setTimeout(ask, arrivingMs);
     }).catch((err: unknown) => {
         if (gone) return;
+        const why = err instanceof Error ? err.message : String(err);
+        // A chat already drawn stays; asking again stops.
+        if (chosen) { log.info(SEG.ELEMENT, `[Agents] ${agent.called} was not asked again: ${why}`); return; }
         // Offered in none: the node says why, where the chat would be.
-        talk.replaceChildren(errorOf(err instanceof Error ? err.message : String(err)));
+        talk.replaceChildren(errorOf(why));
     });
+    void ask();
     preventDrag(tabs);
-    return () => { gone = true; settle(); };
+    return () => { gone = true; clearTimeout(again); settle(); };
 }
 
 /** Where an agent's chat rests in the tray: the namespace agent's under the id the Connectors flow opens. */

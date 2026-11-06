@@ -59,7 +59,7 @@ describe('Agents', () => {
         const { drawAgentChat } = await import('./agents-element');
         const body = document.createElement('div');
         asked.length = 0;
-        const stop = drawAgentChat(body, reached[0]!, chatOf, () => Promise.resolve(['claude', 'pi', 'codex', 'agy']));
+        const stop = drawAgentChat(body, reached[0]!, chatOf, () => Promise.resolve({ harnesses: ['claude', 'pi', 'codex', 'agy'], arriving: [] }));
         await settled();
         const tabs = Array.from(body.querySelectorAll('.agents-tab')).map(t => t.textContent);
         expect(tabs).toEqual(['claude', 'pi', 'codex', 'agy']);
@@ -78,7 +78,7 @@ describe('Agents', () => {
         const { drawAgentChat } = await import('./agents-element');
         const body = document.createElement('div');
         asked.length = 0;
-        const stop = drawAgentChat(body, reached[0]!, chatOf, () => Promise.resolve(['pi', 'codex']));
+        const stop = drawAgentChat(body, reached[0]!, chatOf, () => Promise.resolve({ harnesses: ['pi', 'codex'], arriving: [] }));
         await settled();
         expect(Array.from(body.querySelectorAll('.agents-tab')).map(t => t.textContent)).toEqual(['pi', 'codex']);
         expect(body.querySelector('.agents-tab-on')?.textContent).toBe('pi');
@@ -102,8 +102,45 @@ describe('Agents', () => {
         expect(harnessesIn({ pi: { did: 'd', model: 'm', thinking: '', gateway: 'g', session: '', answering: false, pi: '', pi_version: '', not_ready: '' } })).toEqual(['pi']);
         const paths: string[] = [];
         const ask = (async (path: string) => { paths.push(path); return { claude: am }; }) as <T>(path: string) => Promise<T>;
-        expect(await offeredBy(reached[0]!, ask)).toEqual(['claude']);
+        expect(await offeredBy(reached[0]!, ask)).toEqual({ harnesses: ['claude'], arriving: [] });
         expect(paths).toEqual(['/api/agent']);
+        expect(harnessesIn({ claude: am, arriving: ['pi'] })).toEqual(['claude']);
+    });
+
+    // "My recommendation is that the node also says which harnesses are still
+    // downloading, and the page asks again only while that list isn't empty."
+    // "Sure"
+    test('a harness still arriving gets its tab, in its place, once it has arrived, and asking stops', async () => {
+        const { drawAgentChat } = await import('./agents-element');
+        const body = document.createElement('div');
+        const answers: Array<{ harnesses: Harness[]; arriving: string[] }> = [
+            { harnesses: [], arriving: ['claude', 'pi'] },
+            { harnesses: ['pi'], arriving: ['claude'] },
+            { harnesses: ['claude', 'pi'], arriving: [] },
+        ];
+        let asks = 0;
+        const offered = () => Promise.resolve(answers[Math.min(asks++, answers.length - 1)]!);
+        const tabsNow = () => Array.from(body.querySelectorAll('.agents-tab')).map(t => t.textContent);
+        const stop = drawAgentChat(body, reached[0]!, chatOf, offered, 1);
+        await settled();
+        await new Promise(resolve => setTimeout(resolve, 30));
+        await settled();
+        expect(tabsNow()).toEqual(['claude', 'pi']);
+        expect(body.querySelector('.agents-tab-on')?.textContent).toBe('pi');
+        expect(asks).toBe(3);
+        await new Promise(resolve => setTimeout(resolve, 20));
+        expect(asks).toBe(3);
+        stop();
+    });
+
+    test('while nothing has arrived, the chat says what is arriving', async () => {
+        const { drawAgentChat } = await import('./agents-element');
+        const body = document.createElement('div');
+        const stop = drawAgentChat(body, reached[0]!, chatOf, () => Promise.resolve({ harnesses: [], arriving: ['claude'] }), 60_000);
+        await settled();
+        expect(body.querySelectorAll('.agents-tab').length).toBe(0);
+        expect(body.querySelector('.agents-arriving')?.textContent).toBe('claude still arriving');
+        stop();
     });
 
     // "each element is an agent as well": every element the viewer was given is listed, shaken or not.

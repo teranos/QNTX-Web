@@ -9,7 +9,7 @@ import { log, SEG } from './logger.ts';
 
 export const A2A_CARD_ID = 'a2a-card';
 
-/** What am node answers: the card, and what it leaves empty that the spec requires. */
+/** What am node answers: the card. */
 export interface AmCard {
     card: {
         name?: string;
@@ -19,7 +19,6 @@ export interface AmCard {
         capabilities?: { extensions?: { params?: { mcp?: { url?: string; protocolVersion?: string } } }[] };
         skills?: { name?: string }[];
     };
-    missing: string[];
 }
 
 function row(label: string, value: HTMLElement | string): HTMLElement {
@@ -71,7 +70,6 @@ export function renderA2ACard(container: HTMLElement, am: AmCard): void {
         row('Interface:', interfaces.length > 0 ? lines(interfaces, '') : said(undefined)),
         row('MCP:', said(mcp ? `${mcp.url} ${mcp.protocolVersion ?? ''}`.trim() : undefined)),
         row('Skills:', said(skills)),
-        row('Missing:', am.missing.length > 0 ? lines(am.missing, 'status-unwell') : 'nothing'),
     );
 }
 
@@ -86,7 +84,7 @@ function ask(): Promise<void> {
         .then(async (response) => {
             if (!response.ok) throw new Error(`/am/node answered ${response.status} ${response.statusText}`);
             const body = await response.json() as Partial<AmCard>;
-            if (typeof body.card !== 'object' || body.card === null || !Array.isArray(body.missing)) {
+            if (typeof body.card !== 'object' || body.card === null) {
                 throw new Error(`/am/node answered something that is not a card: ${JSON.stringify(body)}`);
             }
             answered = body as AmCard;

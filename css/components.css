@@ -223,16 +223,11 @@
 
 /* States */
 .qntx-btn:disabled,
+/* "I don't want to see any piece of text ui that has lines behind it."
+   Disabled is said by its faintness and the cursor, never by stripes under its label. */
 .qntx-btn-disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    background-image: repeating-linear-gradient(
-        -45deg,
-        transparent,
-        transparent 4px,
-        rgba(0, 0, 0, 0.08) 4px,
-        rgba(0, 0, 0, 0.08) 6px
-    );
 }
 
 .qntx-btn-loading {

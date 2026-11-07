@@ -18,7 +18,7 @@
     --border-radius: 3px;
     --border-radius-lg: 7px;
 
-    /* The owner's terminal (QNTX ADR-058): Ghostty's palette, tmux's pane and
+    /* The owner's terminal (design-philosophy.md): Ghostty's palette, tmux's pane and
        bar, fish's prompt, nebula's editor. One font, one dark, no light
        surface. The light tokens below keep their names and take the terminal's
        values, so every element drawing from them turns at once; what an

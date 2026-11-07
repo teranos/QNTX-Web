@@ -3,7 +3,7 @@
 
 /* Base */
 body {
-    /* One font, the terminal's: JetBrains Mono, as Ghostty draws everything (QNTX ADR-058). */
+    /* One font, the terminal's: JetBrains Mono, as Ghostty draws everything (design-philosophy.md). */
     font-family: var(--font-mono);
     /* A sym is text. iOS draws every emoji-capable code point with its colour
        emoji font unless told otherwise: the ⬆ that lifts an element became a blue

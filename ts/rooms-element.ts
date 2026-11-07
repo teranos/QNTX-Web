@@ -35,6 +35,7 @@ import { errorOf } from './node-connectors-element';
 import { openAgentChat, type Reachable } from './agents-element';
 import type { ClaudeAm } from './claude-element';
 import { holdBackdrop } from './backdrop.ts';
+import { glass } from './glass.ts';
 
 export const LEVEL_ID = 'rooms';
 
@@ -324,6 +325,9 @@ export function openRoom(room: Room, rooms: Rooms = theRooms): void {
             id,
             title: room.name,
             symbol: RoomSymbol,
+            // Glass: the ground the room holds shows through it.
+            // "and having our things, text be drawn on top, and still make it legible"
+            color: glass(),
             opensAs: window.matchMedia?.(PHONE).matches ? 'panel' : 'window',
             opensAt: 'end',
             renderContent: () => {

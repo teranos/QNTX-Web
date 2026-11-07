@@ -1,7 +1,6 @@
 Feature: ROOT opens Rooms, opens a specific room and talks to an agent
 
   "i want all Node Agents to be in the Node Room"
-  "and i will also connect the Node Room to a Telegram group i have"
   "not everything is completely doable yet, but i hope this gives an idea of where i want to be."
 
   Background:
@@ -22,6 +21,8 @@ Feature: ROOT opens Rooms, opens a specific room and talks to an agent
     Then the message gets to the Agent via the room
     And the Agent can put something back into the room
 
+  # The phone app's, not the page's: walked nowhere yet.
+  @phone
   Scenario: The human user is told on the phone
     Given an Agent put something back into the room
     Then a push notification happens for the human user

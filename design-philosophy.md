@@ -38,6 +38,22 @@ The foundation for the entirety of styling, 2026-11-07. It retires the design ph
 
 "if the design system isnt ported over, its a pending task"
 
+"the seriousness, like, i am serious about it. i am used to my way of working, i want this to be like that, i think the entire ui, needs to be like, ROOT oriented, and not be tailored to individual hypothetical users anymore"
+
+"i think for User i want to develop an entirely independent frontend ui"
+
+"i think normal user isnt a thing anymore in my mind for normal web"
+
+"only ROOT and SUPER"
+
+"people who need to deal with namespaces and me"
+
+"and normal users, they always get served by their own ui from now on"
+
+## Whose it is
+
+QNTX-Web is ROOT's and SUPER's: the people who deal with namespaces, and the owner. Nothing in it is tailored to a hypothetical user. A normal user is always served by their own UI from now on, a frontend independent of this one; a normal user is not a thing here.
+
 ## The language
 
 The owner's terminal is Ghostty running tmux, fish and neovim. Its look is what their configuration produces, read from the files on 2026-11-07, machine `l`. Every value below names the line it comes from; nothing is interpreted from a screenshot.

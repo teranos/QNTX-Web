@@ -30,7 +30,8 @@ import { restLevelInSidebar, enterLevel, levelRow } from './sidebar.ts';
 import { apiJson } from './client';
 import { log, SEG } from './logger.ts';
 import { Room as RoomSymbol } from './sym';
-import { chatRow, chatText, renderAssistant, when, atBottom, jumpToBottom, scrollToBottom } from './chat';
+import { chatRow, chatText, when, atBottom, jumpToBottom, scrollToBottom } from './chat';
+import { roomBody } from './room-media';
 import { errorOf } from './node-connectors-element';
 import { openAgentChat, type Reachable } from './agents-element';
 import type { ClaudeAm } from './claude-element';
@@ -175,15 +176,15 @@ export function openAgentOf(room: Room, agent: RoomAgent): void {
 }
 
 /** One thing said in the room, as the board shows it: who said it, then what. */
-export function messageRow(message: RoomMessage): HTMLElement {
+export function messageRow(message: RoomMessage, cleanups: Array<() => void> = []): HTMLElement {
     const who = part('span', 'room-sender');
     who.textContent = message.sender_name || message.sender;
-    const words = part('span', 'chat-words');
-    if (message.agent) words.innerHTML = renderAssistant(message.body);
-    else words.append(chatText(message.body));
-    const row = chatRow(message.agent ? 'said' : 'you', who, words);
+    const words = roomBody(message.body);
+    cleanups.push(words.dispose);
+    const row = chatRow(message.agent ? 'said' : 'you', who, words.element);
     row.classList.add('room-row');
     row.dataset.message = message.id;
+    row.dataset.thread = message.thread;
     if (message.agent) row.dataset.agent = message.agent.name;
     return row;
 }
@@ -204,6 +205,7 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
     const says = part('textarea', 'room-says');
     says.rows = 2;
     says.placeholder = `Say something in ${room.name}`;
+    says.setAttribute('aria-label', `Message ${room.name}`);
     // "instead of 'say' i want a right arrow > glyph"
     // The send is a press, QNTX's one button: a bare <button> in an element is shrunk to its glyph
     // by @teranos/elements. Its title is the → glyph; what it does is below.
@@ -225,6 +227,7 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
     let gone = false;
     let giveGroundBack: () => void = () => {};
     let drawnIds = '';
+    const messages = new Map<string, { source: string; row: HTMLElement; cleanups: Array<() => void> }>();
 
     const fails = (what: string, err: unknown) => {
         log.error(SEG.ELEMENT, `[Rooms] ${room.name} ${what}: ${wordsOf(err)}`);
@@ -242,7 +245,7 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
 
     const read = () => rooms.read(room).then(answer => {
         if (gone) return;
-        const ids = answer.messages.map(m => m.id).join(',') + '|' + answer.joined.map(j => `${j.member}@${j.at}`).join(',');
+        const ids = JSON.stringify(answer);
         if (ids === drawnIds) return;
         drawnIds = ids;
         const drawn = board.childElementCount > 0;
@@ -251,9 +254,31 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
         const rows: Array<{ at: string; row: HTMLElement }> = [];
         if (answer.truncated) rows.push({ at: '', row: chatRow('marker', chatText('older than this was not answered: the board read is not the whole board')) });
         for (const joined of answer.joined) rows.push({ at: joined.at, row: chatRow('marker', chatText(`${joined.member_name || joined.member} arrived  ${when(joined.at)}`)) });
-        for (const message of answer.messages) rows.push({ at: message.at, row: messageRow(message) });
+        const present = new Set(answer.messages.map(message => message.id));
+        for (const [id, held] of messages) {
+            if (!present.has(id)) { held.cleanups.forEach(clean => clean()); messages.delete(id); }
+        }
+        for (const message of answer.messages) {
+            const source = JSON.stringify(message);
+            let held = messages.get(message.id);
+            if (!held || held.source !== source) {
+                held?.cleanups.forEach(clean => clean());
+                const cleanups: Array<() => void> = [];
+                held = { source, row: messageRow(message, cleanups), cleanups };
+                messages.set(message.id, held);
+            }
+            rows.push({ at: message.at, row: held.row });
+        }
         rows.sort((a, b) => a.at.localeCompare(b.at));
-        board.replaceChildren(...rows.map(r => r.row));
+        // Keep existing media mounted while new messages arrive.
+        const keep = new Set(rows.map(r => r.row));
+        for (const child of Array.from(board.children)) if (!keep.has(child as HTMLElement)) child.remove();
+        rows.forEach(({ row }, index) => {
+            if (board.children[index] !== row) board.insertBefore(row, board.children[index] ?? null);
+        });
+        for (const line of reach.querySelectorAll<HTMLElement>('[data-reach="ROOM_REACH_ARRIVES"]')) {
+            if (answer.messages.some(message => message.thread === line.dataset.wake && message.agent?.name === line.dataset.agent)) line.remove();
+        }
         if (answer.messages.length === 0 && answer.joined.length === 0) board.append(chatRow('marker', chatText('Nothing has been said here yet.')));
         if (!drawn) jumpToBottom(scroller); else if (follow) scrollToBottom(scroller); else scroller.scrollTop = stood;
     }).catch((err: unknown) => { if (!gone) fails('read', err); });
@@ -271,6 +296,8 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
                 for (const each of answer.woken) {
                     const line = part('div', 'room-reach-line');
                     line.dataset.reach = each.reach;
+                    line.dataset.wake = answer.id;
+                    line.dataset.agent = each.agent.name;
                     line.textContent = reachSaid(each);
                     reach.append(line);
                 }
@@ -313,11 +340,16 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
             press.type = 'button';
             press.dataset.agent = agent.name;
             press.dataset.harness = agent.harness;
-            press.textContent = agent.harness ? `${agent.name}  ${agent.harness}` : agent.name;
+            press.textContent = agent.name;
+            press.title = agent.harness;
+            press.setAttribute('aria-pressed', 'false');
             // Pressed once: highlighted, and addressed. Pressed while highlighted: its own element opens.
             press.addEventListener('click', () => {
                 if (press.classList.contains('room-agent-on')) { open(detail.room, agent); return; }
-                for (const each of agents.querySelectorAll('.room-agent')) each.classList.toggle('room-agent-on', each === press);
+                for (const each of agents.querySelectorAll('.room-agent')) {
+                    each.classList.toggle('room-agent-on', each === press);
+                    each.setAttribute('aria-pressed', String(each === press));
+                }
                 address(agent);
             });
             agents.append(press);
@@ -331,6 +363,8 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
     return () => {
         gone = true;
         if (following) { clearInterval(following); following = null; }
+        for (const held of messages.values()) held.cleanups.forEach(clean => clean());
+        messages.clear();
         giveGroundBack();
     };
 }

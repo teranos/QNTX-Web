@@ -171,7 +171,8 @@ const files = new Files();
 const codexAgents = new CodexAgents();
 const agyAgents = new AgyAgents();
 // The rooms (ADR-057): the Node Room, every Node Agent in it.
-const rooms = new Rooms();
+const roomStudy = files.keep(new Uint8Array(readFileSync(join(FIXTURES, 'media/pond-study.svg'))), 'image/svg+xml', 'pond-study.svg');
+const rooms = new Rooms(`/api/files/${roomStudy.id}`);
 
 /** The agent paths, answered live: am, session and say, the picture carried along. */
 async function agentAnswer(level: Level, method: string, path: string, _url: URL, req: Request): Promise<Response | null> {

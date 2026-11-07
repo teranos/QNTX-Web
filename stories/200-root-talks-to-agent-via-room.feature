@@ -21,6 +21,20 @@ Feature: ROOT opens Rooms, opens a specific room and talks to an agent
     Then the message gets to the Agent via the room
     And the Agent can put something back into the room
 
+  Scenario: An agent returns a picture to work on together
+    Given I am in the Node Room Element
+    When I ask an Agent for a picture in the room
+    Then its picture arrives inside its reply
+    And I can save the returned picture
+    And the picture stays in place when someone speaks again
+
+  Scenario: A returned picture fits the room on a phone
+    Given I am ROOT on a phone
+    When I open the App
+    And I ask an Agent for a picture in the room
+    Then its picture arrives inside its reply
+    And the picture and composer fit the phone
+
   # The phone app's, not the page's: walked nowhere yet.
   @phone
   Scenario: The human user is told on the phone

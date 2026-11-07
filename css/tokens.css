@@ -110,8 +110,17 @@
     /*
     "make sure a room element bg is more transparent and shows the visual"
     */
-    --glass-room-alpha: 0.26;
-    --glass-room-blur: 2px;
+    /*
+    "i would make the element darker in general as well so it doesnt look like a black piece of glass enclosed by lighter glass"
+    */
+    --glass-room-alpha: 0.58;
+    --glass-room-blur: 3px;
+    /* The title bar frosts a little more than the pane, so it reads as the bar. */
+    /*
+    "only the titlebar could be less transparent, slight frost maybe"
+    */
+    --glass-room-bar: rgb(var(--glass-rgb) / 0.8);
+    --glass-room-bar-filter: blur(var(--glass-thin-blur)) saturate(var(--glass-thin-saturate)) brightness(var(--glass-thin-brightness));
     --glass-room: rgb(var(--glass-rgb) / var(--glass-room-alpha));
     --glass-room-filter: blur(var(--glass-room-blur)) saturate(var(--glass-thin-saturate)) brightness(var(--glass-thin-brightness));
     /* The room's edge: a light hairline over a dark one, so the pane reads over whatever swims behind it. */

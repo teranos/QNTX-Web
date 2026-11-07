@@ -35,6 +35,13 @@
     border: 1px solid var(--glass-room-border);
     box-shadow: var(--glass-room-edge);
 }
+/* The room's title bar is frosted a little more than its pane. */
+[data-element-id^="room:"][data-form="window"] > .title-bar,
+[data-element-id^="room:"][data-form="panel"] > .title-bar {
+    background: var(--glass-room-bar);
+    backdrop-filter: var(--glass-room-bar-filter);
+    -webkit-backdrop-filter: var(--glass-room-bar-filter);
+}
 
 body {
     /* One font, the terminal's: JetBrains Mono, as Ghostty draws everything (design-philosophy.md). */

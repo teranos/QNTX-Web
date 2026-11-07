@@ -31,7 +31,7 @@ import { apiJson } from './client';
 import { log, SEG } from './logger.ts';
 import { Room as RoomSymbol } from './sym';
 import { chatRow, chatText, when, atBottom, jumpToBottom, scrollToBottom } from './chat';
-import { roomBody } from './room-media';
+import { roomBody, type RoomAttachment } from './room-media';
 import { errorOf } from './node-connectors-element';
 import { openAgentChat, type Reachable } from './agents-element';
 import type { ClaudeAm } from './claude-element';
@@ -54,7 +54,7 @@ export interface RoomOf { node?: string; namespace?: string; element?: string; p
 /** Room: one room. */
 export interface Room { id: string; provider: string; name: string; description: string; instructions: string; of?: RoomOf; connected?: string }
 /** RoomMessage: one thing said in a room. agent is unset when nobody the provider holds as a RoomAgent said it. */
-export interface RoomMessage { id: string; room: string; sender: string; sender_name: string; agent?: RoomAgent | null; body: string; thread: string; at: string }
+export interface RoomMessage { id: string; room: string; sender: string; sender_name: string; agent?: RoomAgent | null; body: string; thread: string; at: string; attachments?: RoomAttachment[] }
 /** RoomJoined: someone arriving in a room. */
 export interface RoomJoined { room: string; member: string; member_name: string; agent?: RoomAgent | null; at: string }
 /** ReadRoomResponse. */
@@ -179,7 +179,7 @@ export function openAgentOf(room: Room, agent: RoomAgent): void {
 export function messageRow(message: RoomMessage, cleanups: Array<() => void> = []): HTMLElement {
     const who = part('span', 'room-sender');
     who.textContent = message.sender_name || message.sender;
-    const words = roomBody(message.body);
+    const words = roomBody(message.body, undefined, message.attachments);
     cleanups.push(words.dispose);
     const row = chatRow(message.agent ? 'said' : 'you', who, words.element);
     row.classList.add('room-row');

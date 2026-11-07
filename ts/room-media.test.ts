@@ -52,4 +52,21 @@ describe('media returned into a room', () => {
         expect(body.element.querySelector('a')?.textContent).toBe('study.png');
         body.dispose();
     });
+
+    test('what was sent with a message is read from where the node serves it: an image drawn, a file a link', async () => {
+        const create = spyOn(URL, 'createObjectURL').mockImplementation(() => 'blob:room-plot');
+        const paths: string[] = [];
+        const media = '/api/switchai-py/media?room=r&mxc=mxc%3A%2F%2Fplot';
+        const body = roomBody('the plot', async path => {
+            paths.push(path);
+            return new Response('png', { headers: { 'Content-Type': 'image/png' } });
+        }, [{ name: 'plot.png', type: 'image/png', url: media }, { name: 'data.csv', type: 'text/csv', url: '/api/switchai-py/media?room=r&mxc=csv' }]);
+        try {
+            await settle();
+            expect(paths).toEqual([media]);
+            expect(body.element.querySelector('img')?.getAttribute('src')).toBe('blob:room-plot');
+            expect([...body.element.querySelectorAll('a')].map(a => a.textContent)).toEqual(['plot.png', 'data.csv']);
+            body.dispose();
+        } finally { create.mockRestore(); }
+    });
 });

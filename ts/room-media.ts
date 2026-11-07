@@ -20,8 +20,11 @@ export function roomResource(value: string): { url: string; file?: string } | un
     return;
 }
 
+/** RoomAttachment: a file sent with a message, at the path the node serves its bytes. */
+export interface RoomAttachment { name: string; type: string; url: string }
+
 /** A reply's media lives as long as its row, including across room polls. */
-export function roomBody(text: string, fetchFile: typeof apiFetch = apiFetch): { element: HTMLElement; dispose: () => void } {
+export function roomBody(text: string, fetchFile: typeof apiFetch = apiFetch, attachments: RoomAttachment[] = []): { element: HTMLElement; dispose: () => void } {
     const element = document.createElement('div');
     element.className = 'room-message-content';
     sizeText(element, 'md');
@@ -86,31 +89,7 @@ export function roomBody(text: string, fetchFile: typeof apiFetch = apiFetch): {
             const name = String(node.attrs.alt || 'Image');
             const resource = roomResource(src);
             if (!resource) return document.createTextNode(`![${name}](${src})`);
-            const media = document.createElement('span');
-            media.className = 'room-media';
-            const image = document.createElement('img');
-            image.alt = name;
-            image.decoding = 'async';
-            image.referrerPolicy = 'no-referrer';
-            const caption = document.createElement('span');
-            caption.className = 'room-media-caption';
-            sizeText(caption, 'xs');
-            caption.append(link(resource, name));
-            media.append(image, caption);
-            image.addEventListener('error', () => {
-                image.hidden = true;
-                failure(media, new Error(`Image could not be displayed: ${src}`));
-            }, { once: true });
-            if (resource.file) {
-                media.setAttribute('aria-busy', 'true');
-                void load(resource.file).then(held => {
-                    if (controller.signal.aborted) return;
-                    if (!/^image\/(png|jpeg|gif|webp|svg\+xml)$/.test(held.type)) throw new Error(`${src}: expected an image, received ${held.type || 'no content type'}`);
-                    image.src = held.url;
-                }).catch(err => { image.hidden = true; failure(media, err); })
-                    .finally(() => media.removeAttribute('aria-busy'));
-            } else image.src = resource.url;
-            return media;
+            return mediaOf(resource, name, src);
         },
     }, { ...base.marks,
         link: mark => {
@@ -120,5 +99,44 @@ export function roomBody(text: string, fetchFile: typeof apiFetch = apiFetch): {
         },
     });
     element.append(serializer.serializeFragment(defaultMarkdownParser.parse(text).content));
+    // What was sent with it is the node's to serve, read as the page reads the node.
+    for (const attachment of attachments) {
+        const resource = { url: backendUrl() + attachment.url, file: attachment.url };
+        const name = attachment.name || 'file';
+        if (attachment.type.startsWith('image/')) element.append(mediaOf(resource, name, attachment.url));
+        else {
+            const held = document.createElement('p');
+            held.append(link(resource, name));
+            element.append(held);
+        }
+    }
     return { element, dispose: () => { controller.abort(); for (const url of urls) URL.revokeObjectURL(url); } };
+
+    function mediaOf(resource: NonNullable<ReturnType<typeof roomResource>>, name: string, src: string): HTMLElement {
+        const media = document.createElement('span');
+        media.className = 'room-media';
+        const image = document.createElement('img');
+        image.alt = name;
+        image.decoding = 'async';
+        image.referrerPolicy = 'no-referrer';
+        const caption = document.createElement('span');
+        caption.className = 'room-media-caption';
+        sizeText(caption, 'xs');
+        caption.append(link(resource, name));
+        media.append(image, caption);
+        image.addEventListener('error', () => {
+            image.hidden = true;
+            failure(media, new Error(`Image could not be displayed: ${src}`));
+        }, { once: true });
+        if (resource.file) {
+            media.setAttribute('aria-busy', 'true');
+            void load(resource.file).then(held => {
+                if (controller.signal.aborted) return;
+                if (!/^image\/(png|jpeg|gif|webp|svg\+xml)$/.test(held.type)) throw new Error(`${src}: expected an image, received ${held.type || 'no content type'}`);
+                image.src = held.url;
+            }).catch(err => { image.hidden = true; failure(media, err); })
+                .finally(() => media.removeAttribute('aria-busy'));
+        } else image.src = resource.url;
+        return media;
+    }
 }

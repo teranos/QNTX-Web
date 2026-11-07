@@ -1,4 +1,4 @@
-// Rooms element: a level of the sidebar, a room a board, an agent pressed is addressed, a send wakes who it names.
+// 「[Fable 5.1, Opus 5.5] Rooms element: a level of the sidebar, a room a board, an agent pressed is addressed, a send wakes who it names.」
 
 import { describe, test, expect } from 'bun:test';
 import { addressed, drawRoom, fillRoomsLevel, messageRow, ofSaid, reachSaid, type Room, type RoomAgent, type Rooms } from './rooms-element';
@@ -74,7 +74,7 @@ describe('Rooms', () => {
         stop();
     });
 
-    // "shared message board"
+    // "「[Opus 5.5] shared message board」"
     test('a send naming no agent is posted to the board for everyone', async () => {
         const log: string[] = [];
         const body = document.createElement('div');

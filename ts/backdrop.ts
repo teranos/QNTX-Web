@@ -38,8 +38,15 @@ export interface Live {
     now: () => number;
 }
 
+/** A room holding the ground: its name, and the agents in it, each one something in the visual. */
+// "and the room itself is the fish is the agent is the model is a different species per model."
+export interface RoomHeld { name: string; agents: string[] }
+
+/** What a ground is given: the node as live, and the room holding it, when one does. */
+export interface Held { live: Live; room?: RoomHeld }
+
 /** A module's ground: it fills the layer, and what it returns gives the ground up. */
-export type BackdropFn = (layer: HTMLElement, held: { live: Live }) => () => void;
+export type BackdropFn = (layer: HTMLElement, held: Held) => () => void;
 
 interface StatusItem { name: string; note?: string; symbol: string }
 
@@ -194,6 +201,37 @@ export function takeBackdrop(node: HTMLElement, by = node.dataset.elementId ?? n
     changed();
     return () => {
         if (layer.firstChild !== node) return;
+        layer.replaceChildren();
+        delete layer.dataset.heldBy;
+        heldBy = '';
+        showChosen();
+        changed();
+    };
+}
+
+/**
+ * An element holds the ground: the chosen ground is drawn again for it, given
+ * what it holds (a room, its agents). What comes back gives the ground up, and
+ * the chosen ground returns as it was. With the ground plain, nothing is held.
+ */
+export function holdBackdrop(by: string, holds: Omit<Held, 'live'>): () => void {
+    const layer = backdropLayer();
+    const fn = offers.get(chosenBackdrop());
+    if (!layer || !fn) return () => {};
+    hideShowing();
+    const node = document.createElement('div');
+    node.className = 'backdrop-held-by';
+    layer.replaceChildren(node);
+    const stop = fn(node, { live, ...holds });
+    startPulse();
+    layer.dataset.heldBy = by;
+    heldBy = by;
+    log.info(SEG.UI, `[Backdrop] ${by} holds the ground, ${chosenBackdrop()}`);
+    changed();
+    return () => {
+        if (layer.firstChild !== node) return;
+        stop();
+        stopPulse();
         layer.replaceChildren();
         delete layer.dataset.heldBy;
         heldBy = '';

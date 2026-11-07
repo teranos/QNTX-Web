@@ -15,9 +15,15 @@ export function render() {
     return el;
 }
 
-/** The ground: fills the layer, reads live every frame, and what it returns stops it. */
-export function backdrop(layer, { live }) {
+/**
+ * The ground: fills the layer, reads live every frame, and what it returns stops it.
+ * Held by a room, each agent in the room is a spring in the water, rippling in its own time.
+ */
+// "so 3 Agents is 3 fish."
+export function backdrop(layer, { live, room }) {
     const canvas = document.createElement('canvas');
+    const agents = room?.agents ?? [];
+    if (room) canvas.dataset.agents = String(agents.length);
     layer.appendChild(canvas);
     const ctx = canvas.getContext('2d');
     // One ripple as the ground arrives, so it is seen to be water before the node first changes.
@@ -44,6 +50,14 @@ export function backdrop(layer, { live }) {
             lastOnset = t;
             ripples.push({ x: width * (0.2 + 0.6 * Math.random()), y: height * (0.2 + 0.6 * Math.random()), born: t });
         }
+        // Each agent a spring, spread across the water, each rippling every four seconds in its own phase.
+        agents.forEach((name, i) => {
+            const period = 4;
+            const phase = (t + i * period / agents.length) % period;
+            if (phase < 0.03 && !ripples.some(r => r.by === name && t - r.born < 1)) {
+                ripples.push({ x: width * ((i + 1) / (agents.length + 1)), y: height * 0.55, born: t, by: name });
+            }
+        });
         ctx.fillStyle = `rgb(${16 + level * 12} ${22 + level * 16} ${30 + level * 20})`;
         ctx.fillRect(0, 0, width, height);
         ctx.lineWidth = 1;

@@ -10,6 +10,12 @@ Feature: ROOT chooses the ground
     Given I am ROOT on the mock
     Then the ground under everything is pond, published at /g/
 
+  Scenario: the Node Room holds the ground, its agents in it, and gives it back when closed
+    Given I am in the Node Room Element
+    Then the Node Room holds the ground, with 3 agents in it
+    When I close the Node Room
+    Then the ground under everything is pond, published at /g/
+
   Scenario: ROOT chooses plain from the picture, and the choice is kept
     Given I am ROOT on the mock
     When I click my picture

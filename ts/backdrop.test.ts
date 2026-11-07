@@ -6,7 +6,7 @@
 // "Goal set: global backdrop, element backdrop overwrite, via /g/, default global backdrop can be boring is ok. option to choose between backdrops by clicking on profile pic."
 
 import { describe, test, expect, beforeEach, beforeAll, afterAll } from 'bun:test';
-import { NONE, backdropHeldBy, backdropLayer, chooseBackdrop, chosenBackdrop, offerBackdrop, offeredBackdrops, resetBackdrop, takeBackdrop, type BackdropFn } from './backdrop';
+import { NONE, backdropHeldBy, backdropLayer, chooseBackdrop, chosenBackdrop, holdBackdrop, offerBackdrop, offeredBackdrops, resetBackdrop, takeBackdrop, type BackdropFn } from './backdrop';
 
 // The node, as the pulse reads it: one item, well. Stubbed at fetch, as ts/client/http.test.ts does, and put back after.
 const originalFetch = globalThis.fetch;
@@ -21,9 +21,10 @@ const kept = new Map<string, string>();
 const keepInMap = { get: (key: string) => kept.get(key) ?? null, set: (key: string, value: string) => { kept.set(key, value); } };
 
 function aGround(name: string, stops: string[]): BackdropFn {
-    return (layer) => {
+    return (layer, held) => {
         const canvas = document.createElement('canvas');
         canvas.dataset.ground = name;
+        if (held.room) canvas.dataset.agents = held.room.agents.join(',');
         layer.appendChild(canvas);
         return () => { stops.push(name); canvas.remove(); };
     };
@@ -65,6 +66,33 @@ describe('the ground', () => {
         expect(backdropLayer()?.dataset.heldBy).toBeUndefined();
         expect(backdropLayer()?.querySelector('canvas')?.dataset.ground).toBe('piranha');
         expect(backdropHeldBy()).toBe('piranha');
+    });
+
+    test('a room holds the ground with its agents in it; closed, the ground is as it was', async () => {
+        const stops: string[] = [];
+        offerBackdrop('piranha', aGround('piranha', stops));
+        await settled();
+        const giveBack = holdBackdrop('room:node-room', { room: { name: 'Node Room', agents: ['node-claude', 'node-codex', 'node-agy'] } });
+        expect(stops).toEqual(['piranha']);
+        expect(backdropLayer()?.dataset.heldBy).toBe('room:node-room');
+        expect(backdropHeldBy()).toBe('room:node-room');
+        expect(backdropLayer()?.querySelector('canvas')?.dataset.agents).toBe('node-claude,node-codex,node-agy');
+        giveBack();
+        await settled();
+        expect(stops).toEqual(['piranha', 'piranha']);
+        expect(backdropHeldBy()).toBe('piranha');
+        expect(backdropLayer()?.querySelector('canvas')?.dataset.agents).toBeUndefined();
+    });
+
+    test('a room holds nothing while the ground is plain', async () => {
+        offerBackdrop('piranha', aGround('piranha', []));
+        await settled();
+        chooseBackdrop(NONE);
+        const giveBack = holdBackdrop('room:node-room', { room: { name: 'Node Room', agents: ['node-claude'] } });
+        expect(backdropLayer()?.childElementCount).toBe(0);
+        expect(backdropHeldBy()).toBe(NONE);
+        giveBack();
+        expect(backdropHeldBy()).toBe(NONE);
     });
 
     test('the viewer chooses plain, and the layer is empty; chooses piranha, and it is back; the choice is kept', async () => {

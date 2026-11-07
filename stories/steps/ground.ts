@@ -24,6 +24,18 @@ Then('the ground under everything is pond, published at \\/g\\/', async ({ page 
     await page.screenshot({ path: `${SHOTS}/1-pond.png` });
 });
 
+const NODE_ROOM = '[data-element-id="room:switchai-py/node-room"]';
+
+Then('the Node Room holds the ground, with {int} agents in it', async ({ page }, agents: number) => {
+    await expect(page.locator(`${LAYER}[data-held-by="room:switchai-py/node-room"] canvas`)).toHaveAttribute('data-agents', String(agents));
+    await page.screenshot({ path: `${SHOTS}/5-room-holds-the-ground.png` });
+});
+
+When('I close the Node Room', async ({ page }) => {
+    await page.locator(`${NODE_ROOM} [aria-label="Close"]`).click();
+    await expect(page.locator(NODE_ROOM)).toHaveCount(0);
+});
+
 When('I click my picture', async ({ page }) => {
     await page.locator(PICTURE).click();
 });

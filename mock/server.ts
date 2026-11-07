@@ -104,25 +104,34 @@ function worldAnswer(level: Level, method: string, path: string, url: URL): Resp
         if (path === "/api/canvas/minimized-windows") return json(minimizedWindows());
     }
     if (path === "/api/plugins/elements") return json({ elements: [] });
-    // A published element the mock serves from one file on this machine, named by
-    // PIRANHA_ELEMENT: a built element module that is not in this repository.
-    // Without it, nothing is published.
+    // What the mock publishes at /g/: pond, a ground in this repository, always;
+    // and piranha, a built element module that is not in this repository, when
+    // PIRANHA_ELEMENT names its file on this machine.
     // "i want piranha on the bg"
     // "via /g/ as a full fledged Element like we talked about before"
+    // "default global backdrop can be boring is ok"
     if (path === "/g/") return json({ elements: publishedElements() });
-    if (path === "/g/piranha.js" && PIRANHA_ELEMENT) {
-        return new Response(Bun.file(PIRANHA_ELEMENT), { headers: { "Content-Type": "text/javascript; charset=utf-8" } });
-    }
+    if (path === "/g/pond.js") return asModule(POND_ELEMENT);
+    if (path === "/g/piranha.js" && PIRANHA_ELEMENT) return asModule(PIRANHA_ELEMENT);
     return null;
 }
 
+const POND_ELEMENT = join(here, "g", "pond.js");
 const PIRANHA_ELEMENT = process.env.PIRANHA_ELEMENT ?? "";
+
+function asModule(file: string): Response {
+    return new Response(Bun.file(file), { headers: { "Content-Type": "text/javascript; charset=utf-8" } });
+}
 
 /** The index at /g/, as the node answers it: what is published, by name, with the attestation standing. */
 function publishedElements(): Array<{ name: string; as: string; url: string; published: string; by: string[]; signer: string }> {
-    if (!PIRANHA_ELEMENT || !existsSync(PIRANHA_ELEMENT)) return [];
-    const stamp = Bun.file(PIRANHA_ELEMENT).lastModified;
-    return [{ name: "piranha", as: `mock-piranha-${stamp}`, url: "/g/piranha.js", published: new Date(stamp).toISOString(), by: ["mock"], signer: "" }];
+    const published = (name: string, file: string) => {
+        const stamp = Bun.file(file).lastModified;
+        return { name, as: `mock-${name}-${stamp}`, url: `/g/${name}.js`, published: new Date(stamp).toISOString(), by: ["mock"], signer: "" };
+    };
+    const elements = [published("pond", POND_ELEMENT)];
+    if (PIRANHA_ELEMENT && existsSync(PIRANHA_ELEMENT)) elements.push(published("piranha", PIRANHA_ELEMENT));
+    return elements;
 }
 
 // The agents, each with its seeded session where a fixture gives one.

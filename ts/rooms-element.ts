@@ -184,7 +184,7 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
     // "instead of 'say' i want a right arrow > glyph"
     // The send is a press, QNTX's one button: a bare <button> in an element is shrunk to its glyph
     // by @teranos/elements. Its title is the → glyph; what it does is below.
-    const press = pressFrom({ id: `room-send-${room.id}`, title: '→', does: () => { sendIt(); } });
+    const press = pressFrom({ id: `room-send-${room.provider}-${room.id}`, title: '→', does: () => { sendIt(); } });
     const send = press.element;
     send.classList.add('room-send');
     send.setAttribute('aria-label', 'Say');
@@ -304,7 +304,7 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
 
 /** Where a room rests in the tray. */
 export function roomIdOf(room: Room): string {
-    return `room:${room.id}`;
+    return `room:${room.provider}/${room.id}`;
 }
 
 /** Opens a room: a window on a desktop, the screen on a phone, as a chat is. */
@@ -336,7 +336,7 @@ export function fillRoomsLevel(into: HTMLElement, rooms: Promise<Room[]>, open: 
         waiting.remove();
         if (found.length === 0) { waiting.textContent = 'There is no room here.'; into.appendChild(waiting); return; }
         for (const room of found) {
-            const row = levelRow(into, { id: `room:${room.id}`, title: room.name, symbol: RoomSymbol }, () => {
+            const row = levelRow(into, { id: `room:${room.provider}/${room.id}`, title: room.name, symbol: RoomSymbol }, () => {
                 for (const each of into.querySelectorAll('.sidebar-level-row')) each.classList.toggle('sidebar-row-on', each === row);
                 open(room);
             });

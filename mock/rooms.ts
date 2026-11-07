@@ -31,9 +31,8 @@ export class Rooms {
         ['node-room', [nodeAgent('claude'), nodeAgent('codex'), nodeAgent('agy')]],
         ['pond', [{ did: 'did:key:mock-agent-pond', harness: 'claude', name: 'pond' }]],
     ]);
-    private connected = new Map<string, string[]>([
-        ['node-room', ['Telegram group "the node"']],
-        ['pond', []],
+    private connected = new Map<string, string>([
+        ['node-room', 'Telegram group "the node"'],
     ]);
     private messages = new Map<string, RoomMessage[]>([
         ['node-room', [
@@ -69,7 +68,7 @@ export class Rooms {
         const room = this.room(decodeURIComponent(id ?? ''));
         if (!room) return json({ error: `${path}: the mock holds no room ${id}` }, 404);
         const rest = more.length ? `/${more.join('/')}` : '';
-        if (rest === '' && method === 'GET') return json({ room, agents: this.agents.get(room.id) ?? [], connected: this.connected.get(room.id) ?? [] });
+        if (rest === '' && method === 'GET') return json({ room: { ...room, connected: this.connected.get(room.id) ?? '' }, agents: this.agents.get(room.id) ?? [] });
         if (rest === '/read' && method === 'GET') return json({ messages: this.messages.get(room.id) ?? [], joined: this.joined.get(room.id) ?? [], truncated: false });
         if (rest === '/post' && method === 'POST') {
             const sent = (await req.json()) as { body?: string; thread?: string };
@@ -79,10 +78,12 @@ export class Rooms {
             return json({ id: said.id });
         }
         if (rest === '/wake' && method === 'POST') {
-            const sent = (await req.json()) as { agents?: RoomAgent[]; says?: string; thread?: string };
+            // agents arrives as the node's sigil takes it: names, comma-separated.
+            const sent = (await req.json()) as { agents?: string; says?: string; thread?: string };
             if (!sent.says) return json({ error: 'says is required' }, 400);
             const inRoom = this.agents.get(room.id) ?? [];
-            const named = (sent.agents ?? []).filter(a => inRoom.some(held => held.name === a.name));
+            const names = new Set((sent.agents ?? '').split(',').map(name => name.trim()).filter(Boolean));
+            const named = inRoom.filter(held => names.has(held.name));
             if (named.length === 0) return json({ error: 'agents names nobody in the room' }, 400);
             const said = this.say(room, `mock:${level}`, level.toLowerCase(), null, sent.says, sent.thread);
             // The mock's codex is told by nothing: its wake stands in the room until it next reads it.

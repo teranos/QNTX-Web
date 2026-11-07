@@ -14,7 +14,7 @@ async function settled(): Promise<void> {
 function roomsOf(log: string[]): Rooms {
     return {
         list: () => Promise.resolve([nodeRoom, { ...nodeRoom, id: 'pond', name: 'pond', of: { namespace: 'pond' } }]),
-        get: () => Promise.resolve({ room: nodeRoom, agents: [claude, codex], connected: ['Telegram group "the node"'] }),
+        get: () => Promise.resolve({ room: { ...nodeRoom, connected: 'Telegram group "the node"' }, agents: [claude, codex] }),
         read: () => Promise.resolve({ messages: [{ id: 'm-1', room: 'node-room', sender: 'tg:1', sender_name: 'root', agent: null, body: 'hello room', thread: '', at: '2026-11-07T09:00:00Z' }], joined: [], truncated: false }),
         post: (_room, body) => { log.push(`post ${body}`); return Promise.resolve({ id: 'm-2' }); },
         wake: (_room, agents, says) => { log.push(`wake ${agents.map(a => a.name).join(',')} ${says}`); return Promise.resolve({ id: 'm-3', woken: agents.map(agent => ({ agent, reach: agent.harness === 'codex' ? 'ROOM_REACH_WAITS' : 'ROOM_REACH_ARRIVES' })) }); },

@@ -42,7 +42,7 @@ export interface RoomAgent { did: string; harness: string; name: string }
 /** RoomOf: what a room is of. */
 export interface RoomOf { node?: string; namespace?: string; element?: string; purpose?: string }
 /** Room: one room. */
-export interface Room { id: string; provider: string; name: string; description: string; instructions: string; of?: RoomOf }
+export interface Room { id: string; provider: string; name: string; description: string; instructions: string; of?: RoomOf; connected?: string }
 /** RoomMessage: one thing said in a room. agent is unset when nobody the provider holds as a RoomAgent said it. */
 export interface RoomMessage { id: string; room: string; sender: string; sender_name: string; agent?: RoomAgent | null; body: string; thread: string; at: string }
 /** RoomJoined: someone arriving in a room. */
@@ -50,11 +50,10 @@ export interface RoomJoined { room: string; member: string; member_name: string;
 /** ReadRoomResponse. */
 export interface RoomRead { messages: RoomMessage[]; joined: RoomJoined[]; truncated: boolean }
 /**
- * GetRoomResponse, and what the room is connected to. rooms.proto has no field
- * for the latter yet (Switch has bridge_display_name and external_channel_id);
- * the page draws `connected` when the node answers it.
+ * GetRoomResponse. What the room is connected to beyond its provider is the
+ * room's own `connected` (rooms.proto Room.connected): a Telegram group, say.
  */
-export interface RoomDetail { room: Room; agents: RoomAgent[]; connected?: string[] }
+export interface RoomDetail { room: Room; agents: RoomAgent[] }
 /** RoomWoken: what the provider says of one agent a wake named; reach is ROOM_REACH_ARRIVES, _WAITS or _DECLINED. */
 export interface RoomWoken { agent: RoomAgent; reach: string }
 /** WakeInRoomResponse. */
@@ -77,7 +76,7 @@ export const theRooms: Rooms = {
     get: room => apiJson<RoomDetail>(at(room)),
     read: room => apiJson<RoomRead>(at(room, '/read')),
     post: (room, body) => apiJson<{ id: string }>(at(room, '/post'), { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ provider: room.provider, room: room.id, body }) }),
-    wake: (room, agents, says) => apiJson<Woke>(at(room, '/wake'), { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ provider: room.provider, room: room.id, agents, says }) }),
+    wake: (room, agents, says) => apiJson<Woke>(at(room, '/wake'), { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ provider: room.provider, room: room.id, agents: agents.map(agent => agent.name).join(','), says }) }),
 };
 
 function part<K extends keyof HTMLElementTagNameMap>(tag: K, className: string): HTMLElementTagNameMap[K] {
@@ -227,10 +226,10 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
     rooms.get(room).then(detail => {
         if (gone) return;
         held = detail.agents;
-        const to = detail.connected ?? [];
+        const to = detail.room.connected ?? '';
         const what = [ofSaid(detail.room.of), detail.room.description].filter(Boolean).join('  ');
-        connected.textContent = to.length > 0 ? `${what}  connected to ${to.join(', ')}` : `${what}  connected to nothing`;
-        connected.dataset.connected = String(to.length);
+        connected.textContent = to ? `${what}  connected to ${to}` : `${what}  connected to nothing`;
+        connected.dataset.connected = to ? '1' : '0';
         agents.replaceChildren();
         if (held.length === 0) {
             const none = part('span', 'room-no-agents');

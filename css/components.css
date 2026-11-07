@@ -408,13 +408,16 @@
 .room-agents { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 6px; border-bottom: 1px solid var(--border-on-dark); flex-shrink: 0; }
 .room-no-agents { color: var(--text-on-dark-secondary); font-size: var(--font-size-xs); }
 .room-board { display: flex; flex-direction: column; flex-shrink: 0; }
-.room-sender { display: block; font-size: var(--font-size-xs); color: var(--text-on-dark-tertiary); }
-.chat-you .room-sender { color: var(--bg-almost-black); }
+.room-sender { display: inline; margin-right: 6px; font-size: var(--font-size-xs); color: var(--text-on-dark-tertiary); }
+.room-row.chat-you { gap: 6px; }
+.room-row .chat-text { display: inline; }
 .room-reach { padding: 0 6px; color: var(--text-on-dark-secondary); font-size: var(--font-size-xs); flex-shrink: 0; }
 .room-failed { padding: 0 6px; flex-shrink: 0; }
 .room-reach:empty, .room-failed:empty { display: none; }
 .room-say { display: flex; gap: 4px; align-items: stretch; padding: 4px 6px; border-top: 1px solid var(--border-on-dark); flex-shrink: 0; }
-.room-says { flex: 1; resize: none; background: var(--bg-almost-black); color: var(--text-on-dark); border: 1px solid var(--border-on-dark); font: inherit; font-size: var(--font-size-field); padding: 4px 6px; }
+.room-says { flex: 1; min-width: 0; resize: none; background: var(--bg-almost-black); color: var(--text-on-dark); border: 1px solid var(--border-on-dark); font: inherit; font-size: var(--font-size-field); padding: 4px 6px; }
+.room-send { width: 44px; height: 44px; min-width: 44px; padding: 0; border-radius: 50%; font-size: var(--font-size-field); align-self: flex-end; }
+.room-agent.room-agent-on { color: var(--accent-on-dark); border-color: var(--accent-on-dark); background: var(--bg-dark-hover); }
 .chat .claude-say { flex-wrap: wrap; }
 .chat .claude-say select { flex: 0 1 auto; min-width: 0; max-width: 46%; font-size: var(--font-size-xs); }
 .chat .claude-says { flex-basis: 100%; }

@@ -37,23 +37,34 @@ describe('Rooms', () => {
         const body = document.createElement('div');
         const stop = drawRoom(body, nodeRoom, roomsOf([]), 60_000);
         await settled();
-        expect(body.querySelector('.room-connected')?.textContent).toBe('the Node Room  the Node Agents  connected to Telegram group "the node"');
+        expect(body.querySelector('.room-connected')?.textContent).toBe('connected to Telegram group "the node"');
+        expect(body.querySelector('.room-send')?.textContent).toBe('→');
         expect(Array.from(body.querySelectorAll('.room-agent')).map(a => a.getAttribute('data-agent'))).toEqual(['node-claude', 'node-codex']);
         expect(body.querySelector('.room-board .room-row')?.textContent).toContain('hello room');
         stop();
     });
 
     // "i press on an Agent / `@agent_name` appears in inputfield and i can type something."
-    test('pressing an agent puts its name after an @ in the box, once, and a send then wakes it', async () => {
+    test('pressing an agent highlights it and puts its name after an @ in the box; pressing it highlighted opens its own element; a send wakes who is named', async () => {
         const log: string[] = [];
+        const opened: string[] = [];
         const body = document.createElement('div');
-        const stop = drawRoom(body, nodeRoom, roomsOf(log), 60_000);
+        const stop = drawRoom(body, nodeRoom, roomsOf(log), 60_000, (_room, agent) => opened.push(agent.name));
         await settled();
         const says = body.querySelector<HTMLTextAreaElement>('.room-says')!;
-        body.querySelector<HTMLButtonElement>('.room-agent[data-agent="node-claude"]')!.click();
+        const press = body.querySelector<HTMLButtonElement>('.room-agent[data-agent="node-claude"]')!;
+        press.click();
         expect(says.value).toBe('@node-claude ');
-        body.querySelector<HTMLButtonElement>('.room-agent[data-agent="node-claude"]')!.click();
+        expect(press.classList.contains('room-agent-on')).toBe(true);
+        expect(opened).toEqual([]);
+        press.click();
+        expect(opened).toEqual(['node-claude']);
         expect(says.value).toBe('@node-claude ');
+        body.querySelector<HTMLButtonElement>('.room-agent[data-agent="node-codex"]')!.click();
+        expect(press.classList.contains('room-agent-on')).toBe(false);
+        expect(body.querySelector('.room-agent-on')?.getAttribute('data-agent')).toBe('node-codex');
+        expect(says.value).toBe('@node-claude @node-codex ');
+        says.value = '@node-claude ';
         says.value += 'what is up?';
         body.querySelector<HTMLButtonElement>('.room-send')!.click();
         await settled();
@@ -81,6 +92,14 @@ describe('Rooms', () => {
         expect(addressed('@node-claude @node-codex, look', [claude, codex]).map(a => a.name)).toEqual(['node-claude', 'node-codex']);
         expect(addressed('@nobody is here', [claude, codex])).toEqual([]);
         expect(addressed('mail me at a@b.c', [claude, codex])).toEqual([]);
+    });
+
+    test('the agent a room agent is: the Node Room holds the Node Agent, a namespace room its agent, a purpose room none the page knows', async () => {
+        const { reachableOf } = await import('./rooms-element');
+        expect(reachableOf(nodeRoom, claude)?.at).toBe('/api/agent');
+        expect(reachableOf({ ...nodeRoom, of: { namespace: 'pond' } }, claude)?.at).toBe('/api/agents/pond');
+        expect(reachableOf({ ...nodeRoom, of: { element: 'db-element' } }, claude)?.at).toBe('/api/elements/db-element');
+        expect(reachableOf({ ...nodeRoom, of: { purpose: 'deployment' } }, claude)).toBeUndefined();
     });
 
     test('a reach and what a room is of are said in words', () => {

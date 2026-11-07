@@ -67,6 +67,7 @@ Then('`@agent_name` appears in the inputfield and I can type something', async (
     const says = page.locator('.room-says');
     await expect(says).toHaveValue('@node-claude ');
     await expect(says).toBeFocused();
+    await expect(page.locator('.room-agent.room-agent-on')).toHaveAttribute('data-agent', 'node-claude');
     await says.pressSequentially('what is the node up to?');
     await expect(says).toHaveValue('@node-claude what is the node up to?');
     await page.screenshot({ path: `${SHOTS}/2-addressed.png` });

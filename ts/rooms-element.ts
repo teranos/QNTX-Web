@@ -8,6 +8,11 @@
 
 // "rooms will be plugin provided"
 // "i want all Node Agents to be in the Node Room"
+// "instead of 'say'i want a right arrow > glyph"
+// "the prose can be removed, think about mobile usage of this feature"
+// "and the send needs to be right side"
+// "and clicking once on the agent needs to also highlight it in the ui. clicking on the highlighted Agent will open its own Agent element"
+// "round send button"
 
 // Story 200:
 // "i open leftside bar"
@@ -27,6 +32,8 @@ import { log, SEG } from './logger.ts';
 import { Room as RoomSymbol } from './sym';
 import { chatRow, chatText, renderAssistant, when, atBottom, jumpToBottom, scrollToBottom } from './chat';
 import { errorOf } from './node-connectors-element';
+import { openAgentChat, type Reachable } from './agents-element';
+import type { ClaudeAm } from './claude-element';
 
 export const LEVEL_ID = 'rooms';
 
@@ -118,6 +125,32 @@ export function reachSaid(woken: RoomWoken): string {
     return `${woken.agent.name}: ${woken.reach}`;
 }
 
+/**
+ * The agent a room agent is, as this page reaches it: a RoomAgent names a DID
+ * and a harness, and what the page reaches is an agent at a path (Reachable).
+ * The room says which: the Node Room holds the Node Agents, a namespace's room
+ * its agent, an element's room its element's. A purpose room names no agent
+ * the page knows a path for.
+ */
+export function reachableOf(room: Room, agent: RoomAgent): Reachable | undefined {
+    const of = room.of ?? {};
+    if (of.node) return { id: 'node', called: 'Node Agent', at: '/api/agent', kind: 'node' };
+    if (of.namespace) {
+        const namespace = of.namespace;
+        return { id: `namespace:${namespace}`, called: `the agent of ${namespace}`, at: `/api/agents/${encodeURIComponent(namespace)}`, kind: 'namespace',
+            unwrap: a => ({ claude: (a as { agent?: ClaudeAm }).agent }) };
+    }
+    if (of.element) return { id: `element:${of.element}`, called: of.element, at: `/api/elements/${encodeURIComponent(of.element)}`, kind: 'element' };
+    log.info(SEG.ELEMENT, `[Rooms] ${agent.name} in ${room.name}: the page knows no path to it`);
+    return undefined;
+}
+
+/** Opens the agent's own element: its chat, as Agents opens it. */
+export function openAgentOf(room: Room, agent: RoomAgent): void {
+    const reached = reachableOf(room, agent);
+    if (reached) openAgentChat(reached);
+}
+
 /** One thing said in the room, as the board shows it: who said it, then what. */
 export function messageRow(message: RoomMessage): HTMLElement {
     const who = part('span', 'room-sender');
@@ -136,7 +169,7 @@ export function messageRow(message: RoomMessage): HTMLElement {
  * One room drawn into body: what it is connected to, the agents in it, the
  * board, and where something is said into it. What it gives back stops reading.
  */
-export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms, every: number = FOLLOW_MS): () => void {
+export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms, every: number = FOLLOW_MS, open: (room: Room, agent: RoomAgent) => void = openAgentOf): () => void {
     const connected = part('div', 'room-connected');
     connected.textContent = 'Asking the node about the room…';
     const agents = part('div', 'room-agents');
@@ -148,10 +181,14 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
     const says = part('textarea', 'room-says');
     says.rows = 2;
     says.placeholder = `Say something in ${room.name}`;
+    // "instead of 'say' i want a right arrow > glyph"
     const send = part('button', 'qntx-btn qntx-btn-small room-send');
-    send.textContent = 'Say';
+    send.type = 'button';
+    send.textContent = '→';
+    send.setAttribute('aria-label', 'Say');
+    send.title = 'Say';
     const form = part('div', 'room-say');
-    form.append(send, says);
+    form.append(says, send);
     declareSay(says);
     preventDrag(form);
     preventDrag(board);
@@ -226,9 +263,10 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
     rooms.get(room).then(detail => {
         if (gone) return;
         held = detail.agents;
+        // The room's name is the window's title; this line says only what it is connected to (Room.connected).
         const to = detail.room.connected ?? '';
-        const what = [ofSaid(detail.room.of), detail.room.description].filter(Boolean).join('  ');
-        connected.textContent = to ? `${what}  connected to ${to}` : `${what}  connected to nothing`;
+        connected.textContent = to ? `connected to ${to}` : 'connected to nothing';
+        connected.title = [ofSaid(detail.room.of), detail.room.description].filter(Boolean).join('  ');
         connected.dataset.connected = to ? '1' : '0';
         agents.replaceChildren();
         if (held.length === 0) {
@@ -242,7 +280,12 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
             press.dataset.agent = agent.name;
             press.dataset.harness = agent.harness;
             press.textContent = agent.harness ? `${agent.name}  ${agent.harness}` : agent.name;
-            press.addEventListener('click', () => address(agent));
+            // Pressed once: highlighted, and addressed. Pressed while highlighted: its own element opens.
+            press.addEventListener('click', () => {
+                if (press.classList.contains('room-agent-on')) { open(detail.room, agent); return; }
+                for (const each of agents.querySelectorAll('.room-agent')) each.classList.toggle('room-agent-on', each === press);
+                address(agent);
+            });
             agents.append(press);
         }
         preventDrag(agents);

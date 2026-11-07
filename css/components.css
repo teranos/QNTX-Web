@@ -349,6 +349,16 @@
 .chat-live:empty, .chat-queued:empty { display: none; }
 .chat-row { margin: 3px 0; white-space: pre-wrap; overflow-wrap: anywhere; animation: chat-arrive 160ms ease-out; }
 @keyframes chat-arrive { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* The Backdrop element: the ground showing, and the grounds to choose from. */
+.backdrop-body { display: flex; flex-direction: column; gap: var(--gap); padding: var(--panel-padding-sm); font-size: var(--font-size-sm); }
+.backdrop-held { color: var(--text-on-dark-secondary); }
+.backdrop-choices { display: flex; flex-wrap: wrap; gap: 4px; }
+.backdrop-choice.backdrop-choice-on { color: var(--accent-on-dark); border-color: var(--accent-on-dark); }
+.backdrop-none { color: var(--text-on-dark-tertiary); }
+/* The mock as an element: a line of who you are, and the presses. */
+.mock-body { display: flex; flex-direction: column; gap: var(--gap); padding: var(--panel-padding-sm); font-size: var(--font-size-sm); }
+.mock-who { color: var(--accent-on-dark); }
+.mock-presses { display: flex; flex-wrap: wrap; gap: 4px; }
 /* What a person says is a prompt line, as fish draws one; what an agent says is a ● line (design-philosophy.md). No bubbles. */
 .chat-you { display: flex; gap: 6px; align-items: baseline; align-self: stretch; max-width: none; margin: 8px 0 4px; padding: 2px 8px; background: var(--bg-dark-hover); color: var(--text-on-dark); }
 .chat-you::before { content: '❯'; color: var(--text-on-dark-secondary); flex-shrink: 0; }

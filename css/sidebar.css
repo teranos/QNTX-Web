@@ -13,7 +13,7 @@
     /* The canvas's colour, under the list: a pressed button leaves a hole
        (buttonFrom's gap) cut through the list, and what shows through is this,
        as the canvas shows through the drawer on a phone. */
-    background: var(--bg-canvas);
+    background: var(--glass-canvas);
     border-right: 1px solid var(--border-on-dark);
     outline: none;
     /* The system bar lies over the foot of the page; the door is above it. */
@@ -38,7 +38,8 @@ body:not(.sidebar-open) #sidebar {
 .sidebar-head,
 .sidebar-list,
 .sidebar-foot {
-    background: var(--bg-almost-black);
+    /* See-through, so the ground shows. */
+    background: var(--glass-pane);
 }
 
 .sidebar-head {

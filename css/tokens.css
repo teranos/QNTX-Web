@@ -79,6 +79,13 @@
     --diff-delete: #ff2222;
     --diff-delete-bg: #502222;
 
+    /* Glass: the pane, the bar and the canvas see-through, so the ground under everything shows.
+       "i want more tranparency"
+    */
+    --glass-pane: color-mix(in srgb, var(--term-pane) 82%, transparent);
+    --glass-bar: color-mix(in srgb, var(--term-bar) 82%, transparent);
+    --glass-canvas: color-mix(in srgb, #2d2e36 76%, transparent);
+
     /* Core Colors: the former light surface, now the pane */
     --panel-border: 1px solid var(--border);
     --text-primary: var(--term-fg);

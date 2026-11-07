@@ -1,9 +1,11 @@
 {
   "pairs": [
+    "--color-error on --bg-canvas",
     "--color-error on --bg-dark-light",
     "--color-error on --bg-tertiary",
     "--element-status-error-text on --element-status-error-bg",
     "--status-failed-text on --status-failed-bg",
+    "--text-on-dark-tertiary on --bg-canvas",
     "--text-on-dark-tertiary on --bg-dark-light",
     "--text-on-dark-tertiary on --bg-tertiary",
     "--text-tertiary on --bg-almost-white",

@@ -330,7 +330,15 @@ export function initSidebar(doc: Document = document): void {
     const who = doc.querySelector<HTMLElement>('#header .who');
     if (who) {
         head.appendChild(who);
-        who.addEventListener('click', () => {
+        // The picture opens the choice of ground; the name beside it opens who is looking.
+        // "option to choose between backdrops by clicking on profile pic."
+        who.addEventListener('click', (e: MouseEvent) => {
+            const picture = (e.target as HTMLElement).closest('#who-picture');
+            if (picture) {
+                import('./backdrop-element.ts').then(({ openBackdropElement }) => openBackdropElement())
+                    .catch(err => log.error(SEG.UI, '[Sidebar] the Backdrop element was not opened:', err));
+                return;
+            }
             if (hasElement('i-element')) openElement('i-element');
         });
     }

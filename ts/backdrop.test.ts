@@ -1,4 +1,4 @@
-// The ground under everything: offered by an element, chosen by the viewer, taken over by an element and given back.
+// 「[Fable 5.1] The ground under everything: offered by an element, chosen by the viewer, taken over by an element and given back.」
 
 // "via /g/"
 // "i want backdrop glovbal"
@@ -8,15 +8,15 @@
 import { describe, test, expect, beforeEach, beforeAll, afterAll } from 'bun:test';
 import { NONE, backdropHeldBy, backdropLayer, chooseBackdrop, chosenBackdrop, holdBackdrop, offerBackdrop, offeredBackdrops, resetBackdrop, takeBackdrop, type BackdropFn } from './backdrop';
 
-// The node, as the pulse reads it: one item, well. Stubbed at fetch, as ts/client/http.test.ts does, and put back after.
+// 「[Fable 5.1] The node, as the pulse reads it: one item, well. Stubbed at fetch, as ts/client/http.test.ts does, and put back after.」
 const originalFetch = globalThis.fetch;
 beforeAll(() => {
     globalThis.fetch = (() => Promise.resolve(new Response(JSON.stringify({ items: [{ name: 'q', symbol: '+', note: 'up' }] }), { status: 200 }))) as typeof fetch;
 });
-// The pulse a showing ground starts would keep asking the node into the next file's fetches: stop it with the file.
+// 「[Fable 5.1] The pulse a showing ground starts would keep asking the node into the next file's fetches: stop it with the file.」
 afterAll(() => { resetBackdrop(); globalThis.fetch = originalFetch; });
 
-// Where the choice is kept: a Map standing in for this browser's storage, which cannot open under happy-dom.
+// 「[Fable 5.1] Where the choice is kept: a Map standing in for this browser's storage, which cannot open under happy-dom.」
 const kept = new Map<string, string>();
 const keepInMap = { get: (key: string) => kept.get(key) ?? null, set: (key: string, value: string) => { kept.set(key, value); } };
 

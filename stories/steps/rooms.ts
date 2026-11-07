@@ -48,7 +48,7 @@ When('I open a specific Room, like the Node Room', async ({ page }) => {
 // Said as Then after opening the room, and as Given before talking in it: one step, the way there taken when not there yet.
 Given('I am in the Node Room Element', async ({ page }) => {
     if (!(await page.locator('.room-says').count())) await intoTheNodeRoom(page);
-    await expect(page.locator('[data-element-id="room:node-room"]')).toBeVisible();
+    await expect(page.locator('[data-element-id="room:switchai-py/node-room"]')).toBeVisible();
     await expect(page.locator('.room-says')).toBeVisible();
 });
 

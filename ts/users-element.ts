@@ -194,9 +194,11 @@ export function createUsersElement(): Element {
             content.style.flexDirection = 'column';
             content.style.gap = '8px';
             content.style.padding = '12px';
-            // A window's width, not the screen's: wider than 80% of the viewport, the package makes a panel of it.
+            // A window's width, not the screen's. The package makes a panel of what measures wider than 80% of the
+            // viewport (fitsAsWindow), and the table's preferred width is 1160px; its max-width is the package's to set
+            // (fit.ts), so the content says its width, and the table takes 100% of that.
             // "and Users on Desktop doesnt need to go full screen"
-            content.style.maxWidth = '640px';
+            content.style.width = '640px';
 
             const listContainer = document.createElement('div');
             listContainer.className = 'users-list';

@@ -21,6 +21,15 @@
     backdrop-filter: var(--glass-filter);
     -webkit-backdrop-filter: var(--glass-filter);
 }
+/* A room's glass is the thinnest: the ground it holds is the thing to see. */
+/*
+"make sure a room element bg is more transparent and shows the visual"
+*/
+[data-element-id^="room:"][data-form="window"],
+[data-element-id^="room:"][data-form="panel"] {
+    backdrop-filter: var(--glass-room-filter);
+    -webkit-backdrop-filter: var(--glass-room-filter);
+}
 
 body {
     /* One font, the terminal's: JetBrains Mono, as Ghostty draws everything (design-philosophy.md). */

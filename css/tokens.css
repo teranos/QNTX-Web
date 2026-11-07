@@ -106,6 +106,14 @@
     --glass-thin: rgb(var(--glass-rgb) / var(--glass-thin-alpha));
     --glass-thin-border: rgb(var(--glass-rgb) / var(--glass-thin-border-alpha));
     --glass-thin-filter: blur(var(--glass-thin-blur)) saturate(var(--glass-thin-saturate)) brightness(var(--glass-thin-brightness));
+    /* The room's glass: the thinnest, since the ground the room holds is the thing to see; the words sit on their own rows. */
+    /*
+    "make sure a room element bg is more transparent and shows the visual"
+    */
+    --glass-room-alpha: 0.26;
+    --glass-room-blur: 2px;
+    --glass-room: rgb(var(--glass-rgb) / var(--glass-room-alpha));
+    --glass-room-filter: blur(var(--glass-room-blur)) saturate(var(--glass-thin-saturate)) brightness(var(--glass-thin-brightness));
 
     /* Core Colors: the former light surface, now the pane */
     --panel-border: 1px solid var(--border);

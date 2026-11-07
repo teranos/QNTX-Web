@@ -408,15 +408,15 @@
 .room-agents { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 6px; border-bottom: 1px solid var(--border-on-dark); flex-shrink: 0; }
 .room-no-agents { color: var(--text-on-dark-secondary); font-size: var(--font-size-xs); }
 .room-board { display: flex; flex-direction: column; flex-shrink: 0; }
-.room-sender { display: inline; margin-right: 6px; font-size: var(--font-size-xs); color: var(--text-on-dark-tertiary); }
+.room-sender { display: inline; margin-right: 6px; font-size: var(--font-size-xs); color: var(--text-on-dark-tertiary); flex: none; }
 .room-row.chat-you { gap: 6px; }
 .room-row .chat-text { display: inline; }
 .room-reach { padding: 0 6px; color: var(--text-on-dark-secondary); font-size: var(--font-size-xs); flex-shrink: 0; }
 .room-failed { padding: 0 6px; flex-shrink: 0; }
 .room-reach:empty, .room-failed:empty { display: none; }
-.room-say { display: flex; gap: 4px; align-items: stretch; padding: 4px 6px; border-top: 1px solid var(--border-on-dark); flex-shrink: 0; }
-.room-says { flex: 1; min-width: 0; resize: none; background: var(--bg-almost-black); color: var(--text-on-dark); border: 1px solid var(--border-on-dark); font: inherit; font-size: var(--font-size-field); padding: 4px 6px; }
-.room-send { width: 44px; height: 44px; min-width: 44px; padding: 0; border-radius: 50%; font-size: var(--font-size-field); align-self: flex-end; }
+.room-say { display: flex; flex-wrap: nowrap; gap: 6px; align-items: flex-end; padding: 6px; border-top: 1px solid var(--border-on-dark); flex-shrink: 0; position: sticky; bottom: 0; background: var(--bg-dark); }
+.room-says { flex: 1 1 auto; min-width: 0; width: auto; resize: none; background: var(--bg-almost-black); color: var(--text-on-dark); border: 1px solid var(--border-on-dark); font: inherit; font-size: var(--font-size-field); padding: 6px 8px; margin: 0; }
+.room-send { flex: none; width: 44px; height: 44px; min-width: 44px; padding: 0; border-radius: 50%; font-size: var(--font-size-field); }
 .room-agent.room-agent-on { color: var(--accent-on-dark); border-color: var(--accent-on-dark); background: var(--bg-dark-hover); }
 .chat .claude-say { flex-wrap: wrap; }
 .chat .claude-say select { flex: 0 1 auto; min-width: 0; max-width: 46%; font-size: var(--font-size-xs); }

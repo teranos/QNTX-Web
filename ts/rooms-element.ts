@@ -25,7 +25,7 @@
 // "i press send."
 // "the message get's to the Agent via the room and the Agent can put something back into the room."
 
-import { declareSay, preventDrag, tray } from '@teranos/elements';
+import { preventDrag, tray } from '@teranos/elements';
 import { restLevelInSidebar, enterLevel, levelRow } from './sidebar.ts';
 import { apiJson } from './client';
 import { log, SEG } from './logger.ts';
@@ -187,9 +187,10 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
     send.textContent = '→';
     send.setAttribute('aria-label', 'Say');
     send.title = 'Say';
+    // Not declareSay: the package gives a declared field the whole last line to itself, and the
+    // owner wants the send at its right. The row is pinned to the bottom by its own stylesheet.
     const form = part('div', 'room-say');
     form.append(says, send);
-    declareSay(says);
     preventDrag(form);
     preventDrag(board);
     body.replaceChildren(connected, agents, scroller, reach, failed, form);

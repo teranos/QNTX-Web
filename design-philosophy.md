@@ -124,6 +124,25 @@ The owner's terminal is Ghostty running tmux, fish and neovim. Its look is what 
 
 The tokens are `css/tokens.css`: every one of them, light and dark alike, holds a value from the tables above, and `body` is set in the mono face, so what draws from tokens is already in the language.
 
+## What held before, and still holds
+
+"there is like an old design philosophy doc"
+
+"it still hold but we are more developed now and it needs to reflect it"
+
+The old doc said data first, a decision framework, implementation standards, and The Food Lab as its inspiration. What of it still holds, said for what QNTX-Web is now:
+
+- **Data first.** Every element is one DOM element for its whole life (the Element Axioma, `CLAUDE.md`), and what it shows is the node's answer, dense, in the node's own words. Nothing decorates. The symbols are the SEG glyphs (`ts/sym.ts`), the one place a segment is mapped to a glyph; no icon set, no emoji.
+- **Deciding.** Does it serve ROOT, who looks at it every day? Does it reduce what ROOT has to hold in their head? Does it stay fast on the phone, where ROOT meets it first? Does it stay in the language above? A decision is written here, in the owner's words, before it is drawn.
+- **One font, one palette.** The terminal's, above. The old doc's system fonts and functional colour are now these exact values; status colours carry status and nothing else.
+- **The press.** QNTX has one button, `pressFrom` of `@teranos/elements`: the same size at every stage, white at rest, red only when the second press cannot be undone, green only when it creates. The send is the `→` glyph, round, right of the input.
+- **An underline means you are leaving.** Nothing internal is underlined. All text wraps; `text-overflow: ellipsis` fails `bun test`.
+- **Where things rest.** A standing element rests in the sidebar, in Button Form; a temporal one, a chat, a room, a User, rests in the tray; the canvas alone opens as the workspace.
+- **Measured, not guessed.** Every story is Gherkin in `stories/` and is walked in Chromium against the mock on every pull request; contrast is a test, with a baseline that only grows on purpose; what the node answers is what the mock answers, so a change is seen before it is merged.
+- **The why is in the file.** As The Food Lab explains why a technique works, a stylesheet and an element carry the owner's words for why they are as they are, verbatim, beside the code.
+
+What no longer holds: optimising for users not known; a light surface; a second theme; WCAG as the arbiter over what the owner has looked at for years, where the two differ.
+
 ## Pending
 
 Not yet moved over; each is wrong until it is, and allowed to be. An agent moves one at a time, against this note.

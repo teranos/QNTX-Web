@@ -5,7 +5,7 @@
 
 import { pressFrom, tray } from '@teranos/elements';
 import { NONE, backdropHeldBy, chooseBackdrop, chosenBackdrop, offeredBackdrops, onBackdropChange } from './backdrop.ts';
-import { glassPane } from './glass.ts';
+import { glass } from './glass.ts';
 
 export const ELEMENT_ID = 'backdrop-element';
 
@@ -48,7 +48,7 @@ export function openBackdropElement(): void {
             id: ELEMENT_ID,
             title: 'Backdrop',
             symbol: '▣',
-            color: glassPane(),
+            color: glass(),
             opensAs: 'window',
             opensAt: 'end',
             renderContent: () => {

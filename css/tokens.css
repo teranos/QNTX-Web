@@ -79,12 +79,33 @@
     --diff-delete: #ff2222;
     --diff-delete-bg: #502222;
 
-    /* Glass: the pane, the bar and the canvas see-through, so the ground under everything shows.
+    /* Glass, as vitreous (teranos/vitreous glass.css) makes it: what it is made of as
+       channels, alphas of the surface and its edge, blur, saturate and brightness. Two
+       thicknesses: the glass a window's copy sits in, and the thin glass of bars and
+       of glass over what is worth seeing through to. The pane's channels are the
+       terminal's pane. QNTX takes this from vitreous, never the other way.
        "i want more tranparency"
+       "and glass is already being explored in vitrous, take lessons from exisring vitrous"
     */
-    --glass-pane: color-mix(in srgb, var(--term-pane) 70%, transparent);
-    --glass-bar: color-mix(in srgb, var(--term-bar) 70%, transparent);
-    --glass-canvas: color-mix(in srgb, #2d2e36 55%, transparent);
+    --glass-rgb: 18 18 18;
+    --glass-alpha: 0.64;
+    --glass-strong-alpha: 0.88;
+    --glass-border-alpha: 0.55;
+    --glass-blur: 24px;
+    --glass-saturate: 1;
+    --glass-brightness: 1;
+    --glass-thin-alpha: 0.42;
+    --glass-thin-border-alpha: 0.66;
+    --glass-thin-blur: 7px;
+    --glass-thin-saturate: 1.2;
+    --glass-thin-brightness: 1;
+    --glass: rgb(var(--glass-rgb) / var(--glass-alpha));
+    --glass-strong: rgb(var(--glass-rgb) / var(--glass-strong-alpha));
+    --glass-border: rgb(var(--glass-rgb) / var(--glass-border-alpha));
+    --glass-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) brightness(var(--glass-brightness));
+    --glass-thin: rgb(var(--glass-rgb) / var(--glass-thin-alpha));
+    --glass-thin-border: rgb(var(--glass-rgb) / var(--glass-thin-border-alpha));
+    --glass-thin-filter: blur(var(--glass-thin-blur)) saturate(var(--glass-thin-saturate)) brightness(var(--glass-thin-brightness));
 
     /* Core Colors: the former light surface, now the pane */
     --panel-border: 1px solid var(--border);

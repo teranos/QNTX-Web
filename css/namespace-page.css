@@ -16,8 +16,8 @@
     overflow-y: auto;
     font-family: var(--font-mono);
     color: var(--text-on-dark);
-    /* Glass over the ground. */
-    background: var(--glass-bar);
+    /* Nothing of its own over the ground: what it holds wears the glass. */
+    background: transparent;
 }
 
 /* Who is looking, top-left; the way out of the door, top-right. */

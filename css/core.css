@@ -15,6 +15,13 @@
     height: 100%;
 }
 
+/* A window or a panel is glass over the ground (vitreous): its colour is the element's (ts/glass.ts), the blur is here. */
+[data-element-id][data-form="window"],
+[data-element-id][data-form="panel"] {
+    backdrop-filter: var(--glass-filter);
+    -webkit-backdrop-filter: var(--glass-filter);
+}
+
 body {
     /* One font, the terminal's: JetBrains Mono, as Ghostty draws everything (design-philosophy.md). */
     font-family: var(--font-mono);

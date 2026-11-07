@@ -158,6 +158,11 @@
        "this is old canvas, its design is frozen, dont touch it."
     */
     --bg-canvas: #2d2e36;
+    /* The grid on the canvas, barely there on black: the ground is the thing to see. */
+    /*
+    "and the horizontal and vertical lines on the canvas are too present, too white, needs to be less obvious that it's there on surfaces that are mostly black"
+    */
+    --canvas-grid-line: rgb(120 130 140 / 0.14);
     --bg-dark-light: var(--term-job); /* Lighter dark surface - buttons, inputs, controls */
     --bg-secondary: var(--term-pane); /* Dark surface - element bodies, canvas panels */
     --bg-tertiary: var(--term-bar); /* Slightly lighter dark surface - title bars, headers */

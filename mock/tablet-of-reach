@@ -181,6 +181,10 @@ REACH is '/api/agent' '/api/agent/say' '/api/agent/session' '/api/agent/login' o
 # agent and its own conversation, and ROOT SHAKE is ROOT's.
 REACH is '/api/elements/{element}' '/api/elements/{element}/say' '/api/elements/{element}/session' of ROOT
 
+# Rooms (ADR-057): the rooms this node's agents are in, what is said in them,
+# and waking an agent in one. ROOT's, as the Node Agent is.
+REACH is '/api/rooms' '/api/rooms/{room}' '/api/rooms/{room}/read' '/api/rooms/{room}/post' '/api/rooms/{room}/wake' of ROOT
+
 # The namespace agent (the agents signum, ADR-048): "shared amongst anyone who
 # has REACH on it". Who acts in the namespace reaches it, which the handler
 # asks of the admission; who may opt the namespace into one is its owner, ROOT

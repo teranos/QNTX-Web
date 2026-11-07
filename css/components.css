@@ -403,6 +403,18 @@
 .agents-talk { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .agents-talk > .claude-who, .agents-talk > .claude-status, .agents-talk > .claude-say, .shake-talk > .claude-who, .shake-talk > .claude-status, .shake-talk > .claude-say { flex-shrink: 0; }
 .agents-talk > .chat-scroll, .shake-talk > .chat-scroll { flex: 1; }
+/* A room (ADR-057): what it is connected to, the agents in it, the board, where something is said into it. */
+.room-connected { padding: 3px 6px; border-bottom: 1px solid var(--border-on-dark); color: var(--text-on-dark-secondary); font-size: var(--font-size-xs); white-space: normal; overflow-wrap: break-word; flex-shrink: 0; }
+.room-agents { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 6px; border-bottom: 1px solid var(--border-on-dark); flex-shrink: 0; }
+.room-no-agents { color: var(--text-on-dark-secondary); font-size: var(--font-size-xs); }
+.room-board { display: flex; flex-direction: column; flex-shrink: 0; }
+.room-sender { display: block; font-size: var(--font-size-xs); color: var(--text-on-dark-tertiary); }
+.chat-you .room-sender { color: var(--bg-almost-black); }
+.room-reach { padding: 0 6px; color: var(--text-on-dark-secondary); font-size: var(--font-size-xs); flex-shrink: 0; }
+.room-failed { padding: 0 6px; flex-shrink: 0; }
+.room-reach:empty, .room-failed:empty { display: none; }
+.room-say { display: flex; gap: 4px; align-items: stretch; padding: 4px 6px; border-top: 1px solid var(--border-on-dark); flex-shrink: 0; }
+.room-says { flex: 1; resize: none; background: var(--bg-almost-black); color: var(--text-on-dark); border: 1px solid var(--border-on-dark); font: inherit; font-size: var(--font-size-field); padding: 4px 6px; }
 .chat .claude-say { flex-wrap: wrap; }
 .chat .claude-say select { flex: 0 1 auto; min-width: 0; max-width: 46%; font-size: var(--font-size-xs); }
 .chat .claude-says { flex-basis: 100%; }

@@ -101,7 +101,7 @@ interface Binding {
     branch?: string;
 }
 
-// "in reality its still one story"
+// "「[Opus 5.5] in reality its still one story」"
 
 /** Where a file of a repository is placed inside a folder of the vault: by its own name, a story as its note (ADR-049). */
 export function notePlaceOf(folder: string, file: string): string {
@@ -150,7 +150,7 @@ export function renderVault(container: HTMLElement, view: View, reload: () => Pr
         return d.startsWith(place + '/') && !d.slice(place.length + 1).includes('/');
     });
 
-    // Each note bound directly in a folder: a bound place that is no folder of the vault.
+    // 「[Opus 5.5] Each note bound directly in a folder: a bound place that is no folder of the vault.」
     const notesIn = (place: string) => [...byPlace.keys()].filter(bound => {
         if (view.dirs.includes(bound)) return false;
         const at = bound.lastIndexOf('/');
@@ -204,7 +204,7 @@ export function renderVault(container: HTMLElement, view: View, reload: () => Pr
             if (kids && opened) li.appendChild(level(place));
             ul.appendChild(li);
         }
-        // A bound note is a row in its folder, as a bound folder is.
+        // 「[Opus 5.5] A bound note is a row in its folder, as a bound folder is.」
         for (const note of notesIn(parent)) {
             const li = document.createElement('li');
             const row = div('obsidian-row obsidian-note' + (open === note ? ' open' : ''));
@@ -223,7 +223,7 @@ export function renderVault(container: HTMLElement, view: View, reload: () => Pr
         return ul;
     };
 
-    // The row is its state's colour, and its dot says nothing until hovered.
+    // 「[Opus 5.5] The row is its state's colour, and its dot says nothing until hovered.」
     const marked = (row: HTMLElement, state: FolderState) => {
         const says = stateSays(state);
         row.classList.add(`obsidian-row-${state.state}`);
@@ -312,7 +312,7 @@ export function renderVault(container: HTMLElement, view: View, reload: () => Pr
             p.appendChild(sending(place, state));
             return p;
         }
-        // Inside a bound folder, nothing more is bound: its notes are that folder's.
+        // 「[Opus 5.5] Inside a bound folder, nothing more is bound: its notes are that folder's.」
         const holding = [...byPlace.keys()].find(other => place.startsWith(other + '/'));
         if (holding) {
             p.append(div('obsidian-refused', `${holding} and ${place} are one place in the vault, or one holds the other`));
@@ -334,7 +334,7 @@ export function renderVault(container: HTMLElement, view: View, reload: () => Pr
         if (b.path !== undefined) {
             const at = b.file ? notePlaceOf(place, b.path) : place;
             p.append(div('obsidian-folder', `${b.repo}@${b.branch}:${b.path}=${at}`));
-            // The node's own refusal (server/vault.go): no place is another's or inside it.
+            // 「[Opus 5.5] The node's own refusal (server/vault.go): no place is another's or inside it.」
             const refused = clash(at) ?? (byPlace.has(at) ? `${at} is bound already` : null);
             if (refused) {
                 p.append(div('obsidian-refused', refused));
@@ -391,7 +391,7 @@ export function renderVault(container: HTMLElement, view: View, reload: () => Pr
                     );
                     list.appendChild(row);
                 }
-                // A note or a story, at the repository's top as well: pressed, it is bound as a note.
+                // 「[Opus 5.5] A note or a story, at the repository's top as well: pressed, it is bound as a note.」
                 for (const file of files) {
                     const row = div('obsidian-subdir obsidian-file');
                     row.append(div('obsidian-into'), pick(file.slice(file.lastIndexOf('/') + 1), () => { binding = { ...b, branch, path: file, file: true }; draw(); }));

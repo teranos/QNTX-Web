@@ -160,15 +160,25 @@ export function drawNamespaceAgent(body: HTMLElement, namespace: string, node: N
     // While the node says the agent is not ready (its Claude Code still
     // arriving), it is said why, and asked again: sign-in is offered only to
     // an agent that can be signed in.
+    // Asked again sooner at first and less often the longer it waits, to once
+    // a minute: a Claude Code that will not arrive is not asked after every 5
+    // seconds for as long as the chat is open.
     let gone = false;
     let again: ReturnType<typeof setTimeout> | undefined;
+    let waiting = false;
+    let wait = notReadyMs;
+    const askAgain = () => {
+        again = setTimeout(ask, wait);
+        wait = Math.min(wait * 2, notReadyMs * 12);
+    };
     const ask = () => node.am()
         .then(is => {
             if (gone) return;
             if (is.not_ready) {
+                waiting = true;
                 head.hidden = false;
                 head.textContent = is.not_ready;
-                again = setTimeout(ask, notReadyMs);
+                askAgain();
                 return;
             }
             head.hidden = true;
@@ -181,6 +191,9 @@ export function drawNamespaceAgent(body: HTMLElement, namespace: string, node: N
             head.hidden = false;
             head.textContent = wordsOf(err);
             log.warn(SEG.ELEMENT, `[Agent] the node did not say who the agent of ${namespace} is: ${wordsOf(err)}`);
+            // Asked once, that is the answer. While it was waiting, one that
+            // did not answer is asked again.
+            if (waiting) askAgain();
         });
     void ask();
 

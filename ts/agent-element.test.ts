@@ -124,6 +124,50 @@ describe('Agent - Spike', () => {
         stop();
     });
 
+    test('a node that does not answer while the agent is arriving is asked again, and sign-in is offered once it is ready', async () => {
+        const body = document.createElement('div');
+        let asks = 0;
+        const flaky: NamespaceAgent = {
+            ...node(false),
+            am: () => {
+                asks++;
+                if (asks === 1) return Promise.resolve({ ...am(false), not_ready: 'Claude Code is still being fetched' });
+                if (asks === 2) return Promise.reject(new Error('/api/agents/pond: HTTP 502'));
+                return Promise.resolve(am(false));
+            },
+        };
+        const stop = drawAgent(body, 'pond', flaky, {}, 1);
+        await new Promise(resolve => setTimeout(resolve, 40));
+        expect(asks).toBe(3);
+        expect(body.querySelector<HTMLElement>('.agent-head')?.hidden).toBe(true);
+        expect(body.querySelector('.agent-begin')).not.toBeNull();
+        stop();
+    });
+
+    test('an agent that stays not ready is asked less often, to a cap', async () => {
+        const body = document.createElement('div');
+        const delays: number[] = [];
+        const real = globalThis.setTimeout;
+        globalThis.setTimeout = ((fn: () => void, ms?: number) => {
+            if (ms !== undefined && ms >= 100) delays.push(ms);
+            return real(fn, 0);
+        }) as typeof setTimeout;
+        try {
+            const stuck: NamespaceAgent = {
+                ...node(false),
+                am: () => Promise.resolve({ ...am(false), not_ready: 'Claude Code did not arrive: the download was cut off' }),
+            };
+            const stop = drawAgent(body, 'pond', stuck, {}, 100);
+            for (let i = 0; i < 20 && delays.length < 7; i++) await new Promise(resolve => real(resolve, 0));
+            stop();
+        } finally {
+            globalThis.setTimeout = real;
+        }
+        expect(delays.slice(0, 7)).toEqual([100, 200, 400, 800, 1200, 1200, 1200]);
+        expect(body.querySelector('.agent-head')?.textContent).toContain('did not arrive');
+        expect(body.querySelector('.agent-begin')).toBeNull();
+    });
+
     // A sign-in the node refuses to begin leaves the button to press again, and says why.
     test('a sign-in that does not begin is said, and can be pressed again', async () => {
         const body = document.createElement('div');

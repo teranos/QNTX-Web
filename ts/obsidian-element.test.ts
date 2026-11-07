@@ -148,7 +148,7 @@ describe('a folder is bound by clicking', () => {
         const container = shown();
 
         row(container, 'Course Material').querySelector<HTMLButtonElement>('.obsidian-name')!.click();
-        click(container, 'Bind to repository md folder');
+        click(container, 'Bind to repository');
         await flush();
         expect(container.querySelector('.obsidian-list')?.textContent).toContain('abcd-nl  org');
         expect(container.querySelector('.obsidian-list')?.textContent).toContain('abcd  user');
@@ -181,7 +181,81 @@ describe('a folder is bound by clicking', () => {
         row(container, 'ABCD').querySelector<HTMLButtonElement>('.obsidian-twist')!.click();
         row(container, 'ABCD/lttr').querySelector<HTMLButtonElement>('.obsidian-name')!.click();
         expect(container.querySelector('.obsidian-refused')?.textContent).toBe('ABCD and ABCD/lttr are one place in the vault, or one holds the other');
-        expect(container.textContent).not.toContain('Bind to repository md folder');
+        expect(container.textContent).not.toContain('Bind to repository');
+    });
+});
+
+// "in reality its still one story"
+describe('Tim: a file or directory is bound by clicking', () => {
+    const picking = () => {
+        answers = {
+            '/api/vault/owners': { owners: [{ login: 'abcd-nl', type: 'Organization', installation: '7' }] },
+            '/api/vault/repos?installation=7': { repos: ['github.com/abcd-nl/clean'] },
+            '/api/vault/subdirs?repo=github.com%2Fabcd-nl%2Fclean&path=': { dirs: ['cdr', 'docs'], files: ['AGENTS.md', '13-root-connects-obsidian.feature'], branch: 'main' },
+        };
+        let sent: unknown = null;
+        answer = (path, init) => {
+            sent = { path, body: JSON.parse(String(init?.body)) };
+            return Promise.resolve(new Response('{}'));
+        };
+        return { sent: () => sent };
+    };
+
+    const toTheTop = async (container: HTMLElement) => {
+        row(container, 'Course Material').querySelector<HTMLButtonElement>('.obsidian-name')!.click();
+        click(container, 'Bind to repository');
+        await flush();
+        click(container, 'abcd-nl');
+        await flush();
+        click(container, 'clean');
+        await flush();
+    };
+
+    test('notes and stories are offered beside directories, the repository\'s top included', async () => {
+        picking();
+        const container = shown();
+        await toTheTop(container);
+        const list = container.querySelector('.obsidian-list')!;
+        expect([...list.querySelectorAll('.obsidian-file')].map(f => f.textContent)).toEqual(['AGENTS.md', '13-root-connects-obsidian.feature']);
+        expect([...list.querySelectorAll('.obsidian-subdir:not(.obsidian-file)')].map(d => d.lastElementChild?.textContent)).toEqual(['cdr', 'docs']);
+    });
+
+    test('a file pressed is bound as a note of the folder pressed, by its own name', async () => {
+        const { sent } = picking();
+        const container = shown();
+        await toTheTop(container);
+        click(container, 'AGENTS.md');
+        expect(container.querySelector('.obsidian-panel')?.textContent).toContain('github.com/abcd-nl/clean@main:AGENTS.md=Course Material/AGENTS.md');
+        click(container, 'Confirm');
+        await flush();
+        click(container, 'Confirm');
+        await flush();
+        expect(sent()).toEqual({ path: '/api/vault/bind', body: { name: 'abcd', place: 'Course Material/AGENTS.md', repo: 'github.com/abcd-nl/clean', path: 'AGENTS.md' } });
+    });
+
+    test('a story pressed is bound as its note', async () => {
+        const { sent } = picking();
+        const container = shown();
+        await toTheTop(container);
+        click(container, '13-root-connects-obsidian.feature');
+        click(container, 'Confirm');
+        await flush();
+        click(container, 'Confirm');
+        await flush();
+        expect(sent()).toEqual({ path: '/api/vault/bind', body: { name: 'abcd', place: 'Course Material/13-root-connects-obsidian.feature.md', repo: 'github.com/abcd-nl/clean', path: '13-root-connects-obsidian.feature' } });
+    });
+
+    test('a bound note is a row in its folder, with its state, and opens as a bound folder does', () => {
+        const folder = 'github.com/teranos/QNTX@main:AGENTS.md=ABCD/lttr/AGENTS.md';
+        const container = shown({ vault: { ...vault, folders: [folder] }, dirs, states: [
+            { folder, place: 'ABCD/lttr/AGENTS.md', state: 'active', why: '', branch: '', pull: '' },
+        ] as never[] });
+        const note = row(container, 'ABCD/lttr/AGENTS.md');
+        expect(note.querySelector('.obsidian-bound')?.textContent).toBe('⇄ github.com/teranos/QNTX@main:AGENTS.md');
+        expect(note.querySelector('.obsidian-state-active')).toBeTruthy();
+        note.querySelector<HTMLButtonElement>('.obsidian-name')!.click();
+        expect(container.querySelector('.obsidian-panel')?.textContent).toContain(folder);
+        expect(container.textContent).toContain('Unbind');
     });
 });
 

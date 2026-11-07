@@ -135,7 +135,7 @@ function elementAgent(element: string): Agent {
 const files = new Files();
 const codexAgents = new CodexAgents();
 const agyAgents = new AgyAgents();
-// The rooms (ADR-057): the Node Room, every Node Agent in it.
+// 「[Fable 5.1, Opus 5.5] The rooms (ADR-057): the Node Room, every Node Agent in it.」
 const rooms = new Rooms();
 
 /** The agent paths, answered live: am, session and say, the picture carried along. */

@@ -1,24 +1,24 @@
-// Rooms Element — the rooms this node's agents are in (ADR-057), each a board
-// that people and agents write on. Rooms is a level of the sidebar, as Agents
-// is; a room opens from its row.
+// 「[Fable 5.1, Opus 5.5] Rooms Element — the rooms this node's agents are in (ADR-057), each a board」
+// 「[Fable 5.1, Opus 5.5] that people and agents write on. Rooms is a level of the sidebar, as Agents」
+// 「[Fable 5.1, Opus 5.5] is; a room opens from its row.」
 
-// ADR-057:
-// "shared message board"
+// 「[Fable 5.1, Opus 5.5] ADR-057:」
+// "「[Opus 5.5] shared message board」"
 // "Say you can wake a specific Agent so it will check the room"
 
 // "rooms will be plugin provided"
-// "i want all Node Agents to be in the Node Room"
+// "「[Opus 5.5] i want all Node Agents to be in the Node Room」"
 // "instead of 'say'i want a right arrow > glyph"
 // "the prose can be removed, think about mobile usage of this feature"
 // "and the send needs to be right side"
 // "and clicking once on the agent needs to also highlight it in the ui. clicking on the highlighted Agent will open its own Agent element"
 // "round send button"
 
-// Story 200:
+// 「[Fable 5.1, Opus 5.5] Story 200:」
 // "i open leftside bar"
 // "i open Rooms Element"
-// "I open a specific Room, like the Node Room"
-// "the Node Room Element"
+// "「[Opus 5.5] I open a specific Room, like the Node Room」"
+// "「[Opus 5.5] the Node Room Element」"
 // "here i see what it's connected to and what Agents are in it"
 // "i press on an Agent"
 // "`@agent_name` appears in inputfield and i can type something."
@@ -39,10 +39,10 @@ export const LEVEL_ID = 'rooms';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 const PHONE = '(max-width: 768px)';
-// How often an open room is read again, so what an agent puts back into it arrives.
+// 「[Fable 5.1, Opus 5.5] How often an open room is read again, so what an agent puts back into it arrives.」
 const FOLLOW_MS = 3000;
 
-// ── rooms.proto, as the page reads it (QNTX plugin/grpc/protocol/rooms.proto) ──
+// 「[Fable 5.1, Opus 5.5] ── rooms.proto, as the page reads it (QNTX plugin/grpc/protocol/rooms.proto) ──」
 
 /** RoomAgent: an agent as a room holds it. */
 export interface RoomAgent { did: string; harness: string; name: string }
@@ -57,8 +57,8 @@ export interface RoomJoined { room: string; member: string; member_name: string;
 /** ReadRoomResponse. */
 export interface RoomRead { messages: RoomMessage[]; joined: RoomJoined[]; truncated: boolean }
 /**
- * GetRoomResponse. What the room is connected to beyond its provider is the
- * room's own `connected` (rooms.proto Room.connected): a Telegram group, say.
+ * 「[Fable 5.1, Opus 5.5] GetRoomResponse. What the room is connected to beyond its provider is the」
+ * 「[Fable 5.1, Opus 5.5] room's own `connected` (rooms.proto Room.connected): a Telegram group, say.」
  */
 export interface RoomDetail { room: Room; agents: RoomAgent[] }
 /** RoomWoken: what the provider says of one agent a wake named; reach is ROOM_REACH_ARRIVES, _WAITS or _DECLINED. */
@@ -126,11 +126,11 @@ export function reachSaid(woken: RoomWoken): string {
 }
 
 /**
- * The agent a room agent is, as this page reaches it: a RoomAgent names a DID
- * and a harness, and what the page reaches is an agent at a path (Reachable).
- * The room says which: the Node Room holds the Node Agents, a namespace's room
- * its agent, an element's room its element's. A purpose room names no agent
- * the page knows a path for.
+ * 「[Fable 5.1, Opus 5.5] The agent a room agent is, as this page reaches it: a RoomAgent names a DID」
+ * 「[Fable 5.1, Opus 5.5] and a harness, and what the page reaches is an agent at a path (Reachable).」
+ * 「[Fable 5.1, Opus 5.5] The room says which: the Node Room holds the Node Agents, a namespace's room」
+ * 「[Fable 5.1, Opus 5.5] its agent, an element's room its element's. A purpose room names no agent」
+ * 「[Fable 5.1, Opus 5.5] the page knows a path for.」
  */
 export function reachableOf(room: Room, agent: RoomAgent): Reachable | undefined {
     const of = room.of ?? {};
@@ -166,8 +166,8 @@ export function messageRow(message: RoomMessage): HTMLElement {
 }
 
 /**
- * One room drawn into body: what it is connected to, the agents in it, the
- * board, and where something is said into it. What it gives back stops reading.
+ * 「[Fable 5.1, Opus 5.5] One room drawn into body: what it is connected to, the agents in it, the」
+ * 「[Fable 5.1, Opus 5.5] board, and where something is said into it. What it gives back stops reading.」
  */
 export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms, every: number = FOLLOW_MS, open: (room: Room, agent: RoomAgent) => void = openAgentOf): () => void {
     const connected = part('div', 'room-connected');
@@ -182,15 +182,15 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
     says.rows = 2;
     says.placeholder = `Say something in ${room.name}`;
     // "instead of 'say' i want a right arrow > glyph"
-    // The send is a press, QNTX's one button: a bare <button> in an element is shrunk to its glyph
-    // by @teranos/elements. Its title is the → glyph; what it does is below.
+    // 「[Fable 5.1, Opus 5.5] The send is a press, QNTX's one button: a bare <button> in an element is shrunk to its glyph」
+    // 「[Fable 5.1, Opus 5.5] by @teranos/elements. Its title is the → glyph; what it does is below.」
     const press = pressFrom({ id: `room-send-${room.provider}-${room.id}`, title: '→', does: () => { sendIt(); } });
     const send = press.element;
     send.classList.add('room-send');
     send.setAttribute('aria-label', 'Say');
     send.title = 'Say';
-    // Not declareSay: the package gives a declared field the whole last line to itself, and the
-    // owner wants the send at its right. The row is pinned to the bottom by its own stylesheet.
+    // 「[Fable 5.1, Opus 5.5] Not declareSay: the package gives a declared field the whole last line to itself, and the」
+    // 「[Fable 5.1, Opus 5.5] owner wants the send at its right. The row is pinned to the bottom by its own stylesheet.」
     const form = part('div', 'room-say');
     form.append(says, send);
     preventDrag(form);
@@ -207,7 +207,7 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
         failed.replaceChildren(errorOf(`${what}: ${wordsOf(err)}`));
     };
 
-    // Pressing an agent addresses it: its name after an @ goes into the box, and the box is where to type.
+    // 「[Fable 5.1, Opus 5.5] Pressing an agent addresses it: its name after an @ goes into the box, and the box is where to type.」
     const address = (agent: RoomAgent) => {
         const mention = `@${agent.name}`;
         if (!says.value.split(/\s+/).includes(mention)) {
@@ -234,7 +234,7 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
         if (!drawn) jumpToBottom(scroller); else if (follow) scrollToBottom(scroller); else scroller.scrollTop = stood;
     }).catch((err: unknown) => { if (!gone) fails('read', err); });
 
-    // Addressed to agents, what is said wakes them; addressed to nobody, it stands on the board for everyone.
+    // 「[Fable 5.1, Opus 5.5] Addressed to agents, what is said wakes them; addressed to nobody, it stands on the board for everyone.」
     const sendIt = () => {
         const words = says.value.trim();
         if (!words) return;
@@ -254,7 +254,7 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
             : rooms.post(room, words);
         said.then(read).catch((err: unknown) => {
             fails('say', err);
-            // A refusal does not cost the words: they go back in the box.
+            // 「[Fable 5.1, Opus 5.5] A refusal does not cost the words: they go back in the box.」
             if (!says.value.trim()) says.value = words;
         });
     };
@@ -265,7 +265,7 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
     rooms.get(room).then(detail => {
         if (gone) return;
         held = detail.agents;
-        // The room's name is the window's title; this line says only what it is connected to (Room.connected).
+        // 「[Fable 5.1, Opus 5.5] The room's name is the window's title; this line says only what it is connected to (Room.connected).」
         const to = detail.room.connected ?? '';
         connected.textContent = to ? `connected to ${to}` : 'connected to nothing';
         connected.title = [ofSaid(detail.room.of), detail.room.description].filter(Boolean).join('  ');
@@ -282,7 +282,7 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
             press.dataset.agent = agent.name;
             press.dataset.harness = agent.harness;
             press.textContent = agent.harness ? `${agent.name}  ${agent.harness}` : agent.name;
-            // Pressed once: highlighted, and addressed. Pressed while highlighted: its own element opens.
+            // 「[Fable 5.1, Opus 5.5] Pressed once: highlighted, and addressed. Pressed while highlighted: its own element opens.」
             press.addEventListener('click', () => {
                 if (press.classList.contains('room-agent-on')) { open(detail.room, agent); return; }
                 for (const each of agents.querySelectorAll('.room-agent')) each.classList.toggle('room-agent-on', each === press);
@@ -349,7 +349,7 @@ export function fillRoomsLevel(into: HTMLElement, rooms: Promise<Room[]>, open: 
     });
 }
 
-// Who this is for: whoever reaches the rooms, and that is ROOT (the rooms signum's line).
+// 「[Fable 5.1, Opus 5.5] Who this is for: whoever reaches the rooms, and that is ROOT (the rooms signum's line).」
 export const needs = ['/api/rooms'] as const;
 
 /** Rooms rests in the sidebar as a level: its row opens the rooms listed, each a row that opens the room. */

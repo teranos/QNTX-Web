@@ -9,7 +9,7 @@ const PORT = 8839;
 const testDir = defineBddConfig({
     features: ['stories/12-user-connects-anthropic.feature', 'stories/32-the-session-streams-in.feature', 'stories/33-root-uses-a-chat.feature', 'stories/200-root-talks-to-agent-via-room.feature'],
     steps: 'stories/steps/*.ts',
-    // A scenario of the phone app's (@phone) is walked nowhere yet: no step binds it.
+    // 「[Fable 5.1, Opus 5.5] A scenario of the phone app's (@phone) is walked nowhere yet: no step binds it.」
     tags: 'not @phone',
     outputDir: '.features-gen',
 });

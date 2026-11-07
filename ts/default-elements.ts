@@ -77,7 +77,7 @@ export async function registerDefaultElements(hasCanvas: boolean = true): Promis
         { needs: groundNeeds, create: createGroundElement },
         // ✦ — Agents: a level of the sidebar, every agent this person reaches a row of it, each a chat (ADR-048, ADR-054)
         { needs: agentsNeeds, create: () => ({ id: AGENTS_ID, title: 'Agents', symbol: Agent, renderContent: () => document.createElement('div') }) },
-        // ⌂ — Rooms: a level of the sidebar, every room a row of it, each a board people and agents write on (ADR-057)
+        // 「[Fable 5.1, Opus 5.5] ⌂ — Rooms: a level of the sidebar, every room a row of it, each a board people and agents write on (ADR-057)」
         { needs: roomsNeeds, create: () => ({ id: ROOMS_ID, title: 'Rooms', symbol: Room, renderContent: () => document.createElement('div') }) },
         // Pulse Panel Element — scheduled jobs dashboard
         { needs: pulseNeeds, create: createPulseElement },

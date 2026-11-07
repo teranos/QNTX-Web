@@ -1,19 +1,19 @@
-// The steps of story 200, walked against the mock as ROOT: Rooms is a level of
-// the sidebar, the Node Room a row of it, and the room opens from the row.
+// 「[Fable 5.1, Opus 5.5] The steps of story 200, walked against the mock as ROOT: Rooms is a level of」
+// 「[Fable 5.1, Opus 5.5] the sidebar, the Node Room a row of it, and the room opens from the row.」
 
 import { expect, type Page } from '@playwright/test';
 import { createBdd } from 'playwright-bdd';
 
 const { Given, When, Then } = createBdd();
 
-// Where the pictures of the walk are kept, to be looked at.
+// 「[Fable 5.1, Opus 5.5] Where the pictures of the walk are kept, to be looked at.」
 const SHOTS = 'test-results/rooms';
 
 /**
- * The sidebar, open: on a desktop the column stands open as remembered, and
- * Rooms is a button in it once the node has said what the viewer reaches.
- * Waiting for that button is waiting for both; a press on the latch is not
- * needed here, and the latch is the system bar's, which a desktop does not show.
+ * 「[Fable 5.1, Opus 5.5] The sidebar, open: on a desktop the column stands open as remembered, and」
+ * 「[Fable 5.1, Opus 5.5] Rooms is a button in it once the node has said what the viewer reaches.」
+ * 「[Fable 5.1, Opus 5.5] Waiting for that button is waiting for both; a press on the latch is not」
+ * 「[Fable 5.1, Opus 5.5] needed here, and the latch is the system bar's, which a desktop does not show.」
  */
 async function sidebarOpen(page: Page): Promise<void> {
     await expect(page.locator('#sidebar .sidebar-button', { hasText: 'Rooms' })).toBeVisible({ timeout: 15_000 });
@@ -45,7 +45,7 @@ When('I open a specific Room, like the Node Room', async ({ page }) => {
     await page.locator('.sidebar-level-row', { hasText: 'Node Room' }).click();
 });
 
-// Said as Then after opening the room, and as Given before talking in it: one step, the way there taken when not there yet.
+// 「[Fable 5.1, Opus 5.5] Said as Then after opening the room, and as Given before talking in it: one step, the way there taken when not there yet.」
 Given('I am in the Node Room Element', async ({ page }) => {
     if (!(await page.locator('.room-says').count())) await intoTheNodeRoom(page);
     await expect(page.locator('[data-element-id="room:switchai-py/node-room"]')).toBeVisible();
@@ -78,7 +78,7 @@ When('I press send', async ({ page }) => {
 });
 
 Then('the message gets to the Agent via the room', async ({ page }) => {
-    // What was said stands on the board, and the provider says the wake arrives for the agent.
+    // 「[Fable 5.1, Opus 5.5] What was said stands on the board, and the provider says the wake arrives for the agent.」
     await expect(page.locator('.room-board .chat-you').last()).toContainText('@node-claude what is the node up to?');
     await expect(page.locator('.room-reach-line[data-reach="ROOM_REACH_ARRIVES"]')).toHaveText('arrives for node-claude');
     await expect(page.locator('.room-says')).toHaveValue('');

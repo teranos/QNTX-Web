@@ -1,10 +1,10 @@
-// The mock's rooms (ADR-057): the Node Room, with every Node Agent in it and a
-// Telegram group connected, and the room of pond. Answered as rooms.proto's
-// calls, each under /api/rooms. An agent woken answers into the room a moment
-// later, in the mock's own words; one whose wake only waits does not.
+// 「[Fable 5.1, Opus 5.5] The mock's rooms (ADR-057): the Node Room, with every Node Agent in it and a」
+// 「[Fable 5.1, Opus 5.5] Telegram group connected, and the room of pond. Answered as rooms.proto's」
+// 「[Fable 5.1, Opus 5.5] calls, each under /api/rooms. An agent woken answers into the room a moment」
+// 「[Fable 5.1, Opus 5.5] later, in the mock's own words; one whose wake only waits does not.」
 
-// "i want all Node Agents to be in the Node Room"
-// "and i will also connect the Node Room to a Telegram group i have"
+// "「[Opus 5.5] i want all Node Agents to be in the Node Room」"
+// "「[Opus 5.5] and i will also connect the Node Room to a Telegram group i have」"
 
 export interface RoomAgent { did: string; harness: string; name: string }
 export interface Room { id: string; provider: string; name: string; description: string; instructions: string; of: Record<string, string> }
@@ -15,7 +15,7 @@ const PROVIDER = 'switchai-py';
 const NODE_DID = 'did:key:z6MkmockNode';
 const MADE_AT = '2026-11-07T09:00:00Z';
 
-// How long an agent takes to put something back into the room.
+// 「[Fable 5.1, Opus 5.5] How long an agent takes to put something back into the room.」
 const ANSWER_MS = 1500;
 
 const nodeAgent = (harness: string): RoomAgent => ({ did: 'did:key:mock-node-agent', harness, name: `node-${harness}` });
@@ -78,7 +78,7 @@ export class Rooms {
             return json({ id: said.id });
         }
         if (rest === '/wake' && method === 'POST') {
-            // agents arrives as the node's sigil takes it: names, comma-separated.
+            // 「[Fable 5.1, Opus 5.5] agents arrives as the node's sigil takes it: names, comma-separated.」
             const sent = (await req.json()) as { agents?: string; says?: string; thread?: string };
             if (!sent.says) return json({ error: 'says is required' }, 400);
             const inRoom = this.agents.get(room.id) ?? [];
@@ -86,7 +86,7 @@ export class Rooms {
             const named = inRoom.filter(held => names.has(held.name));
             if (named.length === 0) return json({ error: 'agents names nobody in the room' }, 400);
             const said = this.say(room, `mock:${level}`, level.toLowerCase(), null, sent.says, sent.thread);
-            // The mock's codex is told by nothing: its wake stands in the room until it next reads it.
+            // 「[Fable 5.1, Opus 5.5] The mock's codex is told by nothing: its wake stands in the room until it next reads it.」
             const woken = named.map(agent => ({ agent, reach: agent.harness === 'codex' ? 'ROOM_REACH_WAITS' : 'ROOM_REACH_ARRIVES' }));
             for (const each of woken) {
                 if (each.reach !== 'ROOM_REACH_ARRIVES') continue;

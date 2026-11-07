@@ -105,9 +105,9 @@ function worldAnswer(level: Level, method: string, path: string, url: URL): Resp
         if (path === "/api/canvas/minimized-windows") return json(minimizedWindows());
     }
     if (path === "/api/plugins/elements") return json({ elements: [] });
-    // What the mock publishes at /g/: pond, a ground in this repository, always;
-    // and piranha, a built element module that is not in this repository, when
-    // PIRANHA_ELEMENT names its file on this machine.
+    // 「[Fable 5.1] What the mock publishes at /g/: pond, a ground in this repository, always;」
+    // 「[Fable 5.1] and piranha, a built element module that is not in this repository, when」
+    // 「[Fable 5.1] PIRANHA_ELEMENT names its file on this machine.」
     // "i want piranha on the bg"
     // "via /g/ as a full fledged Element like we talked about before"
     // "default global backdrop can be boring is ok"
@@ -435,8 +435,8 @@ async function answer(req: Request, url: URL): Promise<Response> {
     return new Response(Bun.file(file), { headers: { "Content-Type": "application/json" } });
 }
 
-// Who you are and who else you can be go to the page, which draws them as an
-// element of its own (ts/mock-element.ts): the mock puts no markup of its own on the page.
+// 「[Fable 5.1] Who you are and who else you can be go to the page, which draws them as an」
+// 「[Fable 5.1] element of its own (ts/mock-element.ts): the mock puts no markup of its own on the page.」
 // "or like floating and transparent and actually an element"
 async function page(level: Level): Promise<Response> {
     const html = await Bun.file(join(web, "dist", "index.html")).text();

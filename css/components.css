@@ -418,7 +418,11 @@
 .agents-talk > .claude-who, .agents-talk > .claude-status, .agents-talk > .claude-say, .shake-talk > .claude-who, .shake-talk > .claude-status, .shake-talk > .claude-say { flex-shrink: 0; }
 .agents-talk > .chat-scroll, .shake-talk > .chat-scroll { flex: 1; }
 /* A room (ADR-057): what it is connected to, the agents in it, the board, where something is said into it. */
-.content-area.room { background: color-mix(in srgb, var(--bg-almost-black) 60%, transparent); }
+/* The room is one glass (--glass-room): its pane paints nothing of its own, so it is not a darker pane inside a lighter frame. */
+/*
+"i would make the element darker in general as well so it doesnt look like a black piece of glass enclosed by lighter glass"
+*/
+.content-area.room { background: transparent; }
 .room-connected { padding: 8px 12px 0; color: var(--text-on-dark-secondary); font-size: var(--font-size-xs); white-space: normal; overflow-wrap: break-word; flex-shrink: 0; }
 .room-connected[data-connected="0"] { display: none; }
 .room-agents { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--border-on-dark); flex-shrink: 0; }

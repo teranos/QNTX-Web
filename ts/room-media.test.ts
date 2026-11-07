@@ -8,7 +8,7 @@ describe('media returned into a room', () => {
         expect(roomResource('/api/files/file-1')?.file).toBe('/api/files/file-1');
         expect(roomResource('http://localhost/api/files/file-1')?.file).toBe('/api/files/file-1');
         expect(roomResource('https://example.org/study.png')).toEqual({ url: 'https://example.org/study.png' });
-        for (const value of ['javascript:alert(1)', 'data:image/svg+xml,x', '//other.test/x', '/auth/status', '/api/files/../keys', 'https://user:secret@example.org/a', 'file:///tmp/image.png']) {
+        for (const value of ['javascript:alert(1)', 'data:image/svg+xml,x', '//other.test/x', '/auth/status', '/api/files/../keys', 'https://u:p@h/a', 'file:///tmp/image.png']) {
             expect(roomResource(value)).toBeUndefined();
         }
     });

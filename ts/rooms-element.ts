@@ -34,7 +34,7 @@ import { chatRow, chatText, renderAssistant, when, atBottom, jumpToBottom, scrol
 import { errorOf } from './node-connectors-element';
 import { openAgentChat, type Reachable } from './agents-element';
 import type { ClaudeAm } from './claude-element';
-import { holdBackdrop } from './backdrop.ts';
+import { holdBackdrop, fishOf, type Fish } from './backdrop.ts';
 import { glass } from './glass.ts';
 
 export const LEVEL_ID = 'rooms';
@@ -145,6 +145,27 @@ export function reachableOf(room: Room, agent: RoomAgent): Reachable | undefined
     if (of.element) return { id: `element:${of.element}`, called: of.element, at: `/api/elements/${encodeURIComponent(of.element)}`, kind: 'element' };
     log.info(SEG.ELEMENT, `[Rooms] ${agent.name} in ${room.name}: the page knows no path to it`);
     return undefined;
+}
+
+/**
+ * The fish each agent in the room is: its model and effort read from its am,
+ * where Agents reads it; an agent whose am is not read is the plain fish.
+ */
+// "and the room itself is the fish is the agent is the model is a different species per model."
+export function fishIn(room: Room, agents: RoomAgent[], read: (at: string) => Promise<unknown> = at => apiJson<unknown>(at)): Promise<Fish[]> {
+    return Promise.all(agents.map(async agent => {
+        const reached = reachableOf(room, agent);
+        if (!reached) return fishOf(agent);
+        try {
+            const answer = await read(reached.at);
+            const am = (reached.unwrap ? reached.unwrap(answer) : answer) as Record<string, { model?: string; effort?: string } | undefined>;
+            const is = am?.[agent.harness];
+            return fishOf({ ...agent, model: is?.model, effort: is?.effort });
+        } catch (err) {
+            log.debug(SEG.ELEMENT, `[Rooms] ${agent.name}: its am was not read, so it is the plain fish: ${wordsOf(err)}`);
+            return fishOf(agent);
+        }
+    }));
 }
 
 /** Opens the agent's own element: its chat, as Agents opens it. */
@@ -271,8 +292,11 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
         // The room holds the ground under everything, its agents in it; closed, it gives the ground back.
         // "so 3 Agents is 3 fish."
         // "and the room itself is the fish is the agent is the model is a different species per model."
-        giveGroundBack();
-        giveGroundBack = holdBackdrop(roomIdOf(room), { room: { name: room.name, agents: held.map(agent => agent.name) } });
+        void fishIn(room, held).then(fish => {
+            if (gone) return;
+            giveGroundBack();
+            giveGroundBack = holdBackdrop(roomIdOf(room), { room: { name: room.name, agents: fish } });
+        });
         // The room's name is the window's title; this line says only what it is connected to (Room.connected).
         const to = detail.room.connected ?? '';
         connected.textContent = to ? `connected to ${to}` : 'connected to nothing';
@@ -341,6 +365,22 @@ export function openRoom(room: Room, rooms: Rooms = theRooms): void {
         });
     }
     tray.open(id);
+}
+
+/**
+ * Opens the Node Room: the room `of.node` names. False when the rooms cannot
+ * be listed by this person, or no room is the node's.
+ */
+// "and having the Node Room be the default think i enter into when i open the App on my Phone, with that backdrop"
+export async function openTheNodeRoom(rooms: Rooms = theRooms): Promise<boolean> {
+    const found = await rooms.list().catch((err: unknown) => {
+        log.debug(SEG.ELEMENT, `[Rooms] the rooms were not listed, so the Node Room is not opened: ${wordsOf(err)}`);
+        return [] as Room[];
+    });
+    const node = found.find(room => room.of?.node);
+    if (!node) return false;
+    openRoom(node, rooms);
+    return true;
 }
 
 /** Every room listed, as rows of the Rooms level of the sidebar; pressing one opens it. */

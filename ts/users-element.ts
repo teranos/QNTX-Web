@@ -184,6 +184,9 @@ export function createUsersElement(): Element {
         id: ELEMENT_ID,
         title: 'Users',
         symbol: '⚇',
+        // A window on a desktop, the screen on a phone, as a room is.
+        // "and Users on Desktop doesnt need to go full screen"
+        opensAs: window.matchMedia?.('(max-width: 768px)').matches ? 'panel' : 'window',
         renderContent: () => {
             const content = document.createElement('div');
             content.className = 'users-element-content';
@@ -191,6 +194,9 @@ export function createUsersElement(): Element {
             content.style.flexDirection = 'column';
             content.style.gap = '8px';
             content.style.padding = '12px';
+            // A window's width, not the screen's: wider than 80% of the viewport, the package makes a panel of it.
+            // "and Users on Desktop doesnt need to go full screen"
+            content.style.maxWidth = '640px';
 
             const listContainer = document.createElement('div');
             listContainer.className = 'users-list';

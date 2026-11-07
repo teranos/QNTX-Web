@@ -7,6 +7,16 @@
 
 export const elementDef = { symbol: '≋', title: 'pond', label: 'pond' };
 
+/** The hue of an agent's ring: its model's family, so a different model is a different species of ring. */
+// "the model is a different species per model"
+function hueOf(agent) {
+    const model = (agent.model || agent.harness || '').toLowerCase();
+    if (model.includes('claude') || agent.harness === 'claude') return 28;
+    if (model.includes('gemini') || agent.harness === 'agy') return 150;
+    if (model.includes('gpt') || agent.harness === 'codex') return 95;
+    return 205;
+}
+
 /** On the canvas: a line saying what this is. The ground is drawn by backdrop(), not here. */
 export function render() {
     const el = document.createElement('div');
@@ -50,12 +60,15 @@ export function backdrop(layer, { live, room }) {
             lastOnset = t;
             ripples.push({ x: width * (0.2 + 0.6 * Math.random()), y: height * (0.2 + 0.6 * Math.random()), born: t });
         }
-        // Each agent a spring, spread across the water, each rippling every four seconds in its own phase.
-        agents.forEach((name, i) => {
-            const period = 4;
+        // Each agent a spring, spread across the water. A stronger model is a wider ring; more effort, a quicker one;
+        // the model's family is the ring's hue.
+        // "stronger model is stronger bigger fish"
+        // "effort translated to speed"
+        agents.forEach((agent, i) => {
+            const period = 6 - 4 * agent.speed;
             const phase = (t + i * period / agents.length) % period;
-            if (phase < 0.03 && !ripples.some(r => r.by === name && t - r.born < 1)) {
-                ripples.push({ x: width * ((i + 1) / (agents.length + 1)), y: height * 0.55, born: t, by: name });
+            if (phase < 0.03 && !ripples.some(r => r.by === agent.name && t - r.born < 1)) {
+                ripples.push({ x: width * ((i + 1) / (agents.length + 1)), y: height * 0.55, born: t, by: agent.name, size: 0.6 + agent.strength, hue: hueOf(agent) });
             }
         });
         ctx.fillStyle = `rgb(${16 + level * 12} ${22 + level * 16} ${30 + level * 20})`;
@@ -66,9 +79,9 @@ export function backdrop(layer, { live, room }) {
             const age = t - r.born;
             if (age > 6) { ripples.splice(i, 1); continue; }
             for (let k = 0; k < 3; k++) {
-                const radius = (age - k * 0.4) * 90;
+                const radius = (age - k * 0.4) * 90 * (r.size ?? 1);
                 if (radius <= 0) continue;
-                ctx.strokeStyle = `rgba(120 140 160 / ${Math.max(0, 0.35 - age * 0.06)})`;
+                ctx.strokeStyle = `hsl(${r.hue ?? 205} 25% 55% / ${Math.max(0, 0.35 - age * 0.06)})`;
                 ctx.beginPath();
                 ctx.arc(r.x, r.y, radius, 0, Math.PI * 2);
                 ctx.stroke();

@@ -9,11 +9,13 @@ Feature: ROOT opens the App into the Node Room, with piranha behind it
   Background:
     Given I am ROOT
 
+  @piranha
   Scenario: piranha is an element of its own
     Given piranha is published on the node as an element
     When I place piranha on the canvas
     Then it swims there, live
 
+  @piranha
   Scenario: The Node Room has piranha behind it
     Given piranha is published on the node as an element
     And I am in the Node Room Element

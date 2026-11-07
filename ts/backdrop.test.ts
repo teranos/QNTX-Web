@@ -6,7 +6,9 @@
 // "Goal set: global backdrop, element backdrop overwrite, via /g/, default global backdrop can be boring is ok. option to choose between backdrops by clicking on profile pic."
 
 import { describe, test, expect, beforeEach, beforeAll, afterAll } from 'bun:test';
-import { NONE, backdropHeldBy, backdropLayer, chooseBackdrop, chosenBackdrop, holdBackdrop, offerBackdrop, offeredBackdrops, resetBackdrop, takeBackdrop, type BackdropFn } from './backdrop';
+import { NONE, backdropHeldBy, backdropLayer, chooseBackdrop, chosenBackdrop, fishOf, holdBackdrop, offerBackdrop, offeredBackdrops, resetBackdrop, takeBackdrop, type BackdropFn } from './backdrop';
+
+const nodeFish = ['node-claude', 'node-codex', 'node-agy'].map(name => fishOf({ name, harness: name.slice(5) }));
 
 // The node, as the pulse reads it: one item, well. Stubbed at fetch, as ts/client/http.test.ts does, and put back after.
 const originalFetch = globalThis.fetch;
@@ -24,7 +26,7 @@ function aGround(name: string, stops: string[]): BackdropFn {
     return (layer, held) => {
         const canvas = document.createElement('canvas');
         canvas.dataset.ground = name;
-        if (held.room) canvas.dataset.agents = held.room.agents.join(',');
+        if (held.room) canvas.dataset.agents = held.room.agents.map(fish => fish.name).join(',');
         layer.appendChild(canvas);
         return () => { stops.push(name); canvas.remove(); };
     };
@@ -72,7 +74,7 @@ describe('the ground', () => {
         const stops: string[] = [];
         offerBackdrop('piranha', aGround('piranha', stops));
         await settled();
-        const giveBack = holdBackdrop('room:node-room', { room: { name: 'Node Room', agents: ['node-claude', 'node-codex', 'node-agy'] } });
+        const giveBack = holdBackdrop('room:node-room', { room: { name: 'Node Room', agents: nodeFish } });
         expect(stops).toEqual(['piranha']);
         expect(backdropLayer()?.dataset.heldBy).toBe('room:node-room');
         expect(backdropHeldBy()).toBe('room:node-room');
@@ -84,15 +86,49 @@ describe('the ground', () => {
         expect(backdropLayer()?.querySelector('canvas')?.dataset.agents).toBeUndefined();
     });
 
+    test('the viewer chooses another ground while a room holds it: the room holds the one chosen now', async () => {
+        const stops: string[] = [];
+        offerBackdrop('pond', aGround('pond', stops));
+        offerBackdrop('piranha', aGround('piranha', stops));
+        await settled();
+        const giveBack = holdBackdrop('room:node-room', { room: { name: 'Node Room', agents: nodeFish } });
+        expect(backdropLayer()?.dataset.holds).toBe('pond');
+        chooseBackdrop('piranha');
+        expect(backdropLayer()?.dataset.holds).toBe('piranha');
+        expect(backdropLayer()?.dataset.heldBy).toBe('room:node-room');
+        expect(backdropLayer()?.querySelector('canvas')?.dataset.ground).toBe('piranha');
+        expect(backdropLayer()?.querySelector('canvas')?.dataset.agents).toBe('node-claude,node-codex,node-agy');
+        expect(stops).toEqual(['pond', 'pond']);
+        chooseBackdrop(NONE);
+        expect(backdropLayer()?.childElementCount).toBe(0);
+        expect(backdropHeldBy()).toBe(NONE);
+        giveBack();
+        expect(backdropLayer()?.childElementCount).toBe(0);
+    });
+
     test('a room holds nothing while the ground is plain', async () => {
         offerBackdrop('piranha', aGround('piranha', []));
         await settled();
         chooseBackdrop(NONE);
-        const giveBack = holdBackdrop('room:node-room', { room: { name: 'Node Room', agents: ['node-claude'] } });
+        const giveBack = holdBackdrop('room:node-room', { room: { name: 'Node Room', agents: nodeFish.slice(0, 1) } });
         expect(backdropLayer()?.childElementCount).toBe(0);
         expect(backdropHeldBy()).toBe(NONE);
         giveBack();
         expect(backdropHeldBy()).toBe(NONE);
+    });
+
+    test('a fish is its model and effort: stronger model, bigger; more effort, faster; unknown, the plain fish', () => {
+        // "stronger model is stronger bigger fish"
+        // "effort translated to speed"
+        const opus = fishOf({ name: 'node-claude', harness: 'claude', model: 'claude-opus-5-5', effort: 'low' });
+        const haiku = fishOf({ name: 'x', harness: 'claude', model: 'claude-haiku-5-5', effort: 'max' });
+        const flash = fishOf({ name: 'node-agy', harness: 'agy', model: 'gemini-3.6-flash' });
+        const plain = fishOf({ name: 'y', harness: 'codex' });
+        expect(opus.strength).toBeGreaterThan(haiku.strength);
+        expect(haiku.speed).toBeGreaterThan(opus.speed);
+        expect(flash.strength).toBe(0.4);
+        expect(flash.speed).toBe(0.6);
+        expect(plain).toEqual({ name: 'y', harness: 'codex', model: '', effort: '', strength: 0.5, speed: 0.6 });
     });
 
     test('the viewer chooses plain, and the layer is empty; chooses piranha, and it is back; the choice is kept', async () => {

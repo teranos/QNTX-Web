@@ -96,7 +96,9 @@ Given('I am ROOT on a phone', async ({ page }) => {
 });
 
 When('I shake it', async ({ page }) => {
-    await page.getByText('shake', { exact: true }).last().click();
+    // The phone's shake is one event on the page (ts/shake.ts); the MOCK element's press raises the same one,
+    // and on a phone the Node Room, which the App opens into, stands in front of that press.
+    await page.evaluate(() => { window.dispatchEvent(new Event('qntx-shake')); });
 });
 
 Then('the screenshot is in the chat, and what I say to it stays on the screen', async ({ page }) => {

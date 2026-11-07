@@ -48,7 +48,7 @@
 /* Active/pressed state */
 .panel-close:active,
 .toast-close:active {
-    background: #e0e0e0;
+    background: var(--bg-dark-light);
     color: var(--text-emphasis);
 }
 
@@ -349,7 +349,10 @@
 .chat-live:empty, .chat-queued:empty { display: none; }
 .chat-row { margin: 3px 0; white-space: pre-wrap; overflow-wrap: anywhere; animation: chat-arrive 160ms ease-out; }
 @keyframes chat-arrive { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-.chat-you { align-self: flex-end; max-width: 82%; margin: 10px 0 6px auto; padding: 6px 10px; border-radius: 14px 14px 4px 14px; background: var(--accent-on-dark); color: var(--bg-almost-black); }
+/* What a person says is a prompt line, as fish draws one; what an agent says is a ● line (QNTX ADR-058). No bubbles. */
+.chat-you { align-self: stretch; max-width: none; margin: 8px 0 4px; padding: 2px 8px; background: var(--bg-dark-hover); color: var(--text-on-dark); }
+.chat-you::before { content: '❯ '; color: var(--text-on-dark-secondary); }
+.chat-said::before { content: '● '; color: var(--term-green); }
 /* Said while it answers: yours, not yet the node's. */
 .chat-waiting { opacity: 0.55; }
 .chat-waiting-said { display: block; text-align: right; font-size: var(--font-size-xs); }

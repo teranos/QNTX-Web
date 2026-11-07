@@ -3,8 +3,8 @@
 
 /* Base */
 body {
-    /* Virtue #5: System Fonts - "Leverage OS defaults for performance and familiarity" */
-    font-family: system-ui, -apple-system, sans-serif;
+    /* One font, the terminal's: JetBrains Mono, as Ghostty draws everything (QNTX ADR-058). */
+    font-family: var(--font-mono);
     /* A sym is text. iOS draws every emoji-capable code point with its colour
        emoji font unless told otherwise: the ⬆ that lifts an element became a blue
        square, the absent element's sym a trophy. This is the telling. */
@@ -18,7 +18,7 @@ body {
     margin: 0;
     padding: 0;
     background: var(--bg-primary);
-    color: #000;
+    color: var(--text-primary);
 }
 
 /* Accessibility: Focus Styles */

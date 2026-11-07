@@ -18,53 +18,110 @@
     --border-radius: 3px;
     --border-radius-lg: 7px;
 
-    /* Core Colors */
+    /* The owner's terminal (QNTX ADR-058): Ghostty's palette, tmux's pane and
+       bar, fish's prompt, nebula's editor. One font, one dark, no light
+       surface. The light tokens below keep their names and take the terminal's
+       values, so every element drawing from them turns at once; what an
+       element draws of its own moves over element by element. */
+
+    /* Ghostty 1.3.1, +show-config --default: palette 0-15 */
+    --term-black: #1d1f21;
+    --term-red: #cc6666;
+    --term-green: #b5bd68;
+    --term-yellow: #f0c674;
+    --term-blue: #81a2be;
+    --term-magenta: #b294bb;
+    --term-cyan: #8abeb7;
+    --term-white: #c5c8c6;
+    --term-bright-black: #666666;
+    --term-bright-red: #d54e53;
+    --term-bright-green: #b9ca4a;
+    --term-bright-yellow: #e7c547;
+    --term-bright-blue: #7aa6da;
+    --term-bright-magenta: #c397d8;
+    --term-bright-cyan: #70c0b1;
+    --term-bright-white: #eaeaea;
+    --term-fg: #ffffff;
+    /* tmux.conf: window-active-style bg, status-bg colour235, colour233, colour232 */
+    --term-pane: #1c1c1c;
+    --term-bar: #262626;
+    --term-bar-deep: #121212;
+    --term-on-current: #080808;
+    /* tmux.conf: colour46, colour34, colour71, colour65 */
+    --term-green-46: #00ff00;
+    --term-green-34: #00af00;
+    --term-green-71: #5faf5f;
+    --term-green-65: #5f875f;
+    /* fish_prompt.fish: the path segment, a job segment, the right prompt */
+    --term-dim: #888888;
+    --term-segment: #161616;
+    --term-job: #333333;
+    --term-right: #555555;
+    /* nebula.vim, dark: the editor */
+    --nebula-bg: #0a121d;
+    --nebula-bg-faint: #1c2b3b;
+    --nebula-norm: #c9cbd1;
+    --nebula-dim: #797987;
+    --nebula-slate: #65737e;
+    --nebula-red: #d65e76;
+    --nebula-green: #a3be8c;
+    --nebula-blue: #20bbfc;
+    --nebula-yellow: #ffff87;
+    /* init.vim GitGutter: a diff's grounds */
+    --diff-add: #10aa11;
+    --diff-add-bg: #223511;
+    --diff-change: #cccc05;
+    --diff-change-bg: #332205;
+    --diff-delete: #ff2222;
+    --diff-delete-bg: #502222;
+
+    /* Core Colors: the former light surface, now the pane */
     --panel-border: 1px solid var(--border);
-    --text-primary: #333433;
-    --text-secondary: #656766;
-    --text-tertiary: #989a99;
-    --text-emphasis: #000; /* Headings, titles, high-contrast text */
-    --bg-primary: #fcffff;
-    --bg-almost-white: #f7f9f8;
-    --bg-hover: #f0f1f1;
-    --bg-gray: #999;
-    --bg-dark: #202523;
-    --border: #dcdedd;
-    --border-light: #dfe1e0;
-    --border-divider: #eee; /* Subtle dividers within panels */
-    --accent-color: #5a9a6a;
-    --accent-hover: #4a8559;
+    --text-primary: var(--term-fg);
+    --text-secondary: var(--term-white);
+    --text-tertiary: var(--term-dim);
+    --text-emphasis: var(--term-fg); /* Headings, titles, high-contrast text */
+    --bg-primary: var(--term-pane);
+    --bg-almost-white: var(--term-bar);
+    --bg-hover: var(--term-job);
+    --bg-gray: var(--term-bright-black);
+    --bg-dark: var(--term-bar);
+    --border: var(--term-bright-black);
+    --border-light: #444444;
+    --border-divider: var(--term-job); /* Subtle dividers within panels */
+    --accent-color: var(--term-bright-yellow);
+    --accent-hover: var(--term-yellow);
 
     /* Dark mode colors - for dark backgrounds */
-    --bg-almost-black: #1a1b1a; /* Like system drawer */
-    --text-on-dark: #dfe1e0; /* Primary text on dark */
-    --text-on-dark-secondary: #a9abaa; /* Secondary text on dark */
-    --text-on-dark-tertiary: #868787; /* Tertiary text on dark, muted labels */
-    --text-on-dark-emphasis: #fefffe; /* Headings/emphasis on dark */
-    --bg-dark-hover: #2a2b2a; /* Hover state on dark backgrounds */
-    --bg-canvas: #2d2e36; /* Canvas workspace background — slight cool tint */
-    --bg-dark-light: #343534; /* Lighter dark surface - buttons, inputs, controls */
-    --bg-secondary: #252625; /* Dark surface - element bodies, canvas panels */
-    --bg-tertiary: #2e2f2e; /* Slightly lighter dark surface - title bars, headers */
-    --border-on-dark: #3f4140; /* Borders on dark backgrounds */
-    --accent-on-dark: #7dba8a; /* Accent/links on dark backgrounds */
-    --accent-on-dark-hover: #9acca5; /* Accent hover on dark backgrounds */
+    --bg-almost-black: var(--term-pane);
+    --text-on-dark: var(--term-fg); /* Primary text on dark */
+    --text-on-dark-secondary: var(--term-white); /* Secondary text on dark */
+    --text-on-dark-tertiary: var(--term-dim); /* Tertiary text on dark, muted labels */
+    --text-on-dark-emphasis: var(--term-fg); /* Headings/emphasis on dark */
+    --bg-dark-hover: var(--term-job); /* Hover state on dark backgrounds */
+    --bg-canvas: var(--term-bar-deep); /* The canvas: tmux's colour233, behind the panes */
+    --bg-dark-light: var(--term-job); /* Lighter dark surface - buttons, inputs, controls */
+    --bg-secondary: var(--term-pane); /* Dark surface - element bodies, canvas panels */
+    --bg-tertiary: var(--term-bar); /* Slightly lighter dark surface - title bars, headers */
+    --border-on-dark: var(--term-bright-black); /* Borders on dark backgrounds */
+    --accent-on-dark: var(--term-bright-yellow); /* What is current: tmux's current window */
+    --accent-on-dark-hover: var(--term-yellow); /* Accent hover on dark backgrounds */
 
     /* @teranos/elements sparkline: its colours are the package's names, QNTX's values */
     --elements-sparkline-stroke: #64748b;
     --elements-sparkline-whole-stroke: #94a3b8;
     --elements-sparkline-mute: var(--text-on-dark-tertiary);
 
-    /* Status Colors */
-    --color-success: #22c65e;
-    --color-error: #e44747;
-    --refusal-crimson: #dc143c; /* A refusal nobody pressed for, standing behind the canvas */
-    --color-warning: #ffab00;
-    --color-info: #3b83f6;
-    --color-scheduled: #7b20a2;
-    --color-burnt-orange: #e07840;
-    --age-fresh: #3f8a5c; /* Used minutes ago: neutral dark green */
-    --age-old: #dc143c; /* Used months ago: crimson */
+    /* Status Colors: Ghostty's palette */
+    --color-success: var(--term-green);
+    --color-error: var(--term-red);
+    --refusal-crimson: var(--term-bright-red); /* A refusal nobody pressed for, standing behind the canvas */
+    --color-warning: var(--term-yellow);
+    --color-info: var(--term-blue);
+    --color-scheduled: var(--term-magenta);
+    --color-burnt-orange: var(--term-bright-red);
+    --age-fresh: var(--term-green-65); /* Used minutes ago */
+    --age-old: var(--term-bright-red); /* Used months ago */
 
     /* Earth, which Ground leans toward */
     --earth-soil: #2a221b;
@@ -101,28 +158,28 @@
     --rite-hold: #a0812f;
     --rite-halt: #9c4a2e;
 
-    /* Element Status Colors - dark-bg tints for lifecycle states */
-    --element-status-idle-bg: rgba(30, 30, 35, 0.92);
+    /* Element Status Colors: the terminal's palette on a diff's grounds */
+    --element-status-idle-bg: var(--term-pane);
     --element-status-idle-section-bg: var(--bg-tertiary);
     --element-status-idle-text: var(--text-on-dark);
-    --element-status-pending-bg: rgba(42, 43, 61, 0.92);
-    --element-status-pending-section-bg: rgba(42, 43, 61, 0.92);
-    --element-status-pending-text: #8b8fd1;
-    --element-status-running-bg: #1f2a3d;
-    --element-status-running-section-bg: #1a2332;
-    --element-status-running-text: #6394d5;
-    --element-status-success-bg: #1f3d1f;
-    --element-status-success-section-bg: #1a2b1a;
-    --element-status-success-text: #a8e6a1;
-    --element-status-error-bg: #3d1f1f;
-    --element-status-error-section-bg: #2b1a1a;
-    --element-status-error-text: #ff6b6b;
-    --element-status-warning-bg: #3d3d1f;
-    --element-status-warning-section-bg: #2b2b1a;
-    --element-status-warning-text: #ffcc66;
+    --element-status-pending-bg: var(--term-bar);
+    --element-status-pending-section-bg: var(--term-bar);
+    --element-status-pending-text: var(--term-magenta);
+    --element-status-running-bg: var(--nebula-bg-faint);
+    --element-status-running-section-bg: var(--nebula-bg);
+    --element-status-running-text: var(--term-blue);
+    --element-status-success-bg: var(--diff-add-bg);
+    --element-status-success-section-bg: var(--diff-add-bg);
+    --element-status-success-text: var(--term-green);
+    --element-status-error-bg: var(--diff-delete-bg);
+    --element-status-error-section-bg: var(--diff-delete-bg);
+    --element-status-error-text: var(--diff-delete); /* GitGutter's own pairing on its own ground */
+    --element-status-warning-bg: var(--diff-change-bg);
+    --element-status-warning-section-bg: var(--diff-change-bg);
+    --element-status-warning-text: var(--term-yellow);
 
     /* Accent Colors */
-    --accent-lavender: #d4b8ff;
+    --accent-lavender: var(--term-bright-magenta);
 
     /* Box Shadows */
     --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -131,9 +188,9 @@
     --shadow-xl: 0 4px 16px rgba(0, 0, 0, 0.4);
 
     /* Scrollbar Colors */
-    --scrollbar-light-thumb-hover: #bbb;
-    --scrollbar-dark-thumb: #3a3a3a;
-    --scrollbar-dark-thumb-hover: #4a4a4a;
+    --scrollbar-light-thumb-hover: var(--term-right);
+    --scrollbar-dark-thumb: var(--term-job);
+    --scrollbar-dark-thumb-hover: var(--term-right);
 
     /* Connectivity Mode Switching - Online mode (default) */
     --mode-element-saturation: 100%;
@@ -154,25 +211,25 @@
     /* Transitions */
     --panel-transition: all 0.2s ease;
 
-    /* Status badge colors (light-bg variants for panels) */
-    --status-pending-bg: #fff3e0;
+    /* Status badge colors: the same grounds as the element statuses */
+    --status-pending-bg: var(--diff-change-bg);
     --status-pending-text: var(--color-warning);
-    --status-running-bg: #e3f2fd;
+    --status-running-bg: var(--nebula-bg-faint);
     --status-running-text: var(--color-info);
-    --status-completed-bg: #e8f5e9;
+    --status-completed-bg: var(--diff-add-bg);
     --status-completed-text: var(--color-success);
-    --status-failed-bg: #ffebee;
+    --status-failed-bg: var(--diff-delete-bg);
     --status-failed-text: var(--color-error);
-    --status-paused-text: #ef6c00;
-    --status-stopped-text: #757575;
-    --status-scheduled-bg: #f3e5f5;
+    --status-paused-text: var(--term-yellow);
+    --status-stopped-text: var(--term-dim);
+    --status-scheduled-bg: var(--term-bar);
 
-    /* Editor colors (shared dark theme for code editors) */
-    --editor-bg: var(--bg-dark);
-    --editor-text: #cccccc;
-    --editor-code-bg: var(--bg-dark);
-    --status-success: #4ec9b0;
-    --status-error: #f48771;
+    /* Editor colors: nebula */
+    --editor-bg: var(--nebula-bg);
+    --editor-text: var(--nebula-norm);
+    --editor-code-bg: var(--nebula-bg);
+    --status-success: var(--nebula-green);
+    --status-error: var(--nebula-red);
 
     /* Breakpoint documentation (can't use in @media, but documents standards) */
     --breakpoint-mobile: 768px;

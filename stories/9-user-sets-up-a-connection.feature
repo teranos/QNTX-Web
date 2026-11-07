@@ -21,7 +21,6 @@ Feature: USER sets up a connection
 
     Examples:
       | platform | story                                  |
-      | Obsidian   | 13-user-connects-obsidian.feature      |
       | OpenRouter | 14-user-sets-an-openrouter-key.feature |
       | Anthropic  | 12-user-connects-anthropic.feature |
       | OpenAI     | 11-user-connects-openai.feature |

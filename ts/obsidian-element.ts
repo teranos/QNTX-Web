@@ -93,10 +93,21 @@ interface Binding {
     repo?: string;
     /** The repository folder whose folders are listed, '' being its top. */
     at: string;
-    /** The repository folder chosen. */
+    /** The repository folder or file chosen. */
     path?: string;
+    /** Whether what was chosen is a file: a note or a story, bound as a note inside the vault's folder. */
+    file?: boolean;
     /** The repository's default branch, as the node read it with its folders. */
     branch?: string;
+}
+
+// "in reality its still one story"
+
+/** Where a file of a repository is placed inside a folder of the vault: by its own name, a story as its note (ADR-049). */
+export function notePlaceOf(folder: string, file: string): string {
+    let name = file.slice(file.lastIndexOf('/') + 1);
+    if (name.endsWith('.feature')) name += '.md';
+    return folder ? `${folder}/${name}` : name;
 }
 
 /** Everything the element shows of one vault. */
@@ -139,6 +150,13 @@ export function renderVault(container: HTMLElement, view: View, reload: () => Pr
         return d.startsWith(place + '/') && !d.slice(place.length + 1).includes('/');
     });
 
+    // Each note bound directly in a folder: a bound place that is no folder of the vault.
+    const notesIn = (place: string) => [...byPlace.keys()].filter(bound => {
+        if (view.dirs.includes(bound)) return false;
+        const at = bound.lastIndexOf('/');
+        return (at === -1 ? '' : bound.slice(0, at)) === place;
+    }).sort();
+
     // The node's own refusal (server/vault.go): no place is another's or inside it.
     const clash = (place: string): string | null => {
         for (const other of byPlace.keys()) {
@@ -162,7 +180,7 @@ export function renderVault(container: HTMLElement, view: View, reload: () => Pr
         const ul = document.createElement('ul');
         for (const place of childrenOf(parent)) {
             const li = document.createElement('li');
-            const kids = childrenOf(place).length > 0;
+            const kids = childrenOf(place).length > 0 || notesIn(place).length > 0;
             // "all per dir bdingings to repo need to be visible at all times"
             const holdsBound = [...byPlace.keys()].some(bound => bound.startsWith(place + '/'));
             const opened = holdsBound || expanded.has(place);
@@ -180,23 +198,41 @@ export function renderVault(container: HTMLElement, view: View, reload: () => Pr
             }, 'obsidian-name');
             row.append(twist, name);
             const state = byPlace.get(place);
-            if (state) {
-                // The row is its state's colour, and its dot says nothing until hovered.
-                const says = stateSays(state);
-                row.classList.add(`obsidian-row-${state.state}`);
-                row.title = says;
-                const dot = div(`obsidian-state obsidian-state-${state.state}`);
-                dot.setAttribute('role', 'img');
-                dot.setAttribute('aria-label', says);
-                const ends = state.folder.slice(0, state.folder.lastIndexOf('='));
-                row.append(div('obsidian-bound', `⇄ ${ends}`), dot);
-            }
+            if (state) marked(row, state);
             li.appendChild(row);
             if (open === place) li.appendChild(panel(place));
             if (kids && opened) li.appendChild(level(place));
             ul.appendChild(li);
         }
+        // A bound note is a row in its folder, as a bound folder is.
+        for (const note of notesIn(parent)) {
+            const li = document.createElement('li');
+            const row = div('obsidian-row obsidian-note' + (open === note ? ' open' : ''));
+            row.dataset.place = note;
+            const name = pick(note.slice(note.lastIndexOf('/') + 1), () => {
+                open = open === note ? null : note;
+                binding = null;
+                draw();
+            }, 'obsidian-name');
+            row.append(div('obsidian-twist'), name);
+            marked(row, byPlace.get(note)!);
+            li.appendChild(row);
+            if (open === note) li.appendChild(panel(note));
+            ul.appendChild(li);
+        }
         return ul;
+    };
+
+    // The row is its state's colour, and its dot says nothing until hovered.
+    const marked = (row: HTMLElement, state: FolderState) => {
+        const says = stateSays(state);
+        row.classList.add(`obsidian-row-${state.state}`);
+        row.title = says;
+        const dot = div(`obsidian-state obsidian-state-${state.state}`);
+        dot.setAttribute('role', 'img');
+        dot.setAttribute('aria-label', says);
+        const ends = state.folder.slice(0, state.folder.lastIndexOf('='));
+        row.append(div('obsidian-bound', `⇄ ${ends}`), dot);
     };
 
     // "i dont want that to be automatically opted in,"
@@ -276,13 +312,14 @@ export function renderVault(container: HTMLElement, view: View, reload: () => Pr
             p.appendChild(sending(place, state));
             return p;
         }
-        const refused = clash(place);
-        if (refused) {
-            p.append(div('obsidian-refused', refused));
+        // Inside a bound folder, nothing more is bound: its notes are that folder's.
+        const holding = [...byPlace.keys()].find(other => place.startsWith(other + '/'));
+        if (holding) {
+            p.append(div('obsidian-refused', `${holding} and ${place} are one place in the vault, or one holds the other`));
             return p;
         }
         if (!binding) {
-            p.append(pick('Bind to repository md folder', () => { binding = { at: '' }; draw(); }, 'obsidian-action'));
+            p.append(pick('Bind to repository', () => { binding = { at: '' }; draw(); }, 'obsidian-action'));
             return p;
         }
         const b = binding;
@@ -295,13 +332,21 @@ export function renderVault(container: HTMLElement, view: View, reload: () => Pr
         const list = div('obsidian-list');
         p.appendChild(list);
         if (b.path !== undefined) {
-            p.append(div('obsidian-folder', `${b.repo}@${b.branch}:${b.path}=${place}`));
+            const at = b.file ? notePlaceOf(place, b.path) : place;
+            p.append(div('obsidian-folder', `${b.repo}@${b.branch}:${b.path}=${at}`));
+            // The node's own refusal (server/vault.go): no place is another's or inside it.
+            const refused = clash(at) ?? (byPlace.has(at) ? `${at} is bound already` : null);
+            if (refused) {
+                p.append(div('obsidian-refused', refused));
+                p.appendChild(pick('Cancel', () => { open = null; binding = null; draw(); }, 'obsidian-cancel'));
+                return p;
+            }
             const confirm = pressFrom({
-                id: `obsidian-bind-${view.vault.name}-${place}`,
+                id: `obsidian-bind-${view.vault.name}-${at}`,
                 title: 'Confirm',
-                again: 'the folder is bound',
+                again: b.file ? 'the note is bound' : 'the folder is bound',
                 does: async () => {
-                    const response = await apiFetch('/api/vault/bind', jsonBody('POST', { name: view.vault.name, place, repo: b.repo, path: b.path }));
+                    const response = await apiFetch('/api/vault/bind', jsonBody('POST', { name: view.vault.name, place: at, repo: b.repo, path: b.path }));
                     if (!response.ok) throw new Error(await refusal(response));
                     await reload();
                 },
@@ -333,7 +378,7 @@ export function renderVault(container: HTMLElement, view: View, reload: () => Pr
                     list.appendChild(pick(repo.slice(repo.lastIndexOf('/') + 1), () => { binding = { owner: b.owner, repo, at: '' }; draw(); }));
                 }
             } else {
-                const { dirs, branch } = await apiJson<{ dirs: string[]; branch: string }>(query('/api/vault/subdirs', { repo: b.repo, path: b.at }));
+                const { dirs, files = [], branch } = await apiJson<{ dirs: string[]; files?: string[]; branch: string }>(query('/api/vault/subdirs', { repo: b.repo, path: b.at }));
                 list.innerHTML = '';
                 list.appendChild(div('obsidian-folder', `on ${branch}, its default branch`));
                 if (b.at) list.appendChild(pick(`${b.at}  this folder`, () => { binding = { ...b, branch, path: b.at }; draw(); }, 'obsidian-pick obsidian-here'));
@@ -346,7 +391,13 @@ export function renderVault(container: HTMLElement, view: View, reload: () => Pr
                     );
                     list.appendChild(row);
                 }
-                if (dirs.length === 0 && !b.at) list.appendChild(div('obsidian-folder', `${b.repo} has no folder on ${branch}.`));
+                // A note or a story, at the repository's top as well: pressed, it is bound as a note.
+                for (const file of files) {
+                    const row = div('obsidian-subdir obsidian-file');
+                    row.append(div('obsidian-into'), pick(file.slice(file.lastIndexOf('/') + 1), () => { binding = { ...b, branch, path: file, file: true }; draw(); }));
+                    list.appendChild(row);
+                }
+                if (dirs.length === 0 && files.length === 0 && !b.at) list.appendChild(div('obsidian-folder', `${b.repo} has no folder or note on ${branch}.`));
             }
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);

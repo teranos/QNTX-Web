@@ -1,12 +1,12 @@
-// The steps of the ground's story, walked against the mock as ROOT.
-// The mock publishes pond at /g/ (mock/g/pond.js); the page offers it as the ground; the picture opens the choice.
+// 「[Fable 5.1] The steps of the ground's story, walked against the mock as ROOT.」
+// 「[Fable 5.1] The mock publishes pond at /g/ (mock/g/pond.js); the page offers it as the ground; the picture opens the choice.」
 
 import { expect } from '@playwright/test';
 import { createBdd } from 'playwright-bdd';
 
 const { Given, When, Then } = createBdd();
 
-// Where the pictures of the walk are kept, to be looked at.
+// 「[Fable 5.1] Where the pictures of the walk are kept, to be looked at.」
 const SHOTS = 'test-results/ground';
 
 const LAYER = '#backdrop';
@@ -62,7 +62,7 @@ Then('the ground is plain', async ({ page }) => {
 });
 
 When('I come back', async ({ page }) => {
-    // The page again, from nothing: the choice is in this browser, not on the page.
+    // 「[Fable 5.1] The page again, from nothing: the choice is in this browser, not on the page.」
     const discovered = page.waitForResponse(response => response.url().endsWith('/g/'));
     await page.reload();
     await discovered;
@@ -71,7 +71,7 @@ When('I come back', async ({ page }) => {
 
 Then('the ground is still plain', async ({ page }) => {
     await expect(page.locator(`${LAYER} > *`)).toHaveCount(0);
-    // Nothing is held and nothing shows: the choice, and not the first ground offered, is what the page kept.
+    // 「[Fable 5.1] Nothing is held and nothing shows: the choice, and not the first ground offered, is what the page kept.」
     await page.locator(PICTURE).click();
     await expect(page.locator('.backdrop-held')).toHaveText('the ground is plain');
     await expect(page.locator('.backdrop-choice[data-ground="none"]')).toHaveClass(/backdrop-choice-on/);

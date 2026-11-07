@@ -8,6 +8,7 @@
 
 import { pressFrom, tray } from '@teranos/elements';
 import { SHAKE_EVENT } from './shake.ts';
+import { glassPane } from './glass.ts';
 
 export const ELEMENT_ID = 'mock-element';
 const AS_PATH = '/__mock__/as/';
@@ -49,6 +50,7 @@ export function restMock(mock: Mock | null = theMock()): void {
         id: ELEMENT_ID,
         title: 'MOCK',
         symbol: '◌',
+        color: glassPane(),
         opensAs: 'window',
         opensAt: 'end',
         renderContent: () => {

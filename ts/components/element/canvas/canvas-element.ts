@@ -25,6 +25,7 @@ import { log, SEG } from '../../../logger';
 import { getElementTypeBySavedSymbol } from '../element-registry';
 import { uiState } from '../../../state/ui';
 import { buildCanvasWorkspace } from './canvas-workspace-builder';
+import { glassPane } from '../../../glass.ts';
 
 // Who this is for: whoever reaches these (audience.ts).
 export const needs = ['/api/canvas'] as const;
@@ -82,6 +83,8 @@ export function createCanvasElement(): Element {
         id: 'canvas-workspace',
         title: 'Canvas',
         opensAs: 'workspace', // Full-viewport, no chrome
+        // Glass: the ground under everything shows through the canvas (ts/glass.ts).
+        color: glassPane(),
         layoutStrategy: 'grid',
         children: items,
         onSpawnMenu: () => [Pulse, AX],

@@ -9,11 +9,14 @@ const { Given, When, Then } = createBdd();
 // Where the pictures of the walk are kept, to be looked at.
 const SHOTS = 'test-results/rooms';
 
-/** The sidebar, open; on a desktop it is remembered open, and the latch opens it when it is not. */
+/**
+ * The sidebar, open: on a desktop the column stands open as remembered, and
+ * Rooms is a button in it once the node has said what the viewer reaches.
+ * Waiting for that button is waiting for both; a press on the latch is not
+ * needed here, and the latch is the system bar's, which a desktop does not show.
+ */
 async function sidebarOpen(page: Page): Promise<void> {
-    const nav = page.locator('#sidebar');
-    if (!(await page.locator('body.sidebar-open').count())) await page.locator('#sidebar-latch').click();
-    await expect(nav).toBeVisible();
+    await expect(page.locator('#sidebar .sidebar-button', { hasText: 'Rooms' })).toBeVisible({ timeout: 15_000 });
 }
 
 async function intoTheNodeRoom(page: Page): Promise<void> {

@@ -1,8 +1,8 @@
-// The backdrop: the ground under everything, a visual that is always there.
-// Published elements offer grounds (a module exports backdrop); the viewer
-// chooses one of them, or none, from their picture; any element can take the
-// ground over and give it back. What a ground reads every frame, `live`, the
-// page keeps fed from the node's statusline, so the ground is the node.
+// 「[Fable 5.1] The backdrop: the ground under everything, a visual that is always there.」
+// 「[Fable 5.1] Published elements offer grounds (a module exports backdrop); the viewer」
+// 「[Fable 5.1] chooses one of them, or none, from their picture; any element can take the」
+// 「[Fable 5.1] ground over and give it back. What a ground reads every frame, `live`, the」
+// 「[Fable 5.1] page keeps fed from the node's statusline, so the ground is the node.」
 
 // "the visual backdrop needs to always be there regardless of being in a Room or not, but not as glitchy, and other elements can replace the backdrop kind of idea."
 // "i want backdrop glovbal"
@@ -18,7 +18,7 @@ import { getStorageItem, setStorageItem } from './indexeddb-storage.ts';
 import { log, SEG } from './logger.ts';
 
 const LAYER = 'backdrop';
-// The viewer's choice, kept in this browser: a ground's name, or NONE.
+// 「[Fable 5.1] The viewer's choice, kept in this browser: a ground's name, or NONE.」
 const CHOICE_KEY = 'backdrop-chosen';
 /** Where the choice is kept: this browser's storage, or what a test hands resetBackdrop. */
 interface Keep { get(key: string): string | null; set(key: string, value: string): void }
@@ -26,7 +26,7 @@ const browserKeep: Keep = { get: getStorageItem, set: setStorageItem };
 let keep: Keep = browserKeep;
 /** The plain ground: the page's own colour and nothing on it. */
 export const NONE = 'none';
-// How often the ground hears from the node.
+// 「[Fable 5.1] How often the ground hears from the node.」
 const PULSE_MS = 2000;
 
 /** What a ground reads every frame: the node as the page last heard it. */
@@ -50,7 +50,7 @@ export type BackdropFn = (layer: HTMLElement, held: Held) => () => void;
 
 interface StatusItem { name: string; note?: string; symbol: string }
 
-// ── The pulse: the node's statusline, read into live ────────────────
+// 「[Fable 5.1] ── The pulse: the node's statusline, read into live ────────────────」
 
 let peakAt = 0;
 let peak = 0;
@@ -111,7 +111,7 @@ function stopPulse(): void {
     if (pulse) { clearInterval(pulse); pulse = null; }
 }
 
-// ── The grounds offered, the one chosen, and who holds the layer ────
+// 「[Fable 5.1] ── The grounds offered, the one chosen, and who holds the layer ────」
 
 /** The layer itself, or null before the page has one. */
 export function backdropLayer(): HTMLElement | null {
@@ -119,9 +119,9 @@ export function backdropLayer(): HTMLElement | null {
 }
 
 const offers = new Map<string, BackdropFn>();
-// The ground showing, and how to give it up.
+// 「[Fable 5.1] The ground showing, and how to give it up.」
 let showing: { name: string; stop: () => void } | null = null;
-// An element holding the layer over the ground, by name.
+// 「[Fable 5.1] An element holding the layer over the ground, by name.」
 let heldBy = '';
 const listeners = new Set<() => void>();
 
@@ -188,8 +188,8 @@ export function chooseBackdrop(name: string): void {
 }
 
 /**
- * An element takes the ground over with node. What it gets back gives the
- * ground up: the chosen ground returns.
+ * 「[Fable 5.1] An element takes the ground over with node. What it gets back gives the」
+ * 「[Fable 5.1] ground up: the chosen ground returns.」
  */
 export function takeBackdrop(node: HTMLElement, by = node.dataset.elementId ?? node.className ?? 'something'): () => void {
     const layer = backdropLayer();
@@ -210,9 +210,9 @@ export function takeBackdrop(node: HTMLElement, by = node.dataset.elementId ?? n
 }
 
 /**
- * An element holds the ground: the chosen ground is drawn again for it, given
- * what it holds (a room, its agents). What comes back gives the ground up, and
- * the chosen ground returns as it was. With the ground plain, nothing is held.
+ * 「[Fable 5.1] An element holds the ground: the chosen ground is drawn again for it, given」
+ * 「[Fable 5.1] what it holds (a room, its agents). What comes back gives the ground up, and」
+ * 「[Fable 5.1] the chosen ground returns as it was. With the ground plain, nothing is held.」
  */
 export function holdBackdrop(by: string, holds: Omit<Held, 'live'>): () => void {
     const layer = backdropLayer();

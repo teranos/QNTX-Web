@@ -394,3 +394,39 @@ describe('a bound folder says what it is now', () => {
         expect(container.querySelector('.obsidian-record')?.textContent).toContain('github.com/abcd-nl/clean@main:gone=Course Material');
     });
 });
+
+// "why isn't it indicated that it's a bound file, and to what?"
+describe('a folder holding bound notes', () => {
+    const note = 'github.com/abcd-nl/clean@main:AGENTS.md=Course Material/AGENTS.md';
+    const holding = () => {
+        answers = {
+            '/api/vault/owners': { owners: [{ login: 'abcd-nl', type: 'Organization', installation: '7' }] },
+            '/api/vault/repos?installation=7': { repos: ['github.com/abcd-nl/clean'] },
+            '/api/vault/subdirs?repo=github.com%2Fabcd-nl%2Fclean&path=': { dirs: ['cdr'], files: ['AGENTS.md', 'README.md'], branch: 'main' },
+            '/api/vault/subdirs?repo=github.com%2Fabcd-nl%2Fclean&path=cdr': { dirs: [], files: [], branch: 'main' },
+        };
+        return shown({ vault: { ...vault, folders: [note] }, dirs, states: [
+            { folder: note, place: 'Course Material/AGENTS.md', state: 'active', why: '', branch: '', pull: '' },
+        ] as never[] });
+    };
+
+    test('says what it holds, and offers only a note beside them', async () => {
+        const container = holding();
+        expect(row(container, 'Course Material/AGENTS.md').querySelector('.obsidian-bound')?.textContent).toBe('⇄ github.com/abcd-nl/clean@main:AGENTS.md');
+        row(container, 'Course Material').querySelector<HTMLButtonElement>('.obsidian-name')!.click();
+        expect(container.querySelector('.obsidian-panel')?.textContent).toContain('Holds bound notes: AGENTS.md');
+        click(container, 'Bind a note to a repository file');
+        await flush();
+        click(container, 'abcd-nl');
+        await flush();
+        click(container, 'clean');
+        await flush();
+        const list = container.querySelector('.obsidian-list')!;
+        expect(list.textContent).toContain('AGENTS.md  bound as Course Material/AGENTS.md');
+        // A folder's name opens it rather than choosing it: there is nothing to refuse later.
+        click(container, 'cdr');
+        await flush();
+        expect(container.textContent).not.toContain('one place in the vault');
+        expect(container.textContent).not.toContain('this folder');
+    });
+});

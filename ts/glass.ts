@@ -1,6 +1,6 @@
-// Glass: the colour an element wears over the ground, read from the tokens
-// (css/tokens.css, as vitreous makes glass), so the ground under everything
-// shows through. The blur is the stylesheet's.
+// 「[Fable 5.1] Glass: the colour an element wears over the ground, read from the tokens」
+// 「[Fable 5.1] (css/tokens.css, as vitreous makes glass), so the ground under everything」
+// 「[Fable 5.1] shows through. The blur is the stylesheet's.」
 
 // "i want more tranparency"
 // "and glass is already being explored in vitrous, take lessons from exisring vitrous"

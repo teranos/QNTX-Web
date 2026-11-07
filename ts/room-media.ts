@@ -115,7 +115,7 @@ export function roomBody(text: string, fetchFile: typeof apiFetch = apiFetch): {
     }, { ...base.marks,
         link: mark => {
             const resource = roomResource(String(mark.attrs.href));
-            // The serializer fills this mark with its original label.
+            // 「[Fable 5.1] The serializer fills this mark with its original label.」
             return resource ? link(resource, '') : document.createElement('span');
         },
     });

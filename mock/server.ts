@@ -14,6 +14,7 @@ import { PEOPLE, authStatus, canvases, canvasElements, compositions, minimizedWi
 import { Agent, Files, type Transcript } from "./agents";
 import { AgyAgents } from "./agy";
 import { CodexAgents } from "./codex";
+import { Rooms } from "./rooms";
 
 const here = import.meta.dir;
 const web = join(here, "..");
@@ -160,6 +161,8 @@ function elementAgent(element: string): Agent {
 const files = new Files();
 const codexAgents = new CodexAgents();
 const agyAgents = new AgyAgents();
+// The rooms (ADR-057): the Node Room, every Node Agent in it.
+const rooms = new Rooms();
 
 /** The agent paths, answered live: am, session and say, the picture carried along. */
 async function agentAnswer(level: Level, method: string, path: string, _url: URL, req: Request): Promise<Response | null> {
@@ -412,6 +415,7 @@ async function answer(req: Request, url: URL): Promise<Response> {
         ?? await codexAgents.answer(req)
         ?? await agyAgents.answer(req)
         ?? await agentAnswer(level, method, path, url, req)
+        ?? await rooms.answer(level, method, path, req)
         ?? await filesAnswer(method, path, req)
         ?? await keysAnswer(level, method, path, req)
         ?? await anthropicAnswer(method, path, req);

@@ -24,7 +24,8 @@ import { createMailElement, needs as mailNeeds } from './mail-element.ts';
 import { createApprovalsElement, needs as approvalsNeeds } from './approvals-element.ts';
 import { createGroundElement, needs as groundNeeds } from './ground-element.ts';
 import { restAgentsInSidebar, needs as agentsNeeds, ELEMENT_ID as AGENTS_ID } from './agents-element.ts';
-import { Agent } from './sym';
+import { restRoomsInSidebar, needs as roomsNeeds, LEVEL_ID as ROOMS_ID } from './rooms-element.ts';
+import { Agent, Room } from './sym';
 import { createIElement, needs as iNeeds } from './i-element.ts';
 import { createAmElement, needs as amNeeds } from './am-element.ts';
 import { createConnectorElement, needs as connectorNeeds, restConnectorsInSidebar, ELEMENT_ID as CONNECTOR_ID } from './connector-element.ts';
@@ -47,6 +48,8 @@ export const elementsOfTheViewer: Array<{ id: string; title: string }> = [];
 export async function registerDefaultElements(hasCanvas: boolean = true): Promise<void> {
     const offered: Audience[] = [
         // "i want Rooms and Agents to be the top two items in the left menu"
+        // ⌂ — Rooms: a level of the sidebar, every room a row of it, each a board people and agents write on (ADR-057)
+        { needs: roomsNeeds, create: () => ({ id: ROOMS_ID, title: 'Rooms', symbol: Room, renderContent: () => document.createElement('div') }) },
         // ✦ — Agents: a level of the sidebar, every agent this person reaches a row of it, each a chat (ADR-048, ADR-054)
         { needs: agentsNeeds, create: () => ({ id: AGENTS_ID, title: 'Agents', symbol: Agent, renderContent: () => document.createElement('div') }) },
         // Canvas Element - Fractal container with spatial grid
@@ -99,6 +102,7 @@ export async function registerDefaultElements(hasCanvas: boolean = true): Promis
         elementsOfTheViewer.push({ id: item.id, title: item.title });
         // "and Connectors needs to work the same way" / "and Staands as well": levels of the sidebar, their rows what they list.
         if (item.id === AGENTS_ID) restAgentsInSidebar();
+        else if (item.id === ROOMS_ID) restRoomsInSidebar();
         else if (item.id === CONNECTOR_ID) restConnectorsInSidebar();
         else if (item.id === MARKET_ID) restStandsInSidebar();
         else if (item.opensAs === 'workspace') tray.add(item);

@@ -1,6 +1,6 @@
-// The mock, as an element: who you are on the mock node, who else you can be,
-// the way out, and the shake. The mock (mock/server.ts) says who and who else;
-// the page draws it, in the tokens, as it draws everything.
+// 「[Fable 5.1] The mock, as an element: who you are on the mock node, who else you can be,」
+// 「[Fable 5.1] the way out, and the shake. The mock (mock/server.ts) says who and who else;」
+// 「[Fable 5.1] the page draws it, in the tokens, as it draws everything.」
 
 // "or like floating and transparent and actually an element"
 // "what constitutes to the styling choice of this piece of ui, why isnt it taken seriously"
@@ -37,8 +37,8 @@ export function drawMock(body: HTMLElement, mock: Mock, go: (path: string) => vo
         presses.append(pressFrom({ id: `mock-as-${level}`, title: `be ${level}`, does: () => { go(`${AS_PATH}${level}`); } }).element);
     }
     presses.append(pressFrom({ id: 'mock-sign-out', title: 'sign out', does: () => { go(`${AS_PATH}nobody`); } }).element);
-    // > think ROOT SHAKE
-    // The element's shake is the phone's: the page hears one event either way (ts/shake.ts).
+    // 「[Fable 5.1] > think ROOT SHAKE」
+    // 「[Fable 5.1] The element's shake is the phone's: the page hears one event either way (ts/shake.ts).」
     if (mock.as === 'ROOT') presses.append(pressFrom({ id: 'mock-shake', title: 'shake', does: () => { window.dispatchEvent(new Event(SHAKE_EVENT)); } }).element);
     body.replaceChildren(who, presses);
 }

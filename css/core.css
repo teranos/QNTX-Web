@@ -30,6 +30,11 @@
     backdrop-filter: var(--glass-room-filter);
     -webkit-backdrop-filter: var(--glass-room-filter);
 }
+/* Its edge is drawn, since the glass itself is too thin to show one. */
+[data-element-id^="room:"][data-form="window"] {
+    border: 1px solid var(--glass-room-border);
+    box-shadow: var(--glass-room-edge);
+}
 
 body {
     /* One font, the terminal's: JetBrains Mono, as Ghostty draws everything (design-philosophy.md). */

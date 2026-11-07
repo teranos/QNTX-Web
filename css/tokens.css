@@ -114,6 +114,12 @@
     --glass-room-blur: 2px;
     --glass-room: rgb(var(--glass-rgb) / var(--glass-room-alpha));
     --glass-room-filter: blur(var(--glass-room-blur)) saturate(var(--glass-thin-saturate)) brightness(var(--glass-thin-brightness));
+    /* The room's edge: a light hairline over a dark one, so the pane reads over whatever swims behind it. */
+    /*
+    "the borders around th glass element isnt clear"
+    */
+    --glass-room-border: var(--border-on-dark);
+    --glass-room-edge: 0 0 0 1px rgb(var(--glass-rgb) / 0.85);
 
     /* Core Colors: the former light surface, now the pane */
     --panel-border: 1px solid var(--border);

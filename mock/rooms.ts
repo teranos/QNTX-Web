@@ -57,8 +57,13 @@ export class Rooms {
     private say(room: Room, sender: string, senderName: string, agent: RoomAgent | null, body: string, thread = ''): RoomMessage {
         const message: RoomMessage = { id: `m-${++this.n}`, room: room.id, sender, sender_name: senderName, agent, body, thread, at: new Date().toISOString() };
         this.messages.get(room.id)!.push(message);
+        this.lastSaid = `${senderName} in ${room.name}, ${message.id}`;
         return message;
     }
+
+    /** The last thing said in any room, as the mock's statusline carries it: a change here is an onset the ground feels. */
+    // "and i want the visual to respond to the server statusline"
+    lastSaid = '';
 
     /** The rooms paths, or null when the path is not one. */
     async answer(level: string, method: string, path: string, req: Request): Promise<Response | null> {

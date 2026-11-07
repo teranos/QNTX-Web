@@ -2,9 +2,29 @@
 /* Design tokens are in tokens.css */
 
 /* Base */
+/* The ground under everything (ts/backdrop.ts): fixed, first in the body, so everything after it paints over it. */
+.backdrop {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.backdrop > * {
+    width: 100%;
+    height: 100%;
+}
+
+/* A window or a panel is glass over the ground (vitreous): its colour is the element's (ts/glass.ts), the blur is here. */
+[data-element-id][data-form="window"],
+[data-element-id][data-form="panel"] {
+    backdrop-filter: var(--glass-filter);
+    -webkit-backdrop-filter: var(--glass-filter);
+}
+
 body {
-    /* Virtue #5: System Fonts - "Leverage OS defaults for performance and familiarity" */
-    font-family: system-ui, -apple-system, sans-serif;
+    /* One font, the terminal's: JetBrains Mono, as Ghostty draws everything (design-philosophy.md). */
+    font-family: var(--font-mono);
     /* A sym is text. iOS draws every emoji-capable code point with its colour
        emoji font unless told otherwise: the ⬆ that lifts an element became a blue
        square, the absent element's sym a trophy. This is the telling. */
@@ -18,7 +38,7 @@ body {
     margin: 0;
     padding: 0;
     background: var(--bg-primary);
-    color: #000;
+    color: var(--text-primary);
 }
 
 /* Accessibility: Focus Styles */

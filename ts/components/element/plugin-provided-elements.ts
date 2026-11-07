@@ -21,6 +21,7 @@ import { log, SEG } from '../../logger';
 import { tray, runCleanup } from '@teranos/elements';
 import type { Element } from '@teranos/elements';
 import type { ElementDef, ElementModule } from './element-ui';
+import type { BackdropFn } from '../../backdrop.ts';
 import { createElementUI } from './element-ui';
 
 export interface PluginElementDef {
@@ -172,6 +173,13 @@ export async function discoverPublishedElements(): Promise<void> {
 
             await place(item, def, mod as ElementModule);
             whyAbsent.delete(item.name);
+            // An element that offers the ground under everything is given it, unless something holds it.
+            // "i want backdrop glovbal"
+            // "i want element to be able to override global backdrop"
+            if (typeof (raw as { backdrop?: unknown }).backdrop === 'function') {
+                const { offerBackdrop } = await import('../../backdrop.ts');
+                offerBackdrop(item.name, (raw as { backdrop: BackdropFn }).backdrop);
+            }
         } catch (err) {
             // The node published this. Failing to load it is a fault, and the
             // reason is the only thing that will ever say why it is absent.

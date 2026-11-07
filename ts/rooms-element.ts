@@ -34,6 +34,8 @@ import { chatRow, chatText, renderAssistant, when, atBottom, jumpToBottom, scrol
 import { errorOf } from './node-connectors-element';
 import { openAgentChat, type Reachable } from './agents-element';
 import type { ClaudeAm } from './claude-element';
+import { holdBackdrop } from './backdrop.ts';
+import { glass } from './glass.ts';
 
 export const LEVEL_ID = 'rooms';
 
@@ -200,6 +202,7 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
     let held: RoomAgent[] = [];
     let following: ReturnType<typeof setInterval> | null = null;
     let gone = false;
+    let giveGroundBack: () => void = () => {};
     let drawnIds = '';
 
     const fails = (what: string, err: unknown) => {
@@ -265,6 +268,11 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
     rooms.get(room).then(detail => {
         if (gone) return;
         held = detail.agents;
+        // The room holds the ground under everything, its agents in it; closed, it gives the ground back.
+        // "so 3 Agents is 3 fish."
+        // "and the room itself is the fish is the agent is the model is a different species per model."
+        giveGroundBack();
+        giveGroundBack = holdBackdrop(roomIdOf(room), { room: { name: room.name, agents: held.map(agent => agent.name) } });
         // The room's name is the window's title; this line says only what it is connected to (Room.connected).
         const to = detail.room.connected ?? '';
         connected.textContent = to ? `connected to ${to}` : 'connected to nothing';
@@ -299,6 +307,7 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
     return () => {
         gone = true;
         if (following) { clearInterval(following); following = null; }
+        giveGroundBack();
     };
 }
 
@@ -311,17 +320,24 @@ export function roomIdOf(room: Room): string {
 export function openRoom(room: Room, rooms: Rooms = theRooms): void {
     const id = roomIdOf(room);
     if (!tray.has(id)) {
+        let stop: (() => void) | null = null;
         tray.add({
             id,
             title: room.name,
             symbol: RoomSymbol,
+            // Glass: the ground the room holds shows through it.
+            // "and having our things, text be drawn on top, and still make it legible"
+            color: glass(),
             opensAs: window.matchMedia?.(PHONE).matches ? 'panel' : 'window',
             opensAt: 'end',
             renderContent: () => {
                 const body = part('div', 'content-area chat room');
-                drawRoom(body, room, rooms);
+                stop?.();
+                stop = drawRoom(body, room, rooms);
                 return body;
             },
+            // Closed, the room stops following and gives the ground back; minimized, it keeps both.
+            onClose: () => { stop?.(); stop = null; },
         });
     }
     tray.open(id);

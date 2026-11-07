@@ -16,7 +16,7 @@
     "selector-max-id": 10
   },
   "css/components.css": {
-    "scale-unlimited/declaration-strict-value": 35,
+    "scale-unlimited/declaration-strict-value": 33,
     "declaration-property-value-disallowed-list": 11,
     "no-descending-specificity": 3
   },
@@ -26,7 +26,7 @@
     "no-descending-specificity": 1
   },
   "css/core.css": {
-    "scale-unlimited/declaration-strict-value": 16,
+    "scale-unlimited/declaration-strict-value": 15,
     "declaration-no-important": 3,
     "selector-max-id": 19
   },

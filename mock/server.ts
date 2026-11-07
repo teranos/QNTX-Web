@@ -105,8 +105,34 @@ function worldAnswer(level: Level, method: string, path: string, url: URL): Resp
         if (path === "/api/canvas/minimized-windows") return json(minimizedWindows());
     }
     if (path === "/api/plugins/elements") return json({ elements: [] });
-    if (path === "/g/") return json({ elements: [] });
+    // What the mock publishes at /g/: pond, a ground in this repository, always;
+    // and piranha, a built element module that is not in this repository, when
+    // PIRANHA_ELEMENT names its file on this machine.
+    // "i want piranha on the bg"
+    // "via /g/ as a full fledged Element like we talked about before"
+    // "default global backdrop can be boring is ok"
+    if (path === "/g/") return json({ elements: publishedElements() });
+    if (path === "/g/pond.js") return asModule(POND_ELEMENT);
+    if (path === "/g/piranha.js" && PIRANHA_ELEMENT) return asModule(PIRANHA_ELEMENT);
     return null;
+}
+
+const POND_ELEMENT = join(here, "g", "pond.js");
+const PIRANHA_ELEMENT = process.env.PIRANHA_ELEMENT ?? "";
+
+function asModule(file: string): Response {
+    return new Response(Bun.file(file), { headers: { "Content-Type": "text/javascript; charset=utf-8" } });
+}
+
+/** The index at /g/, as the node answers it: what is published, by name, with the attestation standing. */
+function publishedElements(): Array<{ name: string; as: string; url: string; published: string; by: string[]; signer: string }> {
+    const published = (name: string, file: string) => {
+        const stamp = Bun.file(file).lastModified;
+        return { name, as: `mock-${name}-${stamp}`, url: `/g/${name}.js`, published: new Date(stamp).toISOString(), by: ["mock"], signer: "" };
+    };
+    const elements = [published("pond", POND_ELEMENT)];
+    if (PIRANHA_ELEMENT && existsSync(PIRANHA_ELEMENT)) elements.push(published("piranha", PIRANHA_ELEMENT));
+    return elements;
 }
 
 // The agents, each with its seeded session where a fixture gives one.
@@ -409,22 +435,14 @@ async function answer(req: Request, url: URL): Promise<Response> {
     return new Response(Bun.file(file), { headers: { "Content-Type": "application/json" } });
 }
 
-/** The strip at the foot of the page: who you are, the two others you can be, and the way out. */
-function strip(level: Level): string {
-    const links = LEVELS.map(each => each === level
-        ? `<b>${each}</b>`
-        : `<a href="${AS_PATH}${each}">${each}</a>`).join(" · ");
-    // > think ROOT SHAKE
-    // The strip's shake is the phone's: the page hears one event either way (ts/shake.ts).
-    const shake = level === "ROOT" ? ` · <a href="#" onclick="window.dispatchEvent(new Event('qntx-shake'));return false">shake</a>` : "";
-    return `<div id="mock-strip" style="position:fixed;left:0;right:0;bottom:0;z-index:2147483647;padding:4px 12px;font:12px/1.4 monospace;background:#fde68a;color:#111;text-align:center">MOCK, no node · you are ${links} · <a href="${AS_PATH}nobody">sign out</a>${shake}</div>`;
-}
-
+// Who you are and who else you can be go to the page, which draws them as an
+// element of its own (ts/mock-element.ts): the mock puts no markup of its own on the page.
+// "or like floating and transparent and actually an element"
 async function page(level: Level): Promise<Response> {
     const html = await Bun.file(join(web, "dist", "index.html")).text();
-    const mockScript = `<script>window.__MOCK__ = ${JSON.stringify({ as: level })};</script>`;
+    const mockScript = `<script>window.__MOCK__ = ${JSON.stringify({ as: level, levels: LEVELS })};</script>`;
     return new Response(
-        html.replace("</head>", `${mockScript}\n</head>`).replace("</body>", `${strip(level)}${RELOAD_SCRIPT}</body>`),
+        html.replace("</head>", `${mockScript}\n</head>`).replace("</body>", `${RELOAD_SCRIPT}</body>`),
         { headers: { "Content-Type": "text/html" } },
     );
 }

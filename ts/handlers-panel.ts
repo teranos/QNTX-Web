@@ -610,7 +610,9 @@ export const needs = ['/api/attestations', '/api/pulse/schedules', '/api/watcher
 export function createHandlersElement(): Element {
     return {
         id: 'handlers-element',
-        title: 'Handlers',
+        // "handlers is missing symbol and hsoul be named just Python"
+        title: 'Python',
+        symbol: 'py',
         opensAs: 'panel',
         renderContent: () => {
             const content = document.createElement('div');

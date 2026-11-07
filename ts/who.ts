@@ -19,10 +19,14 @@ function mirrors(): HTMLImageElement[] {
     return Array.from(document.querySelectorAll<HTMLImageElement>('img[data-who-mirror]'));
 }
 
+// The mark where there is no picture of the person yet.
+// "i want the mock to have a better profile bg logo thing if there is no image"
+const MARK = '/qntx.jpg';
+
 function empty(picture: HTMLImageElement): void {
-    picture.removeAttribute('src');
+    picture.src = MARK;
     picture.classList.add('empty');
-    for (const mirror of mirrors()) mirror.removeAttribute('src');
+    for (const mirror of mirrors()) mirror.src = MARK;
 }
 
 /**

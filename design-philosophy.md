@@ -136,6 +136,27 @@ The owner's terminal is Ghostty running tmux, fish and neovim. Its look is what 
 
 The tokens are `css/tokens.css`: every one of them, light and dark alike, holds a value from the tables above, and `body` is set in the mono face, so what draws from tokens is already in the language.
 
+## The element: the room is the base
+
+"only the titlebar could be less transparent, slight frost maybe. i would make the element darker in general as well so it doesnt look like a black piece of glass enclosed by lighter glass, if you follow me."
+
+"and i would like all elements to take what is now room, as the base style of how an element looks like in QNTX, I want to standardise onto it, it doesnt have to be in one go, things can be moved over slowly, i wont forget."
+
+The room as it stands after QNTX-Web #89 and #93 is what an element looks like:
+
+- One glass over the ground, the room's: `--glass-room` (`rgb(18 18 18 / 0.58)`, a 3px blur), with a drawn edge (`--glass-room-border`, `--glass-room-edge`), since the glass is too thin to show one. The pane inside paints nothing of its own: an element is never a darker pane inside a lighter frame.
+- The title bar frosts a little more than the pane: `--glass-room-bar` (`0.8`) with the thin blur.
+- Quiet names: who said something is a dim line above the words, not a pill; the agents of an element are plain words, lit only when pressed.
+- Rows breathe: 12px between rows, 1.6 line height, text at `--font-size-md`; the prompt `❯` and the agent `●` stand in a narrow first column.
+- What an agent returns is drawn where it was said: an image inline with a download beside it, nothing opened elsewhere.
+- The ground shows through everything, and the element holds it when it is the thing (`holdBackdrop`).
+
+Every other element is moved onto this, one at a time, against this note; until it is, it is wrong and allowed to be.
+
+"and the horizontal and vertical lines on the canvas are too present, too white, needs to be less obvious that it's there on surfaces that are mostly black"
+
+- The canvas grid is faint: `--canvas-grid-line`, a line that is barely there on black.
+
 ## What held before, and still holds
 
 "there is like an old design philosophy doc"
@@ -160,7 +181,8 @@ What no longer holds: optimising for users not known; a light surface; a second 
 Not yet moved over; each is wrong until it is, and allowed to be. An agent moves one at a time, against this note.
 
 - The design system: `design-system/` here and the QNTX Design System artifact describe the old style and are not ported.
-- What an element draws of its own: every stylesheet in `css-interiors.json`.
+- What an element draws of its own: every stylesheet in `css-interiors.json`, each moved onto the room's base above.
+- The glass every window and panel wears (`--glass`, `--glass-filter` in `css/core.css`) becomes the room's; the room's tokens then are the element's and lose their name.
 - Inputs and selects, still drawn light.
 - The app: QNTX-App carries this page, and the phone is where the owner meets it first.
 - The old light tokens: they hold the new values under their old names, and go once nothing names them.

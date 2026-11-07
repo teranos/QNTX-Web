@@ -25,7 +25,7 @@
 // "i press send."
 // "the message get's to the Agent via the room and the Agent can put something back into the room."
 
-import { preventDrag, tray } from '@teranos/elements';
+import { preventDrag, pressFrom, tray } from '@teranos/elements';
 import { restLevelInSidebar, enterLevel, levelRow } from './sidebar.ts';
 import { apiJson } from './client';
 import { log, SEG } from './logger.ts';
@@ -182,9 +182,11 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
     says.rows = 2;
     says.placeholder = `Say something in ${room.name}`;
     // "instead of 'say' i want a right arrow > glyph"
-    const send = part('button', 'qntx-btn qntx-btn-small room-send');
-    send.type = 'button';
-    send.textContent = '→';
+    // The send is a press, QNTX's one button: a bare <button> in an element is shrunk to its glyph
+    // by @teranos/elements. Its title is the → glyph; what it does is below.
+    const press = pressFrom({ id: `room-send-${room.id}`, title: '→', does: () => { sendIt(); } });
+    const send = press.element;
+    send.classList.add('room-send');
     send.setAttribute('aria-label', 'Say');
     send.title = 'Say';
     // Not declareSay: the package gives a declared field the whole last line to itself, and the
@@ -256,7 +258,6 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
             if (!says.value.trim()) says.value = words;
         });
     };
-    send.addEventListener('click', sendIt);
     says.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendIt(); }
     });
@@ -290,7 +291,7 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
             agents.append(press);
         }
         preventDrag(agents);
-    }).catch((err: unknown) => { if (!gone) { connected.textContent = wordsOf(err); send.disabled = true; } });
+    }).catch((err: unknown) => { if (!gone) { connected.textContent = wordsOf(err); send.setAttribute('disabled', ''); } });
 
     void read();
     following = setInterval(() => { void read(); }, every);

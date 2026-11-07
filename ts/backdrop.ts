@@ -20,6 +20,10 @@ import { log, SEG } from './logger.ts';
 const LAYER = 'backdrop';
 // The viewer's choice, kept in this browser: a ground's name, or NONE.
 const CHOICE_KEY = 'backdrop-chosen';
+/** Where the choice is kept: this browser's storage, or what a test hands resetBackdrop. */
+interface Keep { get(key: string): string | null; set(key: string, value: string): void }
+const browserKeep: Keep = { get: getStorageItem, set: setStorageItem };
+let keep: Keep = browserKeep;
 /** The plain ground: the page's own colour and nothing on it. */
 export const NONE = 'none';
 // How often the ground hears from the node.
@@ -126,7 +130,7 @@ export function onBackdropChange(listen: () => void): () => void {
 
 /** The viewer's choice: a ground's name, or NONE; the first offered when nothing was chosen. */
 export function chosenBackdrop(): string {
-    const kept = getStorageItem(CHOICE_KEY);
+    const kept = keep.get(CHOICE_KEY);
     if (kept === NONE) return NONE;
     if (kept && offers.has(kept)) return kept;
     return offers.keys().next().value ?? NONE;
@@ -170,7 +174,7 @@ export function offerBackdrop(name: string, fn: BackdropFn): void {
 
 /** The viewer chooses a ground by name, or NONE. Kept in this browser. */
 export function chooseBackdrop(name: string): void {
-    setStorageItem(CHOICE_KEY, name);
+    keep.set(CHOICE_KEY, name);
     if (showing && showing.name !== name) hideShowing();
     showChosen();
     changed();
@@ -201,4 +205,15 @@ export function takeBackdrop(node: HTMLElement, by = node.dataset.elementId ?? n
 /** Who holds the ground now: an element's name, the ground showing, or NONE. */
 export function backdropHeldBy(): string {
     return heldBy || showing?.name || NONE;
+}
+
+/** For tests: forget every ground offered, showing or held, so the next test starts from nothing; keep the choice where the test says. */
+export function resetBackdrop(keepIn: Keep = browserKeep): void {
+    hideShowing();
+    offers.clear();
+    heldBy = '';
+    listeners.clear();
+    lastSeen = '';
+    silentSince = 0;
+    keep = keepIn;
 }

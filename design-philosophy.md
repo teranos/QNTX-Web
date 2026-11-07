@@ -1,6 +1,6 @@
-# QNTX looks like the owner's terminal
+# 「[Fable 5.1] QNTX looks like the owner's terminal」
 
-The foundation for the entirety of styling, 2026-11-07. It retires the design philosophy that stood here before it.
+「[Fable 5.1] The foundation for the entirety of styling, 2026-11-07. It retires the design philosophy that stood here before it.」
 
 "instead of 'say'i want a right arrow > glyph"
 
@@ -62,17 +62,17 @@ The foundation for the entirety of styling, 2026-11-07. It retires the design ph
 
 "and also, the visual backdrop needs to always be there regardless of being in a Room or not, but not as glitchy, and other elements can replace the backdrop kind of idea."
 
-## Whose it is
+## 「[Fable 5.1] Whose it is」
 
-QNTX-Web is ROOT's and SUPER's: the people who deal with namespaces, and the owner. Nothing in it is tailored to a hypothetical user. A normal user is always served by their own UI from now on, a frontend independent of this one; a normal user is not a thing here.
+「[Fable 5.1] QNTX-Web is ROOT's and SUPER's: the people who deal with namespaces, and the owner. Nothing in it is tailored to a hypothetical user. A normal user is always served by their own UI from now on, a frontend independent of this one; a normal user is not a thing here.」
 
-## The language
+## 「[Fable 5.1] The language」
 
-The owner's terminal is Ghostty running tmux, fish and neovim. Its look is what their configuration produces, read from the files on 2026-11-07, machine `l`. Every value below names the line it comes from; nothing is interpreted from a screenshot.
+「[Fable 5.1] The owner's terminal is Ghostty running tmux, fish and neovim. Its look is what their configuration produces, read from the files on 2026-11-07, machine `l`. Every value below names the line it comes from; nothing is interpreted from a screenshot.」
 
-### Ghostty 1.3.1
+### 「[Fable 5.1] Ghostty 1.3.1」
 
-`~/Library/Application Support/com.mitchellh.ghostty/config` sets one keybind and nothing else, so Ghostty's defaults are the look (`ghostty +show-config --default`):
+「[Fable 5.1] `~/Library/Application Support/com.mitchellh.ghostty/config` sets one keybind and nothing else, so Ghostty's defaults are the look (`ghostty +show-config --default`):」
 
 | | |
 |---|---|
@@ -82,9 +82,9 @@ The owner's terminal is Ghostty running tmux, fish and neovim. Its look is what 
 | palette 0–7 | `#1d1f21` `#cc6666` `#b5bd68` `#f0c674` `#81a2be` `#b294bb` `#8abeb7` `#c5c8c6` |
 | palette 8–15 | `#666666` `#d54e53` `#b9ca4a` `#e7c547` `#7aa6da` `#c397d8` `#70c0b1` `#eaeaea` |
 
-### tmux
+### 「[Fable 5.1] tmux」
 
-`~/.config/tmux/tmux.conf`:
+「[Fable 5.1] `~/.config/tmux/tmux.conf`:」
 
 | | |
 |---|---|
@@ -97,9 +97,9 @@ The owner's terminal is Ghostty running tmux, fish and neovim. Its look is what 
 | a message | `message-style bg=yellow,fg=black` |
 | two lines | `status 2`: ug's row above, tmux's bar below, at the bottom |
 
-### fish
+### 「[Fable 5.1] fish」
 
-`~/.config/fish/functions/fish_prompt.fish`, `fish_right_prompt.fish`: the prompt is segments, as the tmux bar is.
+「[Fable 5.1] `~/.config/fish/functions/fish_prompt.fish`, `fish_right_prompt.fish`: the prompt is segments, as the tmux bar is.」
 
 | | |
 |---|---|
@@ -111,9 +111,9 @@ The owner's terminal is Ghostty running tmux, fish and neovim. Its look is what 
 | the right side | `555`; a failed status in `red`, closed with `│` or `┃`; the duration in parentheses |
 | ssh | `bbb` on `222`; as root `red` on `222` |
 
-### neovim
+### 「[Fable 5.1] neovim」
 
-`init.vim` (home-manager): `set termguicolors`, `set background=dark`, `colorscheme nebula`. nebula's dark side (`colors/nebula.vim`):
+「[Fable 5.1] `init.vim` (home-manager): `set termguicolors`, `set background=dark`, `colorscheme nebula`. nebula's dark side (`colors/nebula.vim`):」
 
 | | |
 |---|---|
@@ -121,46 +121,46 @@ The owner's terminal is Ghostty running tmux, fish and neovim. Its look is what 
 | its colours | red `#d65e76`, green `#a3be8c`, blue `#20bbfc`, yellow `#ffff87`, purple `#bbaaee`, orange `#ecc48d`, cyan `#8de5ec`, slate `#65737e`, dim `#797987` |
 | a diff | add `#10aa11` on `#223511`, change `#cccc05` on `#332205`, delete `#ff2222` on `#502222` (GitGutter, `init.vim` 152–157) |
 
-## What follows, for everything
+## 「[Fable 5.1] What follows, for everything」
 
-- One font: JetBrains Mono, 13, everywhere a terminal would put text. `system-ui` is gone.
-- The pane is `#1c1c1c`, text is `#ffffff`, dim text `#888`, dimmer `#666666`, borders `#666666`.
-- What is current or chosen is the tmux current window: `#080808` on `#e7c547`.
-- Status is Ghostty's palette: red `#cc6666`, green `#b5bd68`, yellow `#f0c674`, blue `#81a2be`, magenta `#b294bb`, cyan `#8abeb7`; a tinted ground is neovim's diff ground.
-- A bar is the tmux bar: `#262626`, segments, powerline joins, the bottom edge.
-- What a person says is a prompt line, `❯` on a `#2a2b2a` bar; what an agent says is a `●` line; what hangs off either is a `⎿` line. No bubbles.
-- A send is the `→` glyph on a round press at the right of the input. An element says nothing it does not have to.
-- An editor is nebula: `#c9cbd1` on `#0a121d`.
-- A light surface has no place: the terminal has none.
-- There is no second theme.
+- 「[Fable 5.1] One font: JetBrains Mono, 13, everywhere a terminal would put text. `system-ui` is gone.」
+- 「[Fable 5.1] The pane is `#1c1c1c`, text is `#ffffff`, dim text `#888`, dimmer `#666666`, borders `#666666`.」
+- 「[Fable 5.1] What is current or chosen is the tmux current window: `#080808` on `#e7c547`.」
+- 「[Fable 5.1] Status is Ghostty's palette: red `#cc6666`, green `#b5bd68`, yellow `#f0c674`, blue `#81a2be`, magenta `#b294bb`, cyan `#8abeb7`; a tinted ground is neovim's diff ground.」
+- 「[Fable 5.1] A bar is the tmux bar: `#262626`, segments, powerline joins, the bottom edge.」
+- 「[Fable 5.1] What a person says is a prompt line, `❯` on a `#2a2b2a` bar; what an agent says is a `●` line; what hangs off either is a `⎿` line. No bubbles.」
+- 「[Fable 5.1] A send is the `→` glyph on a round press at the right of the input. An element says nothing it does not have to.」
+- 「[Fable 5.1] An editor is nebula: `#c9cbd1` on `#0a121d`.」
+- 「[Fable 5.1] A light surface has no place: the terminal has none.」
+- 「[Fable 5.1] There is no second theme.」
 
-The tokens are `css/tokens.css`: every one of them, light and dark alike, holds a value from the tables above, and `body` is set in the mono face, so what draws from tokens is already in the language.
+「[Fable 5.1] The tokens are `css/tokens.css`: every one of them, light and dark alike, holds a value from the tables above, and `body` is set in the mono face, so what draws from tokens is already in the language.」
 
-## What held before, and still holds
+## 「[Fable 5.1] What held before, and still holds」
 
 "there is like an old design philosophy doc"
 
 "it still hold but we are more developed now and it needs to reflect it"
 
-The old doc said data first, a decision framework, implementation standards, and The Food Lab as its inspiration. What of it still holds, said for what QNTX-Web is now:
+「[Fable 5.1] The old doc said data first, a decision framework, implementation standards, and The Food Lab as its inspiration. What of it still holds, said for what QNTX-Web is now:」
 
-- **Data first.** Every element is one DOM element for its whole life (the Element Axioma, `CLAUDE.md`), and what it shows is the node's answer, dense, in the node's own words. Nothing decorates. The symbols are the SEG glyphs (`ts/sym.ts`), the one place a segment is mapped to a glyph; no icon set, no emoji.
-- **Deciding.** Does it serve ROOT, who looks at it every day? Does it reduce what ROOT has to hold in their head? Does it stay fast on the phone, where ROOT meets it first? Does it stay in the language above? A decision is written here, in the owner's words, before it is drawn.
-- **One font, one palette.** The terminal's, above. The old doc's system fonts and functional colour are now these exact values; status colours carry status and nothing else.
-- **The press.** QNTX has one button, `pressFrom` of `@teranos/elements`: the same size at every stage, white at rest, red only when the second press cannot be undone, green only when it creates. The send is the `→` glyph, round, right of the input.
-- **An underline means you are leaving.** Nothing internal is underlined. All text wraps; `text-overflow: ellipsis` fails `bun test`.
-- **Where things rest.** A standing element rests in the sidebar, in Button Form; a temporal one, a chat, a room, a User, rests in the tray; the canvas alone opens as the workspace.
-- **Measured, not guessed.** Every story is Gherkin in `stories/` and is walked in Chromium against the mock on every pull request; contrast is a test, with a baseline that only grows on purpose; what the node answers is what the mock answers, so a change is seen before it is merged.
-- **The why is in the file.** As The Food Lab explains why a technique works, a stylesheet and an element carry the owner's words for why they are as they are, verbatim, beside the code.
+- 「[Fable 5.1] **Data first.** Every element is one DOM element for its whole life (the Element Axioma, `CLAUDE.md`), and what it shows is the node's answer, dense, in the node's own words. Nothing decorates. The symbols are the SEG glyphs (`ts/sym.ts`), the one place a segment is mapped to a glyph; no icon set, no emoji.」
+- 「[Fable 5.1] **Deciding.** Does it serve ROOT, who looks at it every day? Does it reduce what ROOT has to hold in their head? Does it stay fast on the phone, where ROOT meets it first? Does it stay in the language above? A decision is written here, in the owner's words, before it is drawn.」
+- 「[Fable 5.1] **One font, one palette.** The terminal's, above. The old doc's system fonts and functional colour are now these exact values; status colours carry status and nothing else.」
+- 「[Fable 5.1] **The press.** QNTX has one button, `pressFrom` of `@teranos/elements`: the same size at every stage, white at rest, red only when the second press cannot be undone, green only when it creates. The send is the `→` glyph, round, right of the input.」
+- 「[Fable 5.1] **An underline means you are leaving.** Nothing internal is underlined. All text wraps; `text-overflow: ellipsis` fails `bun test`.」
+- 「[Fable 5.1] **Where things rest.** A standing element rests in the sidebar, in Button Form; a temporal one, a chat, a room, a User, rests in the tray; the canvas alone opens as the workspace.」
+- 「[Fable 5.1] **Measured, not guessed.** Every story is Gherkin in `stories/` and is walked in Chromium against the mock on every pull request; contrast is a test, with a baseline that only grows on purpose; what the node answers is what the mock answers, so a change is seen before it is merged.」
+- 「[Fable 5.1] **The why is in the file.** As The Food Lab explains why a technique works, a stylesheet and an element carry the owner's words for why they are as they are, verbatim, beside the code.」
 
-What no longer holds: optimising for users not known; a light surface; a second theme; WCAG as the arbiter over what the owner has looked at for years, where the two differ.
+「[Fable 5.1] What no longer holds: optimising for users not known; a light surface; a second theme; WCAG as the arbiter over what the owner has looked at for years, where the two differ.」
 
-## Pending
+## 「[Fable 5.1] Pending」
 
-Not yet moved over; each is wrong until it is, and allowed to be. An agent moves one at a time, against this note.
+「[Fable 5.1] Not yet moved over; each is wrong until it is, and allowed to be. An agent moves one at a time, against this note.」
 
-- The design system: `design-system/` here and the QNTX Design System artifact describe the old style and are not ported.
-- What an element draws of its own: every stylesheet in `css-interiors.json`.
-- Inputs and selects, still drawn light.
-- The app: QNTX-App carries this page, and the phone is where the owner meets it first.
-- The old light tokens: they hold the new values under their old names, and go once nothing names them.
+- 「[Fable 5.1] The design system: `design-system/` here and the QNTX Design System artifact describe the old style and are not ported.」
+- 「[Fable 5.1] What an element draws of its own: every stylesheet in `css-interiors.json`.」
+- 「[Fable 5.1] Inputs and selects, still drawn light.」
+- 「[Fable 5.1] The app: QNTX-App carries this page, and the phone is where the owner meets it first.」
+- 「[Fable 5.1] The old light tokens: they hold the new values under their old names, and go once nothing names them.」

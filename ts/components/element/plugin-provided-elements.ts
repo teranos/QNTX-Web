@@ -173,7 +173,7 @@ export async function discoverPublishedElements(): Promise<void> {
 
             await place(item, def, mod as ElementModule);
             whyAbsent.delete(item.name);
-            // An element that offers the ground under everything is given it, unless something holds it.
+            // 「[Fable 5.1] An element that offers the ground under everything is given it, unless something holds it.」
             // "i want backdrop glovbal"
             // "i want element to be able to override global backdrop"
             if (typeof (raw as { backdrop?: unknown }).backdrop === 'function') {

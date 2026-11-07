@@ -1,5 +1,5 @@
-// The Backdrop element: the grounds offered, the one chosen, and who holds the
-// layer now. Opened from the viewer's picture, top left.
+// 「[Fable 5.1] The Backdrop element: the grounds offered, the one chosen, and who holds the」
+// 「[Fable 5.1] layer now. Opened from the viewer's picture, top left.」
 
 // "option to choose between backdrops by clicking on profile pic."
 

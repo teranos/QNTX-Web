@@ -48,9 +48,9 @@ export const elementsOfTheViewer: Array<{ id: string; title: string }> = [];
 export async function registerDefaultElements(hasCanvas: boolean = true): Promise<void> {
     const offered: Audience[] = [
         // "i want Rooms and Agents to be the top two items in the left menu"
-        // ⌂ — Rooms: a level of the sidebar, every room a row of it, each a board people and agents write on (ADR-057)
+        // 「[Fable 5.1] ⌂ — Rooms: a level of the sidebar, every room a row of it, each a board people and agents write on (ADR-057)」
         { needs: roomsNeeds, create: () => ({ id: ROOMS_ID, title: 'Rooms', symbol: Room, renderContent: () => document.createElement('div') }) },
-        // ✦ — Agents: a level of the sidebar, every agent this person reaches a row of it, each a chat (ADR-048, ADR-054)
+        // 「[Fable 5.1] ✦ — Agents: a level of the sidebar, every agent this person reaches a row of it, each a chat (ADR-048, ADR-054)」
         { needs: agentsNeeds, create: () => ({ id: AGENTS_ID, title: 'Agents', symbol: Agent, renderContent: () => document.createElement('div') }) },
         // Canvas Element - Fractal container with spatial grid
         ...(hasCanvas ? [{ needs: canvasNeeds, create: createCanvasElement }] : []),

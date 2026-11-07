@@ -268,7 +268,7 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
     rooms.get(room).then(detail => {
         if (gone) return;
         held = detail.agents;
-        // The room holds the ground under everything, its agents in it; closed, it gives the ground back.
+        // 「[Fable 5.1] The room holds the ground under everything, its agents in it; closed, it gives the ground back.」
         // "so 3 Agents is 3 fish."
         // "and the room itself is the fish is the agent is the model is a different species per model."
         giveGroundBack();
@@ -325,7 +325,7 @@ export function openRoom(room: Room, rooms: Rooms = theRooms): void {
             id,
             title: room.name,
             symbol: RoomSymbol,
-            // Glass: the ground the room holds shows through it.
+            // 「[Fable 5.1] Glass: the ground the room holds shows through it.」
             // "and having our things, text be drawn on top, and still make it legible"
             color: glass(),
             opensAs: window.matchMedia?.(PHONE).matches ? 'panel' : 'window',
@@ -336,7 +336,7 @@ export function openRoom(room: Room, rooms: Rooms = theRooms): void {
                 stop = drawRoom(body, room, rooms);
                 return body;
             },
-            // Closed, the room stops following and gives the ground back; minimized, it keeps both.
+            // 「[Fable 5.1] Closed, the room stops following and gives the ground back; minimized, it keeps both.」
             onClose: () => { stop?.(); stop = null; },
         });
     }

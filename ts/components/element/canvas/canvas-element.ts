@@ -83,7 +83,7 @@ export function createCanvasElement(): Element {
         id: 'canvas-workspace',
         title: 'Canvas',
         opensAs: 'workspace', // Full-viewport, no chrome
-        // Thin glass: the ground under everything shows through the canvas (ts/glass.ts).
+        // 「[Fable 5.1] Thin glass: the ground under everything shows through the canvas (ts/glass.ts).」
         color: glassThin(),
         layoutStrategy: 'grid',
         children: items,

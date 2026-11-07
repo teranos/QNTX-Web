@@ -330,7 +330,7 @@ export function initSidebar(doc: Document = document): void {
     const who = doc.querySelector<HTMLElement>('#header .who');
     if (who) {
         head.appendChild(who);
-        // The picture opens the choice of ground; the name beside it opens who is looking.
+        // 「[Fable 5.1] The picture opens the choice of ground; the name beside it opens who is looking.」
         // "option to choose between backdrops by clicking on profile pic."
         who.addEventListener('click', (e: MouseEvent) => {
             const picture = (e.target as HTMLElement).closest('#who-picture');

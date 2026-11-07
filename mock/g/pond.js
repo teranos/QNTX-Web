@@ -1,6 +1,6 @@
-// pond: the ground the mock publishes at /g/, so the page has one wherever the mock runs.
-// Still water, a ripple when the node's statusline changes, brighter while it answers.
-// Boring on purpose; the ground that matters is published to a node, not kept here.
+// 「[Fable 5.1] pond: the ground the mock publishes at /g/, so the page has one wherever the mock runs.」
+// 「[Fable 5.1] Still water, a ripple when the node's statusline changes, brighter while it answers.」
+// 「[Fable 5.1] Boring on purpose; the ground that matters is published to a node, not kept here.」
 
 // "default global backdrop can be boring is ok"
 // "via /g/ as a full fledged Element like we talked about before"
@@ -16,8 +16,8 @@ export function render() {
 }
 
 /**
- * The ground: fills the layer, reads live every frame, and what it returns stops it.
- * Held by a room, each agent in the room is a spring in the water, rippling in its own time.
+ * 「[Fable 5.1] The ground: fills the layer, reads live every frame, and what it returns stops it.」
+ * 「[Fable 5.1] Held by a room, each agent in the room is a spring in the water, rippling in its own time.」
  */
 // "so 3 Agents is 3 fish."
 export function backdrop(layer, { live, room }) {
@@ -26,7 +26,7 @@ export function backdrop(layer, { live, room }) {
     if (room) canvas.dataset.agents = String(agents.length);
     layer.appendChild(canvas);
     const ctx = canvas.getContext('2d');
-    // One ripple as the ground arrives, so it is seen to be water before the node first changes.
+    // 「[Fable 5.1] One ripple as the ground arrives, so it is seen to be water before the node first changes.」
     const ripples = [{ x: 0, y: 0, born: live.now() / 1000 }];
     let frame = 0;
     let lastOnset = 0;
@@ -50,7 +50,7 @@ export function backdrop(layer, { live, room }) {
             lastOnset = t;
             ripples.push({ x: width * (0.2 + 0.6 * Math.random()), y: height * (0.2 + 0.6 * Math.random()), born: t });
         }
-        // Each agent a spring, spread across the water, each rippling every four seconds in its own phase.
+        // 「[Fable 5.1] Each agent a spring, spread across the water, each rippling every four seconds in its own phase.」
         agents.forEach((name, i) => {
             const period = 4;
             const phase = (t + i * period / agents.length) % period;
@@ -74,7 +74,7 @@ export function backdrop(layer, { live, room }) {
                 ctx.stroke();
             }
         }
-        // The slow swell of still water: broad bands, wide enough to show through the glass over them.
+        // 「[Fable 5.1] The slow swell of still water: broad bands, wide enough to show through the glass over them.」
         ctx.lineWidth = 14;
         for (let y = -20; y < height + 20; y += 40) {
             const tone = 0.5 + 0.5 * Math.sin(y / 120 + t * 0.25);

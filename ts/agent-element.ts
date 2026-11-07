@@ -77,7 +77,7 @@ function wordsOf(err: unknown): string {
  * The agent of namespace drawn into body: its sign-in while it is not signed in,
  * the conversation once it is. What it gives back stops reading a turn that is going.
  */
-export function drawNamespaceAgent(body: HTMLElement, namespace: string, node: NamespaceAgent = agentOf(namespace), opening: { image?: Blob } = {}): () => void {
+export function drawNamespaceAgent(body: HTMLElement, namespace: string, node: NamespaceAgent = agentOf(namespace), opening: { image?: Blob } = {}, notReadyMs = 5000): () => void {
     const head = part('div', 'agent-head');
     head.hidden = true;
     const signin = part('div', 'agent-signin');
@@ -156,19 +156,35 @@ export function drawNamespaceAgent(body: HTMLElement, namespace: string, node: N
         });
     };
 
-    node.am()
+    // "We shouldn't be displaying unavailable things to people"
+    // While the node says the agent is not ready (its Claude Code still
+    // arriving), it is said why, and asked again: sign-in is offered only to
+    // an agent that can be signed in.
+    let gone = false;
+    let again: ReturnType<typeof setTimeout> | undefined;
+    const ask = () => node.am()
         .then(is => {
+            if (gone) return;
+            if (is.not_ready) {
+                head.hidden = false;
+                head.textContent = is.not_ready;
+                again = setTimeout(ask, notReadyMs);
+                return;
+            }
+            head.hidden = true;
             if (is.signed_in) converse();
             else signIn();
         })
         .catch((err: unknown) => {
+            if (gone) return;
             // The node says why: no agent set, or none that this person acts in.
             head.hidden = false;
             head.textContent = wordsOf(err);
             log.warn(SEG.ELEMENT, `[Agent] the node did not say who the agent of ${namespace} is: ${wordsOf(err)}`);
         });
+    void ask();
 
-    return () => settle();
+    return () => { gone = true; clearTimeout(again); settle(); };
 }
 
 /** The same, by its earlier name. */

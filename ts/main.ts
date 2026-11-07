@@ -471,7 +471,7 @@ async function init(): Promise<void> {
     // The restore below skips what tray.has, so the node is answered first.
     await registerDefaultElements(hasCanvas);
 
-    // Under the mock, the mock is an element too: who you are, who else you can be, the way out, the shake.
+    // 「[Fable 5.1] Under the mock, the mock is an element too: who you are, who else you can be, the way out, the shake.」
     if ((window as { __MOCK__?: unknown }).__MOCK__) {
         import('./mock-element.ts')
             .then(({ restMock }) => restMock())

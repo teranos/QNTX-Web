@@ -20,3 +20,9 @@ export function glass(): string | undefined {
 export function glassThin(): string | undefined {
     return token('--glass-thin');
 }
+
+/** The room's glass, the thinnest: the ground the room holds is the thing to see. */
+// "make sure a room element bg is more transparent and shows the visual"
+export function glassRoom(): string | undefined {
+    return token('--glass-room');
+}

@@ -38,9 +38,35 @@ export interface Live {
     now: () => number;
 }
 
-/** A room holding the ground: its name, and the agents in it, each one something in the visual. */
+/**
+ * An agent as a ground draws it: its name, the harness it runs in, the model
+ * it is, and two numbers every ground agrees on — how strong the model is
+ * (size) and how much effort it runs at (speed), each 0..1.
+ */
 // "and the room itself is the fish is the agent is the model is a different species per model."
-export interface RoomHeld { name: string; agents: string[] }
+// "stronger model is stronger bigger fish"
+// "effort translated to speed"
+export interface Fish { name: string; harness: string; model: string; effort: string; strength: number; speed: number }
+
+/** A room holding the ground: its name, and the agents in it, each a fish. */
+export interface RoomHeld { name: string; agents: Fish[] }
+
+// How strong a model is, by its name: the page's one reading of it, so pond and piranha agree.
+const STRENGTH: Array<[string, number]> = [
+    ['fable', 1], ['opus', 0.9], ['sonnet', 0.6], ['haiku', 0.3],
+    ['pro', 0.8], ['flash', 0.4],
+    ['nano', 0.2], ['mini', 0.4], ['gpt', 0.8], ['codex', 0.8],
+];
+// How fast it runs, by the effort it was given.
+const SPEED: Record<string, number> = { low: 0.4, medium: 0.6, high: 0.8, xhigh: 0.9, max: 1 };
+
+/** The fish an agent is: strength from its model's name, speed from its effort; 0.5 and 0.6 when unknown. */
+export function fishOf(agent: { name: string; harness: string; model?: string; effort?: string }): Fish {
+    const model = (agent.model ?? '').toLowerCase();
+    const strength = STRENGTH.find(([word]) => model.includes(word))?.[1] ?? 0.5;
+    const speed = SPEED[(agent.effort ?? '').toLowerCase()] ?? 0.6;
+    return { name: agent.name, harness: agent.harness, model: agent.model ?? '', effort: agent.effort ?? '', strength, speed };
+}
 
 /** What a ground is given: the node as live, and the room holding it, when one does. */
 export interface Held { live: Live; room?: RoomHeld }
@@ -182,6 +208,7 @@ export function offerBackdrop(name: string, fn: BackdropFn): void {
 /** The viewer chooses a ground by name, or NONE. Kept in this browser. */
 export function chooseBackdrop(name: string): void {
     keep.set(CHOICE_KEY, name);
+    if (holding) { redrawHeld(); return; }
     if (showing && showing.name !== name) hideShowing();
     showChosen();
     changed();
@@ -216,28 +243,61 @@ export function takeBackdrop(node: HTMLElement, by = node.dataset.elementId ?? n
  */
 export function holdBackdrop(by: string, holds: Omit<Held, 'live'>): () => void {
     const layer = backdropLayer();
-    const fn = offers.get(chosenBackdrop());
-    if (!layer || !fn) return () => {};
+    if (!layer) return () => {};
     hideShowing();
+    if (holding) { holding.stop(); holding = null; }
     const node = document.createElement('div');
     node.className = 'backdrop-held-by';
-    layer.replaceChildren(node);
-    const stop = fn(node, { live, ...holds });
-    startPulse();
-    layer.dataset.heldBy = by;
-    heldBy = by;
-    log.info(SEG.UI, `[Backdrop] ${by} holds the ground, ${chosenBackdrop()}`);
-    changed();
+    const drawn = drawHeld(layer, node, by, holds);
+    if (!drawn) { layer.replaceChildren(); return () => {}; }
     return () => {
-        if (layer.firstChild !== node) return;
-        stop();
+        if (!holding || holding.node !== node) return;
+        holding.stop();
+        holding = null;
         stopPulse();
         layer.replaceChildren();
         delete layer.dataset.heldBy;
+        delete layer.dataset.holds;
         heldBy = '';
         showChosen();
         changed();
     };
+}
+
+// The element holding the ground now: who, what it holds, the node it draws in, and how to stop the ground drawn for it.
+let holding: { by: string; holds: Omit<Held, 'live'>; node: HTMLElement; stop: () => void } | null = null;
+
+/** The chosen ground drawn in node for the element holding it; false when the ground is plain. */
+function drawHeld(layer: HTMLElement, node: HTMLElement, by: string, holds: Omit<Held, 'live'>): boolean {
+    const name = chosenBackdrop();
+    const fn = offers.get(name);
+    if (!fn) return false;
+    node.replaceChildren();
+    layer.replaceChildren(node);
+    holding = { by, holds, node, stop: fn(node, { live, ...holds }) };
+    startPulse();
+    layer.dataset.heldBy = by;
+    layer.dataset.holds = name;
+    heldBy = by;
+    log.info(SEG.UI, `[Backdrop] ${by} holds the ground, ${name}`);
+    changed();
+    return true;
+}
+
+/** The viewer chose while an element holds the ground: the hold is drawn again with the ground chosen now. */
+function redrawHeld(): void {
+    const layer = backdropLayer();
+    if (!layer || !holding) return;
+    const { by, holds, node } = holding;
+    holding.stop();
+    holding = null;
+    if (!drawHeld(layer, node, by, holds)) {
+        layer.replaceChildren();
+        delete layer.dataset.heldBy;
+        delete layer.dataset.holds;
+        heldBy = '';
+        changed();
+    }
 }
 
 /** Who holds the ground now: an element's name, the ground showing, or NONE. */

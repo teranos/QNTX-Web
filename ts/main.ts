@@ -471,6 +471,14 @@ async function init(): Promise<void> {
     // The restore below skips what tray.has, so the node is answered first.
     await registerDefaultElements(hasCanvas);
 
+    // On a phone, the App opens into the Node Room, the ground behind it.
+    // "and having the Node Room be the default think i enter into when i open the App on my Phone, with that backdrop"
+    if (window.matchMedia?.('(max-width: 768px)').matches) {
+        import('./rooms-element.ts')
+            .then(({ openTheNodeRoom }) => openTheNodeRoom())
+            .catch(err => log.error(SEG.UI, '[Init] the Node Room was not opened:', err));
+    }
+
     // Under the mock, the mock is an element too: who you are, who else you can be, the way out, the shake.
     if ((window as { __MOCK__?: unknown }).__MOCK__) {
         import('./mock-element.ts')

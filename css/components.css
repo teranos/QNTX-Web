@@ -434,6 +434,12 @@
 */
 .room-say { display: flex; flex-wrap: nowrap; gap: 6px; align-items: flex-end; padding: 6px; border-top: 1px solid var(--border-on-dark); flex-shrink: 0; position: sticky; bottom: 0; background: transparent; }
 .room .chat-scroll { background: transparent; }
+/* Users' invite link and list measured 1160px, which is more than a window may be (fitsAsWindow): the link wraps, the list scrolls. */
+/*
+"and Users on Desktop doesnt need to go full screen"
+*/
+.users-invite-link { overflow-wrap: anywhere; }
+.users-list { overflow-x: auto; }
 .room-says { flex: 1 1 auto; min-width: 0; width: auto; resize: none; background: var(--bg-almost-black); color: var(--text-on-dark); border: 1px solid var(--border-on-dark); font: inherit; font-size: var(--font-size-field); padding: 6px 8px; margin: 0; }
 .room-send { flex: none; border-radius: 50%; font-size: var(--font-size-field); }
 .room-agent.room-agent-on { color: var(--accent-on-dark); border-color: var(--accent-on-dark); background: var(--bg-dark-hover); }

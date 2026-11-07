@@ -350,8 +350,9 @@
 .chat-row { margin: 3px 0; white-space: pre-wrap; overflow-wrap: anywhere; animation: chat-arrive 160ms ease-out; }
 @keyframes chat-arrive { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 /* What a person says is a prompt line, as fish draws one; what an agent says is a ● line (QNTX ADR-058). No bubbles. */
-.chat-you { align-self: stretch; max-width: none; margin: 8px 0 4px; padding: 2px 8px; background: var(--bg-dark-hover); color: var(--text-on-dark); }
-.chat-you::before { content: '❯ '; color: var(--text-on-dark-secondary); }
+.chat-you { display: flex; gap: 6px; align-items: baseline; align-self: stretch; max-width: none; margin: 8px 0 4px; padding: 2px 8px; background: var(--bg-dark-hover); color: var(--text-on-dark); }
+.chat-you::before { content: '❯'; color: var(--text-on-dark-secondary); flex-shrink: 0; }
+.chat-you > * { min-width: 0; }
 .chat-said::before { content: '● '; color: var(--term-green); }
 /* Said while it answers: yours, not yet the node's. */
 .chat-waiting { opacity: 0.55; }

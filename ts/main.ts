@@ -471,7 +471,7 @@ async function init(): Promise<void> {
     // The restore below skips what tray.has, so the node is answered first.
     await registerDefaultElements(hasCanvas);
 
-    // On a phone, the App opens into the Node Room, the ground behind it.
+    // 「[Fable 5.1] On a phone, the App opens into the Node Room, the ground behind it.」
     // "and having the Node Room be the default think i enter into when i open the App on my Phone, with that backdrop"
     if (window.matchMedia?.('(max-width: 768px)').matches) {
         import('./rooms-element.ts')

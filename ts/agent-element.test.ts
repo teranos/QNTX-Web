@@ -105,6 +105,25 @@ describe('Agent - Spike', () => {
         expect(body.querySelector('.claude-say')).toBeNull();
     });
 
+    // "We shouldn't be displaying unavailable things to people"
+    test('an agent whose Claude Code is still arriving is said so, and offered sign-in once it has arrived', async () => {
+        const body = document.createElement('div');
+        let asks = 0;
+        const arriving: NamespaceAgent = {
+            ...node(false),
+            am: () => Promise.resolve(asks++ < 2 ? { ...am(false), not_ready: 'Claude Code is still being fetched' } : am(false)),
+        };
+        const stop = drawAgent(body, 'pond', arriving, {}, 1);
+        await settled();
+        expect(body.querySelector('.agent-head')?.textContent).toBe('Claude Code is still being fetched');
+        expect(body.querySelector('.agent-begin')).toBeNull();
+        await new Promise(resolve => setTimeout(resolve, 30));
+        expect(asks).toBe(3);
+        expect(body.querySelector<HTMLElement>('.agent-head')?.hidden).toBe(true);
+        expect(body.querySelector('.agent-begin')).not.toBeNull();
+        stop();
+    });
+
     // A sign-in the node refuses to begin leaves the button to press again, and says why.
     test('a sign-in that does not begin is said, and can be pressed again', async () => {
         const body = document.createElement('div');

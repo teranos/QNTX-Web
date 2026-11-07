@@ -8,6 +8,7 @@ const { Given, When, Then } = createBdd();
 
 // Where the pictures of the walk are kept, to be looked at.
 const SHOTS = 'test-results/rooms';
+const mediaWake = new WeakMap<Page, string>();
 
 /**
  * The sidebar, open: on a desktop the column stands open as remembered, and
@@ -90,4 +91,54 @@ Then('the Agent can put something back into the room', async ({ page }) => {
     await expect(back).toContainText('MOCK node-claude answers in Node Room', { timeout: 15_000 });
     await expect(back).toContainText('you said "@node-claude what is the node up to?"');
     await page.screenshot({ path: `${SHOTS}/4-answered.png` });
+});
+
+When('I ask an Agent for a picture in the room', async ({ page }) => {
+    await page.locator('.room-says').fill('@node-claude make a picture of the pond');
+    const response = page.waitForResponse(response => response.url().includes('/wake') && response.request().method() === 'POST');
+    await page.locator('.room-send').click();
+    mediaWake.set(page, (await (await response).json()).id);
+});
+
+Then('its picture arrives inside its reply', async ({ page }) => {
+    const reply = page.locator(`.room-row[data-agent="node-claude"][data-thread="${mediaWake.get(page)}"]`);
+    const picture = reply.locator('.room-media img');
+    await expect(picture).toBeVisible({ timeout: 15_000 });
+    await expect(picture).toHaveAttribute('src', /^blob:/);
+    await expect.poll(() => picture.evaluate(img => (img as HTMLImageElement).naturalWidth)).toBe(800);
+    await expect(reply).toContainText('This is a fixture, not a generated image.');
+    await expect(reply.locator('.room-media-error')).toHaveCount(0);
+    await expect(page.locator('.room-reach-line[data-reach="ROOM_REACH_ARRIVES"]')).toHaveCount(0);
+    await picture.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${SHOTS}/returned-picture-${page.viewportSize()!.width}.png` });
+});
+
+Then('I can save the returned picture', async ({ page }) => {
+    const download = page.waitForEvent('download');
+    await page.locator('.room-media-caption a').last().click();
+    expect((await download).suggestedFilename()).toBe('pond-study.svg');
+});
+
+Then('the picture stays in place when someone speaks again', async ({ page }) => {
+    const picture = page.locator('.room-media img').last();
+    const original = await picture.elementHandle();
+    const src = await picture.getAttribute('src');
+    await page.locator('.room-says').fill('Keep the blue; simplify the outline.');
+    await page.locator('.room-send').click();
+    await expect(page.locator('.room-board .chat-you').last()).toContainText('Keep the blue; simplify the outline.');
+    expect(await original!.evaluate(img => img.isConnected)).toBe(true);
+    await expect(picture).toHaveAttribute('src', src!);
+});
+
+Then('the picture and composer fit the phone', async ({ page }) => {
+    const width = page.viewportSize()!.width;
+    for (const selector of ['.room-media img', '.room-says', '.room-send']) {
+        const box = await page.locator(selector).last().boundingBox();
+        expect(box).not.toBeNull();
+        expect(box!.x).toBeGreaterThanOrEqual(0);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+    }
+    await expect(page.locator('.room-says')).toBeInViewport();
+    await expect(page.locator('.room-send')).toBeInViewport();
+    await page.screenshot({ path: `${SHOTS}/returned-picture-phone.png` });
 });

@@ -23,6 +23,8 @@ const nodeAgent = (harness: string): RoomAgent => ({ did: 'did:key:mock-node-age
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
 export class Rooms {
+    constructor(private readonly study: string) {}
+
     private rooms: Room[] = [
         { id: 'node-room', provider: PROVIDER, name: 'Node Room', description: 'the Node Agents of this node, in every harness it runs them in', instructions: 'the Agy, Claude, Codex Node Agents are all in the Node Room', of: { node: NODE_DID } },
         { id: 'pond', provider: PROVIDER, name: 'pond', description: 'the room of the pond namespace', instructions: '', of: { namespace: 'pond' } },
@@ -96,7 +98,10 @@ export class Rooms {
             for (const each of woken) {
                 if (each.reach !== 'ROOM_REACH_ARRIVES') continue;
                 setTimeout(() => {
-                    this.say(room, each.agent.name, each.agent.name, each.agent, `MOCK ${each.agent.name} answers in ${room.name}: you said "${sent.says}". A mock has nothing to do about it, so it says so, here, where everyone in the room reads it.`, said.id);
+                    const result = /\b(image|picture|media|sketch|study)\b/i.test(sent.says!)
+                        ? `MOCK ${each.agent.name}: here is a pond study to work from. This is a fixture, not a generated image.\n\n![pond-study.svg](${this.study})`
+                        : `MOCK ${each.agent.name} answers in ${room.name}: you said "${sent.says}". A mock has nothing to do about it, so it says so, here, where everyone in the room reads it.`;
+                    this.say(room, each.agent.name, each.agent.name, each.agent, result, said.id);
                 }, ANSWER_MS);
             }
             console.log(`${level} woke ${named.map(a => a.name).join(', ')} in ${room.name}: ${sent.says}`);

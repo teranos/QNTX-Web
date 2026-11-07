@@ -418,29 +418,50 @@
 .agents-talk > .claude-who, .agents-talk > .claude-status, .agents-talk > .claude-say, .shake-talk > .claude-who, .shake-talk > .claude-status, .shake-talk > .claude-say { flex-shrink: 0; }
 .agents-talk > .chat-scroll, .shake-talk > .chat-scroll { flex: 1; }
 /* A room (ADR-057): what it is connected to, the agents in it, the board, where something is said into it. */
-.room-connected { padding: 3px 6px; border-bottom: 1px solid var(--border-on-dark); color: var(--text-on-dark-secondary); font-size: var(--font-size-xs); white-space: normal; overflow-wrap: break-word; flex-shrink: 0; }
-.room-agents { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 6px; border-bottom: 1px solid var(--border-on-dark); flex-shrink: 0; }
+.content-area.room { background: color-mix(in srgb, var(--bg-almost-black) 60%, transparent); }
+.room-connected { padding: 8px 12px 0; color: var(--text-on-dark-secondary); font-size: var(--font-size-xs); white-space: normal; overflow-wrap: break-word; flex-shrink: 0; }
+.room-connected[data-connected="0"] { display: none; }
+.room-agents { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--border-on-dark); flex-shrink: 0; }
+.room-agents .room-agent { padding: 6px 8px; background: transparent; border-color: transparent; color: var(--text-on-dark-secondary); }
 .room-no-agents { color: var(--text-on-dark-secondary); font-size: var(--font-size-xs); }
-.room-board { display: flex; flex-direction: column; flex-shrink: 0; }
-.room-sender { display: inline; margin-right: 6px; font-size: var(--font-size-xs); color: var(--text-on-dark-tertiary); flex: none; }
-.room-row.chat-you { gap: 6px; }
-.room-row .chat-text { display: inline; }
-.room-reach { padding: 0 6px; color: var(--text-on-dark-secondary); font-size: var(--font-size-xs); flex-shrink: 0; }
-.room-failed { padding: 0 6px; flex-shrink: 0; }
+.room-board { display: flex; flex-direction: column; gap: 12px; flex-shrink: 0; }
+.room-row.chat-row { display: grid; grid-template-columns: 12px minmax(0, 1fr); column-gap: 8px; row-gap: 4px; width: 100%; max-width: 100%; box-sizing: border-box; margin: 0; padding: 8px 0; background: transparent; white-space: normal; }
+.room-row::before { grid-column: 1; grid-row: 1; font-size: var(--font-size-xs); }
+.room-sender { grid-column: 2; font-size: var(--font-size-xs); color: var(--text-on-dark-secondary); }
+.room-message-content { grid-column: 2; min-width: 0; font-size: var(--font-size-md); line-height: 1.6; }
+.room-message-content > :first-child { margin-top: 0; }
+.room-message-content > :last-child { margin-bottom: 0; }
+.room-message-content p { margin: 0 0 8px; }
+.room-message-content h1, .room-message-content h2, .room-message-content h3, .room-message-content h4, .room-message-content h5, .room-message-content h6 { font-size: var(--font-size-sm); margin: 12px 0 8px; }
+.room-message-content pre { padding: 8px; background: var(--bg-almost-black); }
+.room-message-content ul, .room-message-content ol { padding-left: 20px; }
+.room-media { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 4px; }
+.room-media img { display: block; width: 100%; height: auto; max-height: 320px; object-fit: contain; object-position: left; border: 1px solid var(--border-on-dark); box-sizing: border-box; background: var(--bg-almost-black); }
+.room-media img:not([src]) { aspect-ratio: 16 / 10; }
+.room-media img[hidden] { display: none; }
+.room-media-caption { font-size: var(--font-size-xs); }
+.room-file { color: var(--accent-on-dark); text-underline-offset: 3px; }
+.room-file[data-file] { text-decoration: none; }
+.room-file[data-file]::before { content: '↓ '; }
+.room-file:focus-visible { outline: 1px solid var(--accent-on-dark); outline-offset: 4px; }
+.room-media-error { display: block; color: var(--sacred-error); font-size: var(--font-size-xs); }
+.room-reach { padding: 4px 12px; color: var(--text-on-dark-secondary); font-size: var(--font-size-xs); flex-shrink: 0; }
+.room-failed { padding: 0 12px; flex-shrink: 0; }
 .room-reach:empty, .room-failed:empty { display: none; }
 /* The room's board and its line are the window's glass: the ground the room holds shows through, the words on top. */
 /*
 "and having our things, text be drawn on top, and still make it legible"
 */
-.room-say { display: flex; flex-wrap: nowrap; gap: 6px; align-items: flex-end; padding: 6px; border-top: 1px solid var(--border-on-dark); flex-shrink: 0; position: sticky; bottom: 0; background: transparent; }
-.room .chat-scroll { background: transparent; }
+.room-say { display: flex; flex-wrap: nowrap; gap: 10px; align-items: flex-end; padding: 12px; border-top: 1px solid var(--border-on-dark); flex-shrink: 0; position: sticky; bottom: 0; background: transparent; }
+.room .chat-scroll { background: transparent; padding: 12px 16px; }
 /* Users' invite link and list measured 1160px, which is more than a window may be (fitsAsWindow): the link wraps, the list scrolls. */
 /*
 "and Users on Desktop doesnt need to go full screen"
 */
 .users-invite-link { overflow-wrap: anywhere; }
 .users-list { overflow-x: auto; }
-.room-says { flex: 1 1 auto; min-width: 0; width: auto; resize: none; background: var(--bg-almost-black); color: var(--text-on-dark); border: 1px solid var(--border-on-dark); font: inherit; font-size: var(--font-size-field); padding: 6px 8px; margin: 0; }
+.room-says { flex: 1 1 auto; min-width: 0; width: auto; resize: none; background: var(--bg-almost-black); color: var(--text-on-dark); border: 1px solid var(--border-on-dark); font: inherit; font-size: var(--font-size-field); line-height: 1.5; padding: 6px 8px; margin: 0; }
+.room-says:focus-visible { outline: 1px solid var(--accent-on-dark); outline-offset: 4px; }
 .room-send { flex: none; border-radius: 50%; font-size: var(--font-size-field); }
 .room-agent.room-agent-on { color: var(--accent-on-dark); border-color: var(--accent-on-dark); background: var(--bg-dark-hover); }
 .chat .claude-say { flex-wrap: wrap; }

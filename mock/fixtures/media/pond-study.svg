@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
+  <title>Pond study — mock agent output</title>
+  <desc>Three fish drawn in cyan, blue and green over a dark pond. A static mock artifact for the room.</desc>
+  <rect width="800" height="500" fill="#0a121d"/>
+  <g fill="none" stroke="#8abeb7" stroke-opacity=".13">
+    <ellipse cx="400" cy="255" rx="310" ry="170"/>
+    <ellipse cx="400" cy="255" rx="245" ry="132"/>
+    <ellipse cx="400" cy="255" rx="180" ry="95"/>
+    <path d="M0 255h800M400 0v500" stroke-dasharray="2 12"/>
+  </g>
+  <g fill="none" stroke-linejoin="round" stroke-width="2">
+    <g stroke="#8abeb7" transform="translate(245 205) rotate(-18)">
+      <path d="M-62 0Q0-52 66 0Q0 52-62 0L-99-28V28ZM-46 0H51M-14 0L-31-24M-14 0L-31 24M12 0L-2-28M12 0L-2 28"/>
+      <circle cx="40" cy="-7" r="4" fill="#8abeb7"/>
+    </g>
+    <g stroke="#81a2be" transform="translate(540 230) rotate(156) scale(.8)">
+      <path d="M-62 0Q0-52 66 0Q0 52-62 0L-99-28V28ZM-46 0H51M-14 0L-31-24M-14 0L-31 24M12 0L-2-28M12 0L-2 28"/>
+      <circle cx="40" cy="-7" r="4" fill="#81a2be"/>
+    </g>
+    <g stroke="#b5bd68" transform="translate(410 345) rotate(22) scale(.6)">
+      <path d="M-62 0Q0-52 66 0Q0 52-62 0L-99-28V28ZM-46 0H51M-14 0L-31-24M-14 0L-31 24M12 0L-2-28M12 0L-2 28"/>
+      <circle cx="40" cy="-7" r="4" fill="#b5bd68"/>
+    </g>
+  </g>
+</svg>

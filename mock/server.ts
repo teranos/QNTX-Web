@@ -413,7 +413,8 @@ function strip(level: Level): string {
     // > think ROOT SHAKE
     // The strip's shake is the phone's: the page hears one event either way (ts/shake.ts).
     const shake = level === "ROOT" ? ` · <a href="#" onclick="window.dispatchEvent(new Event('qntx-shake'));return false">shake</a>` : "";
-    return `<div id="mock-strip" style="position:fixed;left:0;right:0;bottom:0;z-index:2147483647;padding:4px 12px;font:12px/1.4 monospace;background:#fde68a;color:#111;text-align:center">MOCK, no node · you are ${links} · <a href="${AS_PATH}nobody">sign out</a>${shake}</div>`;
+    // "this thing needs to be at top, now cover systembar, it always annoyed me. or like floating and transparent"
+    return `<div id="mock-strip" style="position:fixed;top:6px;right:12px;z-index:2147483647;padding:2px 10px;font:11px/1.4 'JetBrains Mono',monospace;background:rgba(38,38,38,0.8);color:#e7c547;border:1px solid #666;border-radius:3px">MOCK · ${links} · <a href="${AS_PATH}nobody" style="color:#81a2be">sign out</a>${shake}</div>`;
 }
 
 async function page(level: Level): Promise<Response> {

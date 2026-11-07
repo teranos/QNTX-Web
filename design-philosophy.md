@@ -50,6 +50,18 @@ The foundation for the entirety of styling, 2026-11-07. It retires the design ph
 
 "and normal users, they always get served by their own ui from now on"
 
+"i wanted the color of the canvas to stay the same"
+
+"this is old canvas, its design is frozen, dont touch it."
+
+"i want Rooms and Agents to be the top two items in the left menu"
+
+"handlers is missing symbol and hsoul be named just Python"
+
+"it also means the bg you use now needs to be darker"
+
+"and also, the visual backdrop needs to always be there regardless of being in a Room or not, but not as glitchy, and other elements can replace the backdrop kind of idea."
+
 ## Whose it is
 
 QNTX-Web is ROOT's and SUPER's: the people who deal with namespaces, and the owner. Nothing in it is tailored to a hypothetical user. A normal user is always served by their own UI from now on, a frontend independent of this one; a normal user is not a thing here.

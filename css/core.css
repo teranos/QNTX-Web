@@ -2,6 +2,19 @@
 /* Design tokens are in tokens.css */
 
 /* Base */
+/* The ground under everything (ts/backdrop.ts): fixed, first in the body, so everything after it paints over it. */
+.backdrop {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.backdrop > * {
+    width: 100%;
+    height: 100%;
+}
+
 body {
     /* One font, the terminal's: JetBrains Mono, as Ghostty draws everything (design-philosophy.md). */
     font-family: var(--font-mono);

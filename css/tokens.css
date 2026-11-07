@@ -42,8 +42,12 @@
     --term-bright-cyan: #70c0b1;
     --term-bright-white: #eaeaea;
     --term-fg: #ffffff;
-    /* tmux.conf: window-active-style bg, status-bg colour235, colour233, colour232 */
-    --term-pane: #1c1c1c;
+    /* tmux.conf: window-active-style bg #1c1c1c, status-bg colour235, colour233, colour232.
+       The pane is colour233, a step darker than tmux's own, with the backdrop under it:
+       "it also means the bg you use now needs to be darker"
+    */
+    --term-pane: #121212;
+    --term-pane-tmux: #1c1c1c;
     --term-bar: #262626;
     --term-bar-deep: #121212;
     --term-on-current: #080808;
@@ -99,7 +103,10 @@
     --text-on-dark-tertiary: var(--term-dim); /* Tertiary text on dark, muted labels */
     --text-on-dark-emphasis: var(--term-fg); /* Headings/emphasis on dark */
     --bg-dark-hover: var(--term-job); /* Hover state on dark backgrounds */
-    --bg-canvas: var(--term-bar-deep); /* The canvas: tmux's colour233, behind the panes */
+    /* The old canvas, as it was:
+       "this is old canvas, its design is frozen, dont touch it."
+    */
+    --bg-canvas: #2d2e36;
     --bg-dark-light: var(--term-job); /* Lighter dark surface - buttons, inputs, controls */
     --bg-secondary: var(--term-pane); /* Dark surface - element bodies, canvas panels */
     --bg-tertiary: var(--term-bar); /* Slightly lighter dark surface - title bars, headers */

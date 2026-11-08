@@ -17,7 +17,6 @@ const STILL_BY_HAND = [
     'ts/obsidian-element.ts',
     'ts/parity-element.ts',
     'ts/system-drawer.ts',
-    'ts/token-mint-element.ts',
     'ts/user-element.ts',
     'ts/user-invite-element.ts',
 ];

@@ -38,14 +38,14 @@ describe('Access tokens element rows', () => {
                 created_at: '2026-07-27T10:00:00Z',
                 revoked_at: '2026-07-27T11:00:00Z',
             },
-        ]);
+        ], new Date(), true);
 
         expect(container.textContent).not.toContain('Revoke');
         expect(container.textContent).not.toContain('Enable');
         expect(container.querySelectorAll('tbody tr').length).toBe(2);
     });
 
-    test('a revoked token stays listed, carrying when it stopped working', () => {
+    test('a revoked token is listed beside the rest, carrying when it stopped working', () => {
         renderList(container, [
             {
                 id: 'AT_1',
@@ -53,7 +53,7 @@ describe('Access tokens element rows', () => {
                 created_at: '2026-07-27T10:00:00Z',
                 revoked_at: '2026-07-27T11:00:00Z',
             },
-        ]);
+        ], new Date(), true);
 
         expect(container.textContent).toContain('laptop-cron');
         expect(container.textContent).toContain('revoked:');

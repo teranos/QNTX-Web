@@ -18,7 +18,7 @@ function token(extra: Record<string, string> = {}) {
 /** The status cell of one row, as a token sees it: no switches, so it is the last cell. */
 function status(extra: Record<string, string> = {}): HTMLElement {
     const container = document.createElement('div');
-    renderList(container, [token(extra)], NOW);
+    renderList(container, [token(extra)], NOW, true);
     const cell = container.querySelector<HTMLElement>('tbody td:last-child');
     if (!cell) throw new Error('no status cell rendered');
     return cell;
@@ -183,7 +183,8 @@ test('a token a client issued is listed under its client, not here', () => {
 });
 
 // "I wish the status col would give me a way to filter out everything revoked and expired."
-test('the switch in the Status header hides what no longer works, and shows it again', () => {
+// "make it read only for things that are just active"
+test('the list opens on what still works, and the switch in the Status header shows the rest', () => {
     const container = document.createElement('div');
     renderList(container, [
         token({ id: 'AT_1', label: 'live' }),
@@ -191,11 +192,11 @@ test('the switch in the Status header hides what no longer works, and shows it a
         token({ id: 'AT_3', label: 'expired', expires_at: before(HOUR) }),
     ], NOW);
     const labels = () => [...container.querySelectorAll('tbody tr td:first-child')].map(td => td.firstChild?.textContent);
-    expect(labels()).toEqual(['live', 'revoked', 'expired']);
-
-    container.querySelector<HTMLButtonElement>('.tokens-live-only')!.click();
     expect(labels()).toEqual(['live']);
 
     container.querySelector<HTMLButtonElement>('.tokens-live-only')!.click();
     expect(labels()).toEqual(['live', 'revoked', 'expired']);
+
+    container.querySelector<HTMLButtonElement>('.tokens-live-only')!.click();
+    expect(labels()).toEqual(['live']);
 });

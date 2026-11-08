@@ -1,6 +1,6 @@
 import { defaultMarkdownParser } from 'prosemirror-markdown';
 import { DOMSerializer } from 'prosemirror-model';
-import { sizeText } from '@teranos/elements';
+import { pressFrom, sizeText } from '@teranos/elements';
 import { apiFetch, backendUrl } from './client';
 
 /** Links in a room's body are the existing rooms.proto contract, not attachments. */
@@ -23,6 +23,14 @@ export function roomResource(value: string): { url: string; file?: string } | un
 /** RoomAttachment: a file sent with a message, at the path the node serves its bytes. */
 export interface RoomAttachment { name: string; type: string; url: string }
 
+/** Provider media is read through the node, never with credentials sent elsewhere. */
+export function roomAttachmentResource(path: string): { url: string; file: string } | undefined {
+    if (!path.startsWith('/api/') || /[\u0000-\u0020\\]/.test(path)) return;
+    const url = new URL(path, backendUrl());
+    if (url.pathname !== path.split(/[?#]/)[0] || url.hash) return;
+    return { url: url.href, file: path };
+}
+
 /** A reply's media lives as long as its row, including across room polls. */
 export function roomBody(text: string, fetchFile: typeof apiFetch = apiFetch, attachments: RoomAttachment[] = []): { element: HTMLElement; dispose: () => void } {
     const element = document.createElement('div');
@@ -31,6 +39,7 @@ export function roomBody(text: string, fetchFile: typeof apiFetch = apiFetch, at
     const controller = new AbortController();
     const blobs = new Map<string, Promise<{ url: string; type: string }>>();
     const urls: string[] = [];
+    const players: HTMLAudioElement[] = [];
     const load = (file: string) => {
         let pending = blobs.get(file);
         if (!pending) {
@@ -101,16 +110,51 @@ export function roomBody(text: string, fetchFile: typeof apiFetch = apiFetch, at
     element.append(serializer.serializeFragment(defaultMarkdownParser.parse(text).content));
     // What was sent with it is the node's to serve, read as the page reads the node.
     for (const attachment of attachments) {
-        const resource = { url: backendUrl() + attachment.url, file: attachment.url };
         const name = attachment.name || 'file';
+        const resource = roomAttachmentResource(attachment.url);
+        if (!resource) { failure(element, new Error(`Invalid attachment URL: ${attachment.url}`)); continue; }
         if (attachment.type.startsWith('image/')) element.append(mediaOf(resource, name, attachment.url));
+        else if (attachment.type.startsWith('audio/')) element.append(audioOf(resource, name));
         else {
             const held = document.createElement('p');
             held.append(link(resource, name));
             element.append(held);
         }
     }
-    return { element, dispose: () => { controller.abort(); for (const url of urls) URL.revokeObjectURL(url); } };
+    return { element, dispose: () => {
+        controller.abort();
+        for (const player of players) { player.pause(); player.removeAttribute('src'); player.load(); }
+        for (const url of urls) URL.revokeObjectURL(url);
+    } };
+
+    function audioOf(resource: NonNullable<ReturnType<typeof roomAttachmentResource>>, name: string): HTMLElement {
+        const media = document.createElement('div');
+        media.className = 'room-media room-audio';
+        const player = document.createElement('audio');
+        player.controls = true;
+        player.preload = 'none';
+        player.hidden = true;
+        player.setAttribute('aria-label', `Recording: ${name}`);
+        players.push(player);
+        const listen = pressFrom({ id: 'room-listen', title: 'Listen', does: async () => {
+            const held = await load(resource.file);
+            if (controller.signal.aborted) return;
+            if (!held.type.toLowerCase().startsWith('audio/')) throw new Error(`${name}: expected audio, received ${held.type || 'no content type'}`);
+            player.src = held.url;
+            player.hidden = false;
+            await player.play();
+            listen.element.remove();
+        } });
+        player.addEventListener('error', () => {
+            failure(media, new Error(`${name}: ${player.error?.message || 'Audio could not be played'}`));
+        });
+        const caption = document.createElement('span');
+        caption.className = 'room-media-caption';
+        sizeText(caption, 'xs');
+        caption.append(link(resource, name));
+        media.append(listen.element, player, caption);
+        return media;
+    }
 
     function mediaOf(resource: NonNullable<ReturnType<typeof roomResource>>, name: string, src: string): HTMLElement {
         const media = document.createElement('span');

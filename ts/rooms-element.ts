@@ -37,6 +37,7 @@ import { openAgentChat, type Reachable } from './agents-element';
 import type { ClaudeAm } from './claude-element';
 import { holdBackdrop, fishOf, type Fish } from './backdrop.ts';
 import { glassRoom } from './glass.ts';
+import type { RoomVoice } from './room-voice';
 
 export const LEVEL_ID = 'rooms';
 
@@ -225,6 +226,16 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
     let held: RoomAgent[] = [];
     let following: ReturnType<typeof setInterval> | null = null;
     let gone = false;
+    let sending = false;
+    let voice: RoomVoice | undefined;
+    if ((window as { __MOCK__?: unknown }).__MOCK__) {
+        void import('./mock-room-voice').then(({ mockRoomVoice }) => {
+            if (gone) return;
+            voice = mockRoomVoice(says, room);
+            form.before(voice.element);
+            preventDrag(voice.element);
+        }).catch(err => fails('voice', err));
+    }
     let giveGroundBack: () => void = () => {};
     let drawnIds = '';
     const messages = new Map<string, { source: string; row: HTMLElement; cleanups: Array<() => void> }>();
@@ -285,13 +296,16 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
 
     // Addressed to agents, what is said wakes them; addressed to nobody, it stands on the board for everyone.
     const sendIt = () => {
+        if (sending) return;
+        if (voice?.busy()) { fails('say', new Error('Finish recording and transcription before sending.')); return; }
         const words = says.value.trim();
         if (!words) return;
+        sending = true;
         says.value = '';
         failed.replaceChildren();
         reach.replaceChildren();
         const woken = addressed(words, held);
-        const said: Promise<unknown> = woken.length > 0
+        const said: Promise<unknown> = voice?.hasDraft() ? voice.send(words) : woken.length > 0
             ? rooms.wake(room, woken, words).then(answer => {
                 for (const each of answer.woken) {
                     const line = part('div', 'room-reach-line');
@@ -304,10 +318,11 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
             })
             : rooms.post(room, words);
         said.then(read).catch((err: unknown) => {
+            if (gone) return;
             fails('say', err);
             // A refusal does not cost the words: they go back in the box.
             if (!says.value.trim()) says.value = words;
-        });
+        }).finally(() => { sending = false; });
     };
     says.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendIt(); }
@@ -362,6 +377,7 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
 
     return () => {
         gone = true;
+        voice?.dispose();
         if (following) { clearInterval(following); following = null; }
         for (const held of messages.values()) held.cleanups.forEach(clean => clean());
         messages.clear();

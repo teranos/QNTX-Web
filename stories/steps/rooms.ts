@@ -9,6 +9,8 @@ const { Given, When, Then } = createBdd();
 // Where the pictures of the walk are kept, to be looked at.
 const SHOTS = 'test-results/rooms';
 const mediaWake = new WeakMap<Page, string>();
+const voiceMessage = new WeakMap<Page, string>();
+const otherPlayer = new WeakMap<Page, import('@playwright/test').ElementHandle<HTMLAudioElement>>();
 
 /**
  * The sidebar, open: on a desktop the column stands open as remembered, and
@@ -141,4 +143,93 @@ Then('the picture and composer fit the phone', async ({ page }) => {
     await expect(page.locator('.room-says')).toBeInViewport();
     await expect(page.locator('.room-send')).toBeInViewport();
     await page.screenshot({ path: `${SHOTS}/returned-picture-phone.png` });
+});
+
+Given('the browser grants microphone access', async ({ context }) => {
+    await context.grantPermissions(['microphone']);
+});
+
+When('I record a short voice message', async ({ page }) => {
+    await page.getByRole('button', { name: 'Record', exact: true }).click();
+    await expect(page.locator('.room-voice [role="status"]')).toContainText('Recording · 0:01');
+    await page.getByRole('button', { name: 'Stop', exact: true }).click();
+});
+
+Then('I can review the recording and the mock transcript', async ({ page }) => {
+    await expect(page.locator('.room-says')).toHaveValue('MOCK transcript: let us work on this together.');
+    await expect(page.locator('.room-voice audio')).toBeVisible();
+    await expect(page.locator('.room-voice audio')).toHaveAttribute('src', /^blob:/);
+    await page.locator('.room-says').fill('Let us work on this together.');
+    await page.screenshot({ path: `${SHOTS}/voice-review-${page.viewportSize()!.width}.png` });
+});
+
+Then('the words and my original audio arrive together', async ({ page }) => {
+    const row = page.locator('.room-row').filter({ hasText: 'Let us work on this together.' }).last();
+    await expect(row.locator('.room-audio')).toBeVisible();
+    voiceMessage.set(page, (await row.getAttribute('data-message'))!);
+    await expect(page.locator('.room-says')).toHaveValue('');
+    await expect(page.locator('.room-voice audio')).toBeHidden();
+});
+
+Then('I can listen to my recording after reopening the room', async ({ page }) => {
+    await page.reload();
+    // The phone opens straight into the Node Room.
+    const row = page.locator(`.room-row[data-message="${voiceMessage.get(page)}"]`);
+    await row.getByRole('button', { name: 'Listen', exact: true }).click();
+    await expect(row.locator('audio')).toBeVisible();
+    await expect.poll(() => row.locator('audio').evaluate(audio => (audio as HTMLAudioElement).currentTime)).toBeGreaterThan(0);
+    const download = page.waitForEvent('download');
+    await row.locator('.room-media-caption a').click();
+    expect((await download).suggestedFilename()).toMatch(/^voice\.(webm|m4a|ogg)$/);
+});
+
+Then('the audio and composer fit the phone', async ({ page }) => {
+    for (const selector of ['.room-audio audio:not([hidden])', '.room-says', '.room-send', '.room-voice']) {
+        const box = await page.locator(selector).last().boundingBox();
+        expect(box).not.toBeNull();
+        expect(box!.x).toBeGreaterThanOrEqual(0);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+    }
+    await expect(page.locator('.room-says')).toBeInViewport();
+    await page.screenshot({ path: `${SHOTS}/voice-phone.png` });
+});
+
+When("I listen to another participant's recording", async ({ page }) => {
+    const row = page.locator('.room-row').filter({ hasText: 'MOCK audio fixture: a quiet tone from another participant.' });
+    await row.getByRole('button', { name: 'Listen', exact: true }).click();
+    await expect.poll(() => row.locator('audio').evaluate(audio => (audio as HTMLAudioElement).currentTime)).toBeGreaterThan(0);
+    otherPlayer.set(page, await row.locator('audio').elementHandle() as import('@playwright/test').ElementHandle<HTMLAudioElement>);
+});
+
+Then('its player stays mounted when someone speaks again', async ({ page }) => {
+    const player = otherPlayer.get(page)!;
+    const before = await player.evaluate(audio => ({ src: audio.src, time: audio.currentTime }));
+    await page.locator('.room-says').fill('Keep the recording alongside the words.');
+    await page.locator('.room-send').click();
+    await expect(page.locator('.room-row').last()).toContainText('Keep the recording alongside the words.');
+    const after = await player.evaluate(audio => ({ connected: audio.isConnected, src: audio.src, time: audio.currentTime }));
+    expect(after.connected).toBe(true);
+    expect(after.src).toBe(before.src);
+    expect(after.time).toBeGreaterThanOrEqual(before.time);
+});
+
+When('the mock refuses my voice message', async ({ page }) => {
+    await page.route('**/__mock__/rooms/*/voice', route => route.fulfill({ status: 503, body: 'Voice storage refused this send' }), { times: 1 });
+    await page.locator('.room-send').click();
+});
+
+Then('my words and recording remain for another send', async ({ page }) => {
+    await expect(page.locator('.room-failed')).toContainText('Voice storage refused this send');
+    await expect(page.locator('.room-says')).toHaveValue('Let us work on this together.');
+    await expect(page.locator('.room-voice audio')).toBeVisible();
+});
+
+When('I discard the audio', async ({ page }) => {
+    await page.getByRole('button', { name: 'Discard audio', exact: true }).click();
+});
+
+Then('my reviewed words remain in the composer', async ({ page }) => {
+    await expect(page.locator('.room-says')).toHaveValue('Let us work on this together.');
+    await expect(page.locator('.room-voice audio')).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Record', exact: true })).toBeVisible();
 });

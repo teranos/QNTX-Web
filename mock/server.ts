@@ -172,7 +172,7 @@ const codexAgents = new CodexAgents();
 const agyAgents = new AgyAgents();
 // The rooms (ADR-057): the Node Room, every Node Agent in it.
 const roomStudy = files.keep(new Uint8Array(readFileSync(join(FIXTURES, 'media/pond-study.svg'))), 'image/svg+xml', 'pond-study.svg');
-const rooms = new Rooms(`/api/files/${roomStudy.id}`);
+const rooms = new Rooms(`/api/files/${roomStudy.id}`, (bytes, type, name) => `/api/files/${files.keep(bytes, type, name).id}`);
 
 /** The agent paths, answered live: am, session and say, the picture carried along. */
 async function agentAnswer(level: Level, method: string, path: string, _url: URL, req: Request): Promise<Response | null> {
@@ -484,6 +484,11 @@ Bun.serve({
             return new Response(null, { status: 303, headers: { Location: "/", "Set-Cookie": `${COOKIE}=${level}; Path=/; SameSite=Lax` } });
         }
         if (path === "/__mock__/") return json({ as: whoIs(req) ?? "nobody", levels: LEVELS });
+        if (path.startsWith('/__mock__/rooms/')) {
+            const level = whoIs(req);
+            if (level !== 'ROOT') return json({ error: 'Mock voice needs ROOT' }, 403);
+            return rooms.voice(level, path, req);
+        }
 
         if (isBackendPath(path) || path.startsWith("/.well-known/")) return answer(req, url);
 

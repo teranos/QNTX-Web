@@ -444,6 +444,12 @@
 .room-media img:not([src]) { aspect-ratio: 16 / 10; }
 .room-media img[hidden] { display: none; }
 .room-media-caption { font-size: var(--font-size-xs); }
+.room-audio audio, .room-voice audio { width: 100%; min-width: 0; height: 40px; color-scheme: dark; }
+.room-audio audio[hidden], .room-voice [hidden] { display: none; }
+.room-voice { padding: 8px 12px 0; flex-shrink: 0; }
+.room-voice-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.room-voice-controls [role="status"] { flex: 1; min-width: 100px; color: var(--text-on-dark-secondary); overflow-wrap: anywhere; }
+.room-voice audio { margin-top: 8px; }
 .room-file { color: var(--accent-on-dark); text-underline-offset: 3px; }
 .room-file[data-file] { text-decoration: none; }
 .room-file[data-file]::before { content: '↓ '; }

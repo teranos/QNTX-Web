@@ -8,7 +8,7 @@
 
 export interface RoomAgent { did: string; harness: string; name: string }
 export interface Room { id: string; provider: string; name: string; description: string; instructions: string; of: Record<string, string> }
-export interface RoomMessage { id: string; room: string; sender: string; sender_name: string; agent: RoomAgent | null; body: string; thread: string; at: string }
+export interface RoomMessage { id: string; room: string; sender: string; sender_name: string; agent: RoomAgent | null; body: string; thread: string; at: string; attachments?: Array<{ name: string; type: string; url: string }> }
 export interface RoomJoined { room: string; member: string; member_name: string; agent: RoomAgent | null; at: string }
 
 const PROVIDER = 'switchai-py';
@@ -23,7 +23,44 @@ const nodeAgent = (harness: string): RoomAgent => ({ did: 'did:key:mock-node-age
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
 export class Rooms {
-    constructor(private readonly study: string) {}
+    constructor(private readonly study: string, private readonly keepAudio: (bytes: Uint8Array, type: string, name: string) => string) {
+        // A second participant's playable fixture, not a claim of transcribed speech.
+        const samples = 16000 * 4;
+        const wav = new Uint8Array(44 + samples * 2);
+        const view = new DataView(wav.buffer);
+        const word = (at: number, text: string) => wav.set(new TextEncoder().encode(text), at);
+        word(0, 'RIFF'); view.setUint32(4, wav.length - 8, true); word(8, 'WAVE'); word(12, 'fmt ');
+        view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+        view.setUint32(24, 16000, true); view.setUint32(28, 32000, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+        word(36, 'data'); view.setUint32(40, samples * 2, true);
+        for (let i = 0; i < samples; i++) view.setInt16(44 + i * 2, Math.sin(i * 2 * Math.PI * 330 / 16000) * 1000, true);
+        const message = this.say(this.rooms[0]!, 'mock:collaborator', 'Collaborator', null, 'MOCK audio fixture: a quiet tone from another participant.');
+        message.attachments = [{ name: 'collaborator.wav', type: 'audio/wav', url: keepAudio(wav, 'audio/wav', 'collaborator.wav') }];
+    }
+
+    /** Deliberately not an /api contract: the real node has neither operation yet. */
+    async voice(level: string, path: string, req: Request): Promise<Response> {
+        const match = /^\/__mock__\/rooms\/([^/]+)\/voice(\/transcribe)?$/.exec(path);
+        const room = match && this.room(decodeURIComponent(match[1]!));
+        if (!room || req.method !== 'POST') return json({ error: 'Unknown mock voice operation' }, 404);
+        const form = await req.formData();
+        const audio = form.get('audio');
+        // Bun's multipart File.type is inferred from the filename; keep what
+        // MediaRecorder actually encoded separately in this mock-only contract.
+        const type = form.get('type');
+        if (!(audio instanceof File)) return json({ error: 'Expected an audio file' }, 400);
+        if (typeof type !== 'string' || !type.startsWith('audio/')) return json({ error: `Expected audio, received ${type}` }, 400);
+        if (!audio.size || audio.size > 3 * 1024 * 1024) return json({ error: `Expected audio up to 3 MiB, received ${audio.size} bytes` }, 400);
+        if (match[2]) return json({ text: 'MOCK transcript: let us work on this together.' });
+        const body = form.get('body');
+        if (typeof body !== 'string' || !body.trim()) return json({ error: 'A transcript is required' }, 400);
+        const extension = type.includes('mp4') ? 'm4a' : type.includes('ogg') ? 'ogg' : 'webm';
+        const name = `voice.${extension}`;
+        const url = this.keepAudio(new Uint8Array(await audio.arrayBuffer()), type, name);
+        const said = this.say(room, `mock:${level}`, level.toLowerCase(), null, body);
+        said.attachments = [{ name, type, url }];
+        return json({ id: said.id });
+    }
 
     private rooms: Room[] = [
         { id: 'node-room', provider: PROVIDER, name: 'Node Room', description: 'the Node Agents of this node, in every harness it runs them in', instructions: 'the Agy, Claude, Codex Node Agents are all in the Node Room', of: { node: NODE_DID } },

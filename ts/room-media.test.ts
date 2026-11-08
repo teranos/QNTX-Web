@@ -1,9 +1,53 @@
 import { describe, expect, test, spyOn } from 'bun:test';
-import { roomBody, roomResource } from './room-media';
+import { roomBody, roomResource, roomAttachmentResource } from './room-media';
 
 const settle = async () => { for (let i = 0; i < 5; i++) await new Promise(resolve => setTimeout(resolve, 0)); };
 
 describe('media returned into a room', () => {
+    test('provider attachments stay on the node', () => {
+        expect(roomAttachmentResource('/api/switchai-py/media?room=r&mxc=x')?.file).toBe('/api/switchai-py/media?room=r&mxc=x');
+        for (const path of ['https://elsewhere.test/a', '//elsewhere.test/a', '/api/../auth/keys', '/api/%2e%2e/auth/keys', '/api/x\\other', '/api/x#fragment']) expect(roomAttachmentResource(path)).toBeUndefined();
+    });
+
+    test('audio loads only on Listen, plays authenticated bytes, and stops on disposal', async () => {
+        const create = spyOn(URL, 'createObjectURL').mockReturnValue('blob:voice');
+        const revoke = spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+        const play = spyOn(window.HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+        const pause = spyOn(window.HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
+        const reset = spyOn(window.HTMLMediaElement.prototype, 'load').mockImplementation(() => {});
+        const paths: string[] = [];
+        const body = roomBody('The words', async path => {
+            paths.push(path);
+            return new Response('audio', { headers: { 'Content-Type': 'audio/mp4' } });
+        }, [{ name: 'voice.m4a', type: 'audio/mp4', url: '/api/switchai-py/media?room=r&mxc=x' }]);
+        try {
+            expect(paths).toHaveLength(0);
+            body.element.querySelector('button')!.click();
+            await settle();
+            expect(paths).toEqual(['/api/switchai-py/media?room=r&mxc=x']);
+            expect(body.element.querySelector('audio')?.src).toBe('blob:voice');
+            expect(play).toHaveBeenCalledTimes(1);
+            body.dispose();
+            expect(pause).toHaveBeenCalled();
+            expect(body.element.querySelector('audio')?.hasAttribute('src')).toBe(false);
+            expect(revoke).toHaveBeenCalledWith('blob:voice');
+        } finally { for (const spy of [create, revoke, play, pause, reset]) spy.mockRestore(); }
+    });
+
+    test('an audio attachment cannot turn an HTML response into a player', async () => {
+        const create = spyOn(URL, 'createObjectURL').mockReturnValue('blob:wrong');
+        const pause = spyOn(window.HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
+        const reset = spyOn(window.HTMLMediaElement.prototype, 'load').mockImplementation(() => {});
+        const body = roomBody('The words', async () => new Response('<html>Sign in</html>', { headers: { 'Content-Type': 'text/html' } }), [{ name: 'voice.m4a', type: 'audio/mp4', url: '/api/files/a' }]);
+        document.body.append(body.element);
+        try {
+            body.element.querySelector('button')!.click();
+            await settle();
+            expect(body.element.textContent).toContain('expected audio, received text/html');
+            expect(body.element.querySelector('audio')?.hasAttribute('src')).toBe(false);
+            body.dispose();
+        } finally { body.element.remove(); for (const spy of [create, pause, reset]) spy.mockRestore(); }
+    });
     test('only node files use authenticated fetch; external links must be HTTPS', () => {
         expect(roomResource('/api/files/file-1')?.file).toBe('/api/files/file-1');
         expect(roomResource('http://localhost/api/files/file-1')?.file).toBe('/api/files/file-1');

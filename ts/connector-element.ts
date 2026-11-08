@@ -18,7 +18,7 @@ import { person } from './self-person';
 import { openElement as openStanding, restLevelInSidebar, levelRow } from './sidebar.ts';
 import { openAgentElement, ELEMENT_ID as AGENT_CHAT_ID } from './agents-element.ts';
 import { CONNECTOR } from './sym';
-import { createToken, OAUTH, type CreateTokenResponse } from './token-mint-element';
+import { createToken, OAUTH, type CreateTokenResponse } from './client-mint';
 import type { NamespaceKeys } from './generated/proto/plugin/grpc/protocol/sigil';
 
 export const needs = ['/am/node', '/auth/tokens'] as const;

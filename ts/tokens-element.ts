@@ -1,19 +1,20 @@
 /**
- * Access Tokens Element — machine-access token management (ADR-025).
+ * Access Tokens Element — the tokens the node holds, read only.
  *
  * Plain window (no panel manifestation). Reached from the Self element. Lists
- * tokens without raw values, revokes and enables them. Minting one is its own
- * element: surveying and creating are different acts.
+ * the tokens that still work, without raw values; what no longer works is a
+ * press away. Nothing is minted here: a third-party OAuth client is minted in
+ * the Connector element, and nothing else is.
  */
 
+// "Tokens are to be removed from QNTX except for third-party OAuth clients"
+
 import type { Element } from '@teranos/elements';
-import { createTable, pressFrom } from '@teranos/elements';
+import { createTable } from '@teranos/elements';
 import { openElement } from './sidebar.ts';
 import { apiJson } from './client/http';
-import { openTokenMintElement } from './token-mint-element';
 import { openTokenElement } from './token-element';
 import { log, SEG } from './logger';
-import { person } from './self-person';
 import { long, spanBetween } from './span';
 import { stacked } from './table-cell';
 import { errorBox } from './element-parts';
@@ -149,17 +150,17 @@ function statusPill(t: TokenInfo, now: Date): HTMLTableCellElement {
     return td;
 }
 
-/** Whether the list shows only the tokens that still work. */
-let liveOnly = false;
+/** Whether the list shows what no longer works too: revoked and expired. */
+let showEnded = false;
 
 /** The switch in the Status header that hides what no longer works. */
 function liveOnlyToggle(onToggle: () => void): HTMLButtonElement {
     const toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.className = 'tokens-live-only';
-    toggle.setAttribute('aria-pressed', liveOnly ? 'true' : 'false');
-    toggle.textContent = liveOnly ? 'live only' : 'all';
-    toggle.title = liveOnly ? 'press to show revoked and expired tokens too' : 'press to hide revoked and expired tokens';
+    toggle.setAttribute('aria-pressed', showEnded ? 'true' : 'false');
+    toggle.textContent = showEnded ? 'all' : 'active';
+    toggle.title = showEnded ? 'press to hide revoked and expired tokens' : 'press to show revoked and expired tokens too';
     toggle.style.cursor = 'pointer';
     toggle.style.background = 'none';
     toggle.style.border = '1px solid var(--border-on-dark)';
@@ -168,7 +169,7 @@ function liveOnlyToggle(onToggle: () => void): HTMLButtonElement {
     toggle.style.fontFamily = 'inherit';
     toggle.style.padding = '0 6px';
     toggle.addEventListener('click', () => {
-        liveOnly = !liveOnly;
+        showEnded = !showEnded;
         onToggle();
     });
     return toggle;
@@ -176,7 +177,7 @@ function liveOnlyToggle(onToggle: () => void): HTMLButtonElement {
 
 /** Exported for tests. Revoking and enabling are the token element's: a row is
  *  a way in to it and nothing else. */
-export function renderList(container: HTMLElement, tokens: TokenInfo[], now = new Date()): void {
+export function renderList(container: HTMLElement, tokens: TokenInfo[], now = new Date(), all = showEnded): void {
     container.innerHTML = '';
 
     if (tokens.length === 0) {
@@ -194,7 +195,7 @@ export function renderList(container: HTMLElement, tokens: TokenInfo[], now = ne
         // What a client issued, an access token each hour and a refresh token
         // beside it, is listed in the client's element.
         if (t.client_did) continue;
-        if (liveOnly && ended(t, now)) continue;
+        if (!all && ended(t, now)) continue;
 
         const label = stacked(t.label, `${t.level || '—'} · ${t.namespaces?.length ? t.namespaces.join(', ') : '—'}`);
         // The label is the way in to the token's own element, where it is
@@ -223,39 +224,12 @@ export function renderList(container: HTMLElement, tokens: TokenInfo[], now = ne
     // "I don't need to see the did in mobile as it's own col": on a phone the
     // DID column goes, and the token's own element still carries it.
     for (const row of table.rows) row.cells[2]?.classList.add('element-wide-only');
-    statusHead.append(' ', liveOnlyToggle(() => { renderList(container, tokens, now); }));
+    statusHead.append(' ', liveOnlyToggle(() => { renderList(container, tokens, now, showEnded); }));
     container.appendChild(table);
 }
 
 async function refreshList(container: HTMLElement): Promise<void> {
     renderList(container, await fetchTokens());
-}
-
-/** The way to the mint element. Creating one token is not surveying them all. */
-function renderMintLink(container: HTMLElement, listContainer: HTMLElement): void {
-    container.innerHTML = '';
-    container.style.padding = '8px 0';
-
-    // A plus, because there is one thing to add here and its name is the row
-    // it becomes. The palette says the same with a symbol and no words.
-    const mint = pressFrom({ id: 'tokens-mint', title: '+', does: async () => {
-        // The list hears about the token rather than waiting to be asked.
-        openTokenMintElement(() => { void refreshList(listContainer); });
-    } });
-    mint.element.title = 'mint a token';
-    mint.element.setAttribute('aria-label', 'Mint a token');
-    container.appendChild(mint.element);
-
-    // "i want to see the + but it needs to be grayed out and on hover it needs to say this"
-    person().then(who => {
-        if (who.via !== 'token') return;
-        const why = 'only a session mints a token, and this page reaches the node as a token';
-        mint.hold(why);
-        // A disabled button can get no hover of its own, so the row around it says it too.
-        container.title = why;
-    }).catch((err: unknown) => {
-        log.error(SEG.UI, '[TokensElement] the node did not say who is looking', err);
-    });
 }
 
 // Who this is for: whoever reaches these (audience.ts).
@@ -278,11 +252,6 @@ export function createTokensElement(): Element {
             listContainer.className = 'tokens-list';
             listContainer.innerHTML = '<div class="element-loading">Loading tokens…</div>';
 
-            const mintContainer = document.createElement('div');
-            mintContainer.className = 'tokens-mint-link';
-            renderMintLink(mintContainer, listContainer);
-
-            content.appendChild(mintContainer);
             content.appendChild(listContainer);
 
             refreshList(listContainer).catch(err => {

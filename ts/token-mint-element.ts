@@ -53,12 +53,11 @@ export async function createToken(
 }
 
 /**
- * The three kinds a token is minted as, named the way the node names them
- * (server/auth/admission.go). The generated AccessLevel is a User's ladder and
- * numbers its members, so it does not answer for what a mint sends.
+ * The kind a token is minted as, named the way the node names it
+ * (server/auth/admission.go).
+ *
+ * "Tokens are to be removed from QNTX except for third-party OAuth clients"
  */
-export const SUPER = 'SUPER';
-export const ATTESTOR = 'ATTESTOR';
 export const OAUTH = 'OAUTH';
 
 function option(value: string, text: string): HTMLOptionElement {
@@ -70,8 +69,6 @@ function option(value: string, text: string): HTMLOptionElement {
 
 /** What each kind says of itself, in the order the rows are drawn. */
 export const KINDS: ReadonlyArray<readonly [string, string]> = [
-    [SUPER, 'does pretty much everything'],
-    [ATTESTOR, 'attests what the roles its DID holds say'],
     [OAUTH, 'is a door: an app let in on your say-so'],
 ];
 
@@ -213,14 +210,12 @@ export function renderMint(content: HTMLElement): void {
     returnAddress.placeholder = 'https://app.example/callback';
     returnAddress.size = 28;
 
-    // A SUPER token is not narrowed, so the field that narrows one is
-    // not asked for when that is what is being minted. A client's
-    // connector acts in the namespace picked here and nowhere else
+    // A client's connector acts in the namespace picked here and nowhere else
     // (ADR-038), and a client is also asked where its codes go.
     const narrowing: HTMLElement[] = [];
     const returning: HTMLElement[] = [];
     const showNarrowing = () => {
-        const narrowed = kind.value === ATTESTOR || kind.value === OAUTH;
+        const narrowed = kind.value === OAUTH;
         for (const row of narrowing) row.hidden = !narrowed;
         const client = kind.value === OAUTH;
         for (const row of returning) row.hidden = !client;
@@ -254,7 +249,7 @@ export function renderMint(content: HTMLElement): void {
             if (!kind.value) {
                 throw new Error('no kind');
             }
-            const narrowed = kind.value === ATTESTOR || kind.value === OAUTH;
+            const narrowed = kind.value === OAUTH;
             if (narrowed && namespace.value === '') {
                 throw new Error('no namespace picked');
             }

@@ -11,7 +11,7 @@
  */
 
 import { describe, test, expect, beforeEach } from 'bun:test';
-import { kindRows, renderMint, KINDS, ATTESTOR, OAUTH } from './token-mint-element.ts';
+import { kindRows, renderMint, KINDS, OAUTH } from './token-mint-element.ts';
 
 const USE_JSDOM = process.env.USE_JSDOM === '1';
 
@@ -44,7 +44,11 @@ describe('Mint Token kind rows', () => {
         }
     });
 
-    test('pressing a row names the kind, and pressing another moves it', () => {
+    test('the one kind a mint offers is a third-party client', () => {
+        expect(KINDS.map(([kind]) => kind)).toEqual([OAUTH]);
+    });
+
+    test('pressing the row names the kind', () => {
         const kind = kindRows();
         container.appendChild(kind.element);
         let heard = 0;
@@ -53,11 +57,7 @@ describe('Mint Token kind rows', () => {
         rows().find(r => r.dataset.kind === OAUTH)!.click();
         expect(kind.value).toBe(OAUTH);
         expect(rows().filter(r => r.getAttribute('aria-checked') === 'true').map(r => r.dataset.kind)).toEqual([OAUTH]);
-
-        rows().find(r => r.dataset.kind === ATTESTOR)!.click();
-        expect(kind.value).toBe(ATTESTOR);
-        expect(rows().filter(r => r.getAttribute('aria-checked') === 'true').map(r => r.dataset.kind)).toEqual([ATTESTOR]);
-        expect(heard).toBe(2);
+        expect(heard).toBe(1);
     });
 
     test('the form asks for what the pressed kind needs and nothing else', () => {
@@ -67,10 +67,6 @@ describe('Mint Token kind rows', () => {
 
         // Nothing pressed: neither the narrowing nor the return address is asked for.
         expect(labelOf('Namespace').hidden).toBe(true);
-        expect(labelOf('Return address').hidden).toBe(true);
-
-        rows().find(r => r.dataset.kind === ATTESTOR)!.click();
-        expect(labelOf('Namespace').hidden).toBe(false);
         expect(labelOf('Return address').hidden).toBe(true);
 
         // "i want to set the namespace there and there only"

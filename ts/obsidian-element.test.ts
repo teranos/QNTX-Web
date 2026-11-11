@@ -185,7 +185,7 @@ describe('a folder is bound by clicking', () => {
     });
 });
 
-// "in reality its still one story"
+// "「[Opus 5.5] in reality its still one story」"
 describe('Tim: a file or directory is bound by clicking', () => {
     const picking = () => {
         answers = {

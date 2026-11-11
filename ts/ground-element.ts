@@ -25,7 +25,7 @@
 // Not drawn yet, every session file on disk and its import state: loom's SessionList.svelte at d512ffb2.
 
 import type { Element } from '@teranos/elements';
-import { renderSparkline } from '@teranos/elements';
+import { renderSparkline, declareScroller } from '@teranos/elements';
 import { openElement } from './sidebar.ts';
 import { apiJson } from './client/http';
 import { log, SEG } from './logger';
@@ -928,6 +928,9 @@ export function createGroundElement(): Element {
         renderContent: () => {
             const body = document.createElement('div');
             body.className = 'ground';
+            // Ground's book is the element's one scroller (it is bounded by max-height in ground.css): said to the
+            // package, which then keeps its own body from scrolling too.
+            declareScroller(body);
             const scene = drawGround(body);
             followNode(body, scene);
             apiJson<{ transcripts: TranscriptRead[] }>('/api/transcripts')

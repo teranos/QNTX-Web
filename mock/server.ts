@@ -96,8 +96,8 @@ function worldAnswer(level: Level, method: string, path: string, url: URL): Resp
         return json({ paths: tablet.reached(level, asked) });
     }
     if (path === "/api/dev") return new Response("false");
-    // The statusline is the fixture's items plus the rooms: what was last said in one, so the ground under
-    // everything, which reads the statusline, moves when somebody speaks in a room.
+    // 「[Fable 5.1] The statusline is the fixture's items plus the rooms: what was last said in one, so the ground under」
+    // 「[Fable 5.1] everything, which reads the statusline, moves when somebody speaks in a room.」
     // "and i want the visual to respond to the server statusline"
     if (path === "/am/statusline") {
         const held = fixture("am/statusline") as { items: unknown[] };
@@ -137,7 +137,7 @@ function publishedElements(): Array<{ name: string; as: string; url: string; pub
         const stamp = Bun.file(file).lastModified;
         return { name, as: `mock-${name}-${stamp}`, url: `/g/${name}.js`, published: new Date(stamp).toISOString(), by: ["mock"], signer: "" };
     };
-    // The first published is the ground shown until one is chosen: piranha, where this machine has it; pond otherwise.
+    // 「[Fable 5.1] The first published is the ground shown until one is chosen: piranha, where this machine has it; pond otherwise.」
     const elements = [];
     if (PIRANHA_ELEMENT && existsSync(PIRANHA_ELEMENT)) elements.push(published("piranha", PIRANHA_ELEMENT));
     elements.push(published("pond", POND_ELEMENT));

@@ -270,7 +270,7 @@ export function drawRoom(body: HTMLElement, room: Room, rooms: Rooms = theRooms,
             rows.push({ at: message.at, row: held.row });
         }
         rows.sort((a, b) => a.at.localeCompare(b.at));
-        // Keep existing media mounted while new messages arrive.
+        // 「[Fable 5.1] Keep existing media mounted while new messages arrive.」
         const keep = new Set(rows.map(r => r.row));
         for (const child of Array.from(board.children)) if (!keep.has(child as HTMLElement)) child.remove();
         rows.forEach(({ row }, index) => {

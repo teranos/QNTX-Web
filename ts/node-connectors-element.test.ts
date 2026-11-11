@@ -3,7 +3,7 @@
 // Spike: part of what the node needs, a refused rule, Done pressed too soon, what the Console puts around an ID.
 
 import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
-// The Obsidian element asks the node through ./client, which the preload stands in for: here it answers the vault.
+// 「[Opus 5.5] The Obsidian element asks the node through ./client, which the preload stands in for: here it answers the vault.」
 mock.module('./client', () => ({
     connectivity: {
         get state() { return 'online' as const; },

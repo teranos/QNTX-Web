@@ -199,6 +199,9 @@ export function createUsersElement(): Element {
             // (fit.ts), so the content says its width, and the table takes 100% of that.
             // "and Users on Desktop doesnt need to go full screen"
             content.style.width = '640px';
+            // Border-box: the package caps every box at max-width: 100% (fit.ts), and a content-box one adds its 12px
+            // padding on top of that cap, 24px wider than what holds it: on a phone, TOO WIDE and the element dead.
+            content.style.boxSizing = 'border-box';
 
             const listContainer = document.createElement('div');
             listContainer.className = 'users-list';

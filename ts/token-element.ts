@@ -411,9 +411,9 @@ export function askedPress(container: HTMLElement, t: TokenInfo): HTMLElement {
         return ask;
     }
     says.textContent = `Press Revoke below. ${named} stops working, and Enable brings it back.`;
-    // "the action happens"
-    // "on my OK"
-    // One press: Enable undoes it, so nothing is armed first.
+    // "「[Opus 5.5] the action happens」"
+    // "「[Opus 5.5] on my OK」"
+    // 「[Fable 5.2] One press: Enable undoes it, so nothing is armed first.」
     const revoke = pressFrom({ id: `token-asked-revoke-${t.id}`, title: 'Revoke', does: async () => {
         await revokeToken(t.id);
         await redraw(container, t.id, 'revoke');
@@ -584,8 +584,8 @@ function elementIdFor(id: string): string {
 
 /**
  * Opens one token as its own element. `raw` is present only when the token was
- * just minted, which is the one moment it exists at all. `asked` is what a link
- * asked the person to press there.
+ * 「[Fable 5.2] just minted, which is the one moment it exists at all. `asked` is what a link」
+ * 「[Fable 5.2] asked the person to press there.」
  */
 export function openTokenElement(id: string, label: string, raw?: string, asked?: Asked): void {
     const elementId = elementIdFor(id);

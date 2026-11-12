@@ -78,8 +78,8 @@ test('an invitation into pond says pond under invited', () => {
     expect(level).toContain('pond');
 });
 
-// Seen on a phone: "TOO WIDE: users-element: its content is 417px wide in 393px". The content said 640px and 12px of
-// padding; the package caps a box at 100% (fit.ts) and a content-box one grows by its padding past the cap.
+// 「[Sonnet 5.5] Seen on a phone: "TOO WIDE: users-element: its content is 417px wide in 393px". The content said 640px and 12px of」
+// 「[Sonnet 5.5] padding; the package caps a box at 100% (fit.ts) and a content-box one grows by its padding past the cap.」
 test('the content is border-box, so the package\'s cap holds with its padding inside it', () => {
     const had = globalThis.fetch;
     globalThis.fetch = (() => Promise.reject(new Error('no node here'))) as typeof fetch;

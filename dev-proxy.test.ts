@@ -2,7 +2,7 @@ import { describe, test, expect } from 'bun:test';
 import { resolveBackend, resolveCredential, resolveOrigin, resolveDevPluginDirs, backendHeaders, dropSetCookie, backendWsUrl, isBackendPath, prefixesOf } from './dev-proxy';
 import { createPrivateKey, createPublicKey, verify } from "node:crypto";
 
-// The zero seed, whose did:key ground's tests name too.
+// 「[Opus 5.5] The zero seed, whose did:key ground's tests name too.」
 const SEED = '0000000000000000000000000000000000000000000000000000000000000000';
 const SEED_DID = 'did:key:z6MkiTBz1ymuepAQ4HEHYSF1H8quG5GLVVQR3djdX3mDooWp';
 

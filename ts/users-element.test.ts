@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { fmt, renderList, type UserRecord } from './users-element';
+import { fmt, renderList, createUsersElement, type UserRecord } from './users-element';
 
 function root(): UserRecord {
     return {
@@ -76,4 +76,18 @@ test('an invitation into pond says pond under invited', () => {
     const level = container.querySelector('tbody tr')!.children[1].textContent;
     expect(level).toContain('invited');
     expect(level).toContain('pond');
+});
+
+// Seen on a phone: "TOO WIDE: users-element: its content is 417px wide in 393px". The content said 640px and 12px of
+// padding; the package caps a box at 100% (fit.ts) and a content-box one grows by its padding past the cap.
+test('the content is border-box, so the package\'s cap holds with its padding inside it', () => {
+    const had = globalThis.fetch;
+    globalThis.fetch = (() => Promise.reject(new Error('no node here'))) as typeof fetch;
+    try {
+        const content = createUsersElement().renderContent() as HTMLElement;
+        expect(content.style.boxSizing).toBe('border-box');
+        expect(content.style.width).toBe('640px');
+    } finally {
+        globalThis.fetch = had;
+    }
 });

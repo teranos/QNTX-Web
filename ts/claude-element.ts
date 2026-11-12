@@ -210,14 +210,21 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     says.rows = 2;
     says.placeholder = 'Say something to the Node Agent';
     const send = part('button', 'qntx-btn qntx-btn-small claude-send');
-    send.textContent = 'Say';
+    // "I dont want to diverge from what industry is doing": a chat's buttons
+    // are glyphs, as the Claude app's are and as the room's send is. The words
+    // stay, for a reader and a hover.
+    send.textContent = '→';
+    send.setAttribute('aria-label', 'Say');
+    send.title = 'Say';
     // > being able to attach an imagine whne in a mobile chat
     const pick = part('input', 'claude-pick');
     pick.type = 'file';
     pick.accept = 'image/*';
     pick.hidden = true;
     const attach = part('button', 'qntx-btn qntx-btn-small claude-attach');
-    attach.textContent = 'Picture';
+    attach.textContent = '+';
+    attach.setAttribute('aria-label', 'Picture');
+    attach.title = 'Picture';
     const attached = part('div', 'claude-attached');
     const form = part('div', 'claude-say');
     form.append(mode, model, attach, pick, send, attached, says);
@@ -311,7 +318,9 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         shown.alt = 'the picture to be said';
         shown.addEventListener('load', () => URL.revokeObjectURL(shown.src));
         const drop = part('button', 'qntx-btn qntx-btn-small claude-drop');
-        drop.textContent = 'Without it';
+        drop.textContent = '×';
+        drop.setAttribute('aria-label', 'Without it');
+        drop.title = 'Without it';
         drop.addEventListener('click', () => carry(null));
         attached.append(shown, drop);
     };

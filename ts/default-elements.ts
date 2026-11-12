@@ -67,7 +67,7 @@ export async function registerDefaultElements(hasCanvas: boolean = true): Promis
         // ⧉ — Connectors: ChatGPT, Claude, Obsidian, OpenRouter and GitHub, each its own story.
         // Obsidian and GitHub open from here, and are not in the tray of their own.
         { needs: connectorNeeds, create: createConnectorElement },
-        // Access Tokens Element — opened from ⍟ (ADR-025)
+        // Access Tokens Element — opened from ⍟
         { needs: tokensNeeds, create: createTokensElement },
         { needs: usersNeeds, create: createUsersElement },
         // Roles Element — every role the lines name, opened from ⍟ (ADR-034)

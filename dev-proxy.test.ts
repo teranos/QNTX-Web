@@ -1,5 +1,15 @@
 import { describe, test, expect } from 'bun:test';
 import { resolveBackend, resolveCredential, resolveOrigin, resolveDevPluginDirs, backendHeaders, dropSetCookie, backendWsUrl, isBackendPath, prefixesOf } from './dev-proxy';
+import { createPrivateKey, createPublicKey, verify } from "node:crypto";
+
+// The zero seed, whose did:key ground's tests name too.
+const SEED = '0000000000000000000000000000000000000000000000000000000000000000';
+const SEED_DID = 'did:key:z6MkiTBz1ymuepAQ4HEHYSF1H8quG5GLVVQR3djdX3mDooWp';
+
+function claimsOf(authorization: string): Record<string, string> {
+    expect(authorization.startsWith('Signed ')).toBe(true);
+    return JSON.parse(Buffer.from(authorization.slice('Signed '.length).split('.')[1], 'base64url').toString());
+}
 
 describe('resolveBackend', () => {
     test('a port on this machine is still the default', () => {
@@ -34,22 +44,36 @@ describe('backendHeaders', () => {
         expect(h.get('Origin')).toBe('https://q.sbvh.nl');
     });
 
-    test('a token is what the relay presents', () => {
-        const h = backendHeaders(new Headers(), { token: 'tok_7' }, '');
-        expect(h.get('Authorization')).toBe('Bearer tok_7');
+    test('the key this machine keeps signs what the relay presents', () => {
+        const h = backendHeaders(new Headers(), { seed: SEED, audience: 'https://api.q.sbvh.nl' }, '');
+        const claims = claimsOf(h.get('Authorization') || '');
+        expect(claims.aud).toBe('https://api.q.sbvh.nl');
+        expect(claims.iss).toBe(SEED_DID);
+        expect(claims.sub).toBe(SEED_DID);
         expect(h.get('Cookie')).toBeNull();
     });
 
-    test('a session works where no token was minted', () => {
+    test('each request is signed afresh: the node admits a signature once', () => {
+        const credential = { seed: SEED, audience: 'https://api.q.sbvh.nl' };
+        const first = claimsOf(backendHeaders(new Headers(), credential, '').get('Authorization') || '');
+        const second = claimsOf(backendHeaders(new Headers(), credential, '').get('Authorization') || '');
+        expect(first.jti).not.toBe(second.jti);
+    });
+
+    test('the signature verifies against the key its DID names', () => {
+        const signed = (backendHeaders(new Headers(), { seed: SEED, audience: 'https://api.q.sbvh.nl' }, '').get('Authorization') || '').slice('Signed '.length);
+        const [header, claims, signature] = signed.split('.');
+        const pub = createPublicKey(createPrivateKey({
+            key: Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), Buffer.from(SEED, 'hex')]),
+            format: 'der', type: 'pkcs8',
+        }));
+        expect(verify(null, Buffer.from(`${header}.${claims}`), pub, Buffer.from(signature, 'base64url'))).toBe(true);
+    });
+
+    test('a session works where no key is kept', () => {
         const h = backendHeaders(new Headers(), { session: 'abc123' }, '');
         expect(h.get('Cookie')).toBe('qntx_session=abc123');
         expect(h.get('Authorization')).toBeNull();
-    });
-
-    test('a token outranks a session, because it says whose it is', () => {
-        const h = backendHeaders(new Headers(), { token: 'tok_7', session: 'abc123' }, '');
-        expect(h.get('Authorization')).toBe('Bearer tok_7');
-        expect(h.get('Cookie')).toBeNull();
     });
 
     test('no credential means none invented', () => {
@@ -60,8 +84,8 @@ describe('backendHeaders', () => {
 
     test('what the browser sent never reaches the node as a credential', () => {
         const incoming = new Headers({ Cookie: 'qntx_session=stale', Authorization: 'Bearer stale' });
-        const h = backendHeaders(incoming, { token: 'fresh' }, '');
-        expect(h.get('Authorization')).toBe('Bearer fresh');
+        const h = backendHeaders(incoming, { seed: SEED, audience: 'https://api.q.sbvh.nl' }, '');
+        expect(h.get('Authorization')?.startsWith('Signed ')).toBe(true);
         expect(h.get('Cookie')).toBeNull();
     });
 
@@ -87,8 +111,12 @@ describe('resolveOrigin', () => {
 });
 
 describe('resolveCredential', () => {
-    test('QNTX_TOKEN is the token', () => {
-        expect(resolveCredential({ QNTX_TOKEN: 'tok_7' })).toEqual({ token: 'tok_7' });
+    test('the key kept is what signs, for the node named', () => {
+        expect(resolveCredential({}, SEED, 'https://api.q.sbvh.nl')).toEqual({ seed: SEED, audience: 'https://api.q.sbvh.nl' });
+    });
+
+    test('a session named in the environment is the operator choosing it', () => {
+        expect(resolveCredential({ QNTX_SESSION: 'abc' }, SEED, 'https://api.q.sbvh.nl')).toEqual({ session: 'abc' });
     });
 
     test('QNTX_SESSION is the session', () => {

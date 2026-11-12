@@ -6,6 +6,7 @@
 // A copy of what the node serves at /openapi.json, kept here because that path
 // is behind the door and this is read before any credential is.
 import openapi from "./openapi.json";
+import { createPrivateKey, createPublicKey, randomBytes, sign } from "node:crypto";
 
 export interface Backend {
     url: string;
@@ -23,28 +24,77 @@ export function resolveBackend(env: Record<string, string | undefined>, backendP
     return { url, isRemote };
 }
 
-/** What the relay presents as itself. A token says whose it is; a session is borrowed. */
+// What the relay presents as itself: the key this machine keeps, signing each
+// request for the node it goes to, or a borrowed session.
+//
+// "A signature proves the key, and nothing reusable leaves the node."
 export interface Credential {
-    token?: string;
+    /** The seed in ~/.qntx/key, sixty-four hex characters. */
+    seed?: string;
+    /** The node a signature is for: its public origin. */
+    audience?: string;
     session?: string;
 }
 
-/** A token is preferred: it is minted, scoped and revocable on its own (ADR-025). */
-
-// `held` is what ~/.qntx/token holds, which is where this machine keeps the one
-// every other tool here already uses. Asking the operator to hand it over again
-// through the environment is asking for a thing they have already given.
-export function resolveCredential(env: Record<string, string | undefined>, held = ''): Credential {
-    if (env.QNTX_TOKEN) {
-        return { token: env.QNTX_TOKEN };
-    }
+// `held` is what ~/.qntx/key holds: the key ground and the qntx CLI sign with,
+// which the node holds a grant for. A session named in the environment is the
+// operator saying which to present.
+export function resolveCredential(env: Record<string, string | undefined>, held = '', audience = ''): Credential {
     if (env.QNTX_SESSION) {
         return { session: env.QNTX_SESSION };
     }
     if (held) {
-        return { token: held };
+        return { seed: held, audience };
     }
     return {};
+}
+
+const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+
+function base58(bytes: Uint8Array): string {
+    let n = 0n;
+    for (const b of bytes) n = (n << 8n) | BigInt(b);
+    let out = '';
+    while (n > 0n) {
+        out = B58[Number(n % 58n)] + out;
+        n /= 58n;
+    }
+    for (const b of bytes) {
+        if (b !== 0) break;
+        out = '1' + out;
+    }
+    return out;
+}
+
+function base64url(bytes: Uint8Array | string): string {
+    return Buffer.from(bytes).toString('base64url');
+}
+
+/**
+ * The Authorization one request goes with: a JWT signed by the key whose seed
+ * is given, as its did:key, for audience, lasting a minute, with an id of its
+ * own — the node admits each once.
+ */
+export function signedFor(seedHex: string, audience: string, nowSeconds: number): string {
+    const seed = Buffer.from(seedHex.trim(), 'hex');
+    if (seed.length !== 32) {
+        throw new Error('~/.qntx/key holds no 32-byte seed in hex');
+    }
+    const key = createPrivateKey({
+        key: Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), seed]),
+        format: 'der',
+        type: 'pkcs8',
+    });
+    const spki = createPublicKey(key).export({ format: 'der', type: 'spki' });
+    const did = 'did:key:z' + base58(Uint8Array.from([0xed, 0x01, ...spki.subarray(spki.length - 32)]));
+    const header = base64url(JSON.stringify({ alg: 'EdDSA', typ: 'JWT' }));
+    const claims = base64url(JSON.stringify({
+        iss: did, sub: did, aud: audience,
+        exp: Math.floor(nowSeconds) + 60,
+        jti: randomBytes(16).toString('hex'),
+    }));
+    const signature = base64url(sign(null, Buffer.from(`${header}.${claims}`), key));
+    return `Signed ${header}.${claims}.${signature}`;
 }
 
 /**
@@ -71,8 +121,8 @@ export function backendHeaders(incoming: Headers, credential: Credential, origin
     h.delete('cookie');
     h.delete('authorization');
 
-    if (credential.token) {
-        h.set('Authorization', `Bearer ${credential.token}`);
+    if (credential.seed) {
+        h.set('Authorization', signedFor(credential.seed, credential.audience || '', Date.now() / 1000));
     } else if (credential.session) {
         h.set('Cookie', `qntx_session=${credential.session}`);
     }

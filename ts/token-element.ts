@@ -1,5 +1,5 @@
 /**
- * Token Element — one access token, on its own (ADR-025, TOKATTEST).
+ * Token Element — one access token, on its own (TOKATTEST).
  * Reached by pressing a row in the Access Tokens list, and by finishing a mint.
  * The raw value exists only on the second of those, and only once.
  */

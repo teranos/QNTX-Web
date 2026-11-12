@@ -301,6 +301,20 @@ async function init(): Promise<void> {
         history.replaceState(null, '', cleaned.toString());
     }
 
+    // "so give me the link"
+    // "the action happens"
+    // "on my OK"
+    // "not me searhing for it in the ui"
+    // A link naming a token opens that token, where Revoke and Enable are.
+    const token = new URLSearchParams(location.search).get('token');
+    if (token && who) {
+        const { openTokenElement } = await import('./token-element.ts');
+        openTokenElement(token, '');
+        const cleaned = new URL(location.href);
+        cleaned.searchParams.delete('token');
+        history.replaceState(null, '', cleaned.toString());
+    }
+
     // The canvases this person may act on where they stand, and which one the
     // page is built for: the one remembered, or the namespace's own, or none.
     // "i expect to not see any canvas if a namespace has none"

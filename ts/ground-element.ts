@@ -928,8 +928,8 @@ export function createGroundElement(): Element {
         renderContent: () => {
             const body = document.createElement('div');
             body.className = 'ground';
-            // Ground's book is the element's one scroller (it is bounded by max-height in ground.css): said to the
-            // package, which then keeps its own body from scrolling too.
+            // 「[Sonnet 5.5] Ground's book is the element's one scroller (it is bounded by max-height in ground.css): said to the」
+            // 「[Sonnet 5.5] package, which then keeps its own body from scrolling too.」
             declareScroller(body);
             const scene = drawGround(body);
             followNode(body, scene);

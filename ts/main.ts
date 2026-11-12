@@ -301,11 +301,11 @@ async function init(): Promise<void> {
         history.replaceState(null, '', cleaned.toString());
     }
 
-    // "so give me the link"
-    // "the action happens"
-    // "on my OK"
-    // "not me searhing for it in the ui"
-    // A link naming a token opens that token, where Revoke and Enable are.
+    // "「[Opus 5.5] so give me the link」"
+    // "「[Opus 5.5] the action happens」"
+    // "「[Opus 5.5] on my OK」"
+    // "「[Opus 5.5] not me searhing for it in the ui」"
+    // 「[Opus 5.5] A link naming a token opens that token, where Revoke and Enable are.」
     const token = new URLSearchParams(location.search).get('token');
     if (token && who) {
         const { openTokenElement } = await import('./token-element.ts');

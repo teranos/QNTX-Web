@@ -48,9 +48,9 @@ const BACKEND_URL = BACKEND.url;  // Go backend, here or on a deployed node
 
 // Carried by the dev server because the browser cannot carry it — see README.
 
-// ~/.qntx/key is this machine's key, and ground and the CLI already sign with
-// it. Signing with it here too is what makes `bun run dev` against a deployed
-// node work without being handed a credential.
+// 「[Sonnet 5.5] ~/.qntx/key is this machine's key, and ground and the CLI already sign with」
+// 「[Sonnet 5.5] it. Signing with it here too is what makes `bun run dev` against a deployed」
+// 「[Sonnet 5.5] node work without being handed a credential.」
 function heldKey(): string {
     const path = join(process.env.HOME || '', '.qntx', 'key');
     if (!existsSync(path)) {

@@ -48,13 +48,13 @@ const BACKEND_URL = BACKEND.url;  // Go backend, here or on a deployed node
 
 // Carried by the dev server because the browser cannot carry it — see README.
 
-// ~/.qntx/token is this machine's token, and ground and the CLI already read
-// it from there. Reading it here too is what makes `bun run dev` against a
-// deployed node work without being handed a credential it can already reach.
-function heldToken(): string {
-    const path = join(process.env.HOME || '', '.qntx', 'token');
+// ~/.qntx/key is this machine's key, and ground and the CLI already sign with
+// it. Signing with it here too is what makes `bun run dev` against a deployed
+// node work without being handed a credential.
+function heldKey(): string {
+    const path = join(process.env.HOME || '', '.qntx', 'key');
     if (!existsSync(path)) {
-        console.error(`dev: no token at ${path} and none in the environment`);
+        console.error(`dev: no key at ${path}: ground code login keeps one`);
         return '';
     }
     try {
@@ -65,11 +65,11 @@ function heldToken(): string {
     }
 }
 
-const BACKEND_CREDENTIAL = resolveCredential(process.env, heldToken());
+const BACKEND_CREDENTIAL = resolveCredential(process.env, heldKey(), new URL(BACKEND_URL).origin);
 
 // An anonymous relay renders every page signed out, and looks from the browser
 // exactly like a node that refused you.
-if (BACKEND.isRemote && !BACKEND_CREDENTIAL.token && !BACKEND_CREDENTIAL.session) {
+if (BACKEND.isRemote && !BACKEND_CREDENTIAL.seed && !BACKEND_CREDENTIAL.session) {
     console.error(`dev: relaying to ${BACKEND_URL} with no credential — the node will answer as if signed out`);
 }
 
@@ -100,7 +100,7 @@ interface WsRelay {
 
 // Says which credential is in play without printing it.
 function credentialLabel(): string {
-    if (BACKEND_CREDENTIAL.token) return "QNTX_TOKEN (bearer)";
+    if (BACKEND_CREDENTIAL.seed) return "~/.qntx/key (signed)";
     if (BACKEND_CREDENTIAL.session) return "QNTX_SESSION (cookie)";
     return "nothing — the node will refuse anything it gates";
 }

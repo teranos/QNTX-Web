@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  *
- * Access tokens element — what a row is (ADR-025).
+ * Access tokens element — what a row is.
  *
  * Revocation is a switch: kill the token, watch whether anything is still
  * presenting it, turn it back on if that was you. The switch is the token

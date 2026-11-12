@@ -56,7 +56,6 @@ Which node this machine points at is a property of the machine, so it lives in
 
 ```bash
 QNTX_BACKEND=https://your-node.example.com
-QNTX_TOKEN=<access token minted on that node>
 ```
 
 The dev server stands in for the node. The browser addresses it, it carries the
@@ -74,11 +73,13 @@ from cross-site XHR, and a WebAuthn ceremony for the node's `rp_id` cannot be
 answered by a page on localhost — no configuration on either side changes that.
 One server calling another is neither.
 
-Mint the token in the node's own UI (`/auth/tokens` is gated on a session, so a
-token cannot mint another). It carries a DID, a minter, a namespace and a scope,
-and revoking it lands without a restart — see [ADR-025](https://github.com/teranos/QNTX/blob/main/docs/adr/ADR-025-access-tokens.md).
-`QNTX_SESSION` accepts a copied `qntx_session` cookie instead, for a node where
-no token has been minted yet.
+The dev server signs each request with `~/.qntx/key`, the key ground and the
+`qntx` CLI sign with, which the node holds a grant for once `ground code login`
+was approved there.
+
+"A signature proves the key, and nothing reusable leaves the node."
+
+`QNTX_SESSION` accepts a copied `qntx_session` cookie instead.
 
 ### Developing a plugin's module from outside the checkout
 

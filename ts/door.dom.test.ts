@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  *
- * The door names who sent the person (ADR-025). An app that sent somebody
+ * The door names who sent the person. An app that sent somebody
  * here is not the origin they are looking at, so nothing else in front of
  * them says who will hold the token.
  */

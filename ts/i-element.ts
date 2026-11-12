@@ -25,7 +25,7 @@ import { openMailElement, ELEMENT_ID as MAIL_ID } from './mail-element.ts';
 import { openGitHubElement, ELEMENT_ID as GITHUB_ID } from './github-element.ts';
 import { openApprovalsElement, ELEMENT_ID as APPROVALS_ID } from './approvals-element.ts';
 
-// The elements opened from ⍟: Access Tokens, Users (ADR-031), Roles
+// 「[Opus 5.5] The elements opened from ⍟: Access Tokens, Users (ADR-031), Roles」
 // (ADR-034), Stands (ADR-035), Mail (ADR-041), GitHub (ADR-043), Approvals (ADR-052).
 const WAYS = [
     { id: TOKENS_ID, label: '⚿ Access Tokens', open: openTokensElement },

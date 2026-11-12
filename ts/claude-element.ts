@@ -210,9 +210,9 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     says.rows = 2;
     says.placeholder = 'Say something to the Node Agent';
     const send = part('button', 'qntx-btn qntx-btn-small claude-send');
-    // "I dont want to diverge from what industry is doing": a chat's buttons
-    // are glyphs, as the Claude app's are and as the room's send is. The words
-    // stay, for a reader and a hover.
+    // 「[Opus 5.5] "I dont want to diverge from what industry is doing": a chat's buttons」
+    // 「[Opus 5.5] are glyphs, as the Claude app's are and as the room's send is. The words」
+    // 「[Opus 5.5] stay, for a reader and a hover.」
     send.textContent = '→';
     send.setAttribute('aria-label', 'Say');
     send.title = 'Say';

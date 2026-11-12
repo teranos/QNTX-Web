@@ -2,8 +2,8 @@
  * Generic spawn-on-canvas helper for attestation-family elements.
  *
  * Eliminates the repeated contentLayer lookup → position calc → registry lookup →
- * render → appendChild → uiState.addCanvasElement pattern across attestation,
- * triplet, and sigma elements.
+ * render → appendChild → uiState.addCanvasElement pattern across attestation
+ * and triplet elements.
  */
 
 import type { Element } from '@teranos/elements';
@@ -14,7 +14,7 @@ import { getElementTypeBySymbol } from './element-registry';
 export interface SpawnOpts {
     /** Element symbol (used for registry lookup and uiState tracking) */
     symbol: string;
-    /** ID prefix (e.g. 'as', 'triplet', 'sigma') */
+    /** ID prefix (e.g. 'as', 'triplet') */
     prefix: string;
     /** Title for the element */
     title: string;

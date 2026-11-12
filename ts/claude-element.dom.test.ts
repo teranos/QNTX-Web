@@ -57,7 +57,6 @@ const session: SessionRead = {
     subjects: ['qntx/root-agent'],
     started: '2026-10-05T09:00:00Z',
     ended: '2026-10-05T09:00:04Z',
-    folded: 0,
     model: 'claude-opus-5-5',
     effort: '',
     turns: [

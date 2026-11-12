@@ -10,7 +10,7 @@
  * marks the grammar already gives them.
  *
  * What one shows is the other segments and the actors, folded out of what is
- * filed under it, the way a sigma folds its observations. Which segments those
+ * filed under it. Which segments those
  * are is the only thing that differs between them, so it is the only thing a
  * Segment says.
  */

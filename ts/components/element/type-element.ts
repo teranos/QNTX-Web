@@ -2,8 +2,7 @@
  * Type Element (⊢) — canvas element for type attestations
  *
  * Shows a type definition: name, label, color swatch, field list,
- * and how many actors attested it. Simpler than sigma — it's a type,
- * not a statistical report.
+ * and how many actors attested it.
  *
  * Opened via double-click on type result lines in AX or SE elements.
  */

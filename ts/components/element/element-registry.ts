@@ -9,7 +9,7 @@
 
 import { DROPPED_SYMBOLS } from '../../dropped-symbols';
 import type { Element } from '@teranos/elements';
-import { AX, SO, SE, AS, Attestation, Sigma, Type, Triplet, Prose, Subcanvas, Transcript } from '../../sym';
+import { AX, SO, SE, AS, Attestation, Type, Triplet, Prose, Subcanvas, Transcript } from '../../sym';
 import { createAxElement } from './ax-element';
 import { createSemanticElement } from './semantic-element';
 import { createPyElement, PY_DEFAULT_CODE } from './py-element';
@@ -18,7 +18,6 @@ import { createNoteElement } from './note-element';
 import { createTsElement, TS_DEFAULT_CODE } from './ts-element';
 import { createSubcanvasElement } from './subcanvas-element';
 import { createAttestationElement } from './attestation-element';
-import { createSigmaElement } from './sigma-element';
 import { createTypeElement } from './type-element';
 import { createTripletElement } from './triplet-element';
 import { createResultElement } from './result-element';
@@ -63,7 +62,6 @@ const ELEMENT_TYPES: ElementTypeEntry[] = [
     { symbol: Subcanvas, className: 'canvas-subcanvas-element', title: 'Subcanvas',    label: 'Subcanvas', render: createSubcanvasElement, spawnMenuOrder: 6 },
     { symbol: Attestation, className: 'canvas-attestation-element', title: 'Attestation', label: 'Attestation', render: createAttestationElement },
     { symbol: Triplet,  className: 'canvas-triplet-element',     title: 'Triplet',     label: 'Triplet',   render: createTripletElement },
-    { symbol: Sigma,    className: 'canvas-sigma-element',       title: 'Sigma',       label: 'Sigma',     render: createSigmaElement },
     { symbol: Type,     className: 'canvas-type-element',        title: 'Type',        label: 'Type',      render: createTypeElement },
     { symbol: 'stream', className: 'canvas-stream-element',      title: 'Stream',      label: 'Stream',    render: (g) => createResultElement(g) },
     { symbol: Transcript, className: 'canvas-transcript-element', title: 'Transcript', label: 'Transcript', render: createTranscriptElement },

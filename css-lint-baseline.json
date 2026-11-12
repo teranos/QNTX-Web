@@ -41,7 +41,7 @@
   "css/drawer.css": {
     "scale-unlimited/declaration-strict-value": 30,
     "no-descending-specificity": 3,
-    "selector-max-id": 20
+    "selector-max-id": 18
   },
   "css/element-table.css": {
     "no-descending-specificity": 2

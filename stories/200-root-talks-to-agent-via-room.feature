@@ -35,6 +35,32 @@ Feature: ROOT opens Rooms, opens a specific room and talks to an agent
     Then its picture arrives inside its reply
     And the picture and composer fit the phone
 
+  Scenario: A person records and reviews a voice message on a phone
+    Given I am ROOT on a phone
+    And the browser grants microphone access
+    When I open the App
+    And I record a short voice message
+    Then I can review the recording and the mock transcript
+    When I press send
+    Then the words and my original audio arrive together
+    And I can listen to my recording after reopening the room
+    And the audio and composer fit the phone
+
+  Scenario: A participant's audio keeps playing as the room changes
+    Given I am in the Node Room Element
+    When I listen to another participant's recording
+    Then its player stays mounted when someone speaks again
+
+  Scenario: A recording draft survives a send refusal
+    Given I am in the Node Room Element
+    And the browser grants microphone access
+    When I record a short voice message
+    Then I can review the recording and the mock transcript
+    When the mock refuses my voice message
+    Then my words and recording remain for another send
+    When I discard the audio
+    Then my reviewed words remain in the composer
+
   # The phone app's, not the page's: walked nowhere yet.
   @phone
   Scenario: The human user is told on the phone

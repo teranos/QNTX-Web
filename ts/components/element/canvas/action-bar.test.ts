@@ -16,26 +16,32 @@ import { showActionBar, hideActionBar } from './action-bar';
 };
 
 describe('Canvas Action Bar - Tim (Happy Path)', () => {
-    test('Tim selects elements and sees action bar', () => {
+    test('Tim selects two elements and sees the action bar, and its delete button deletes', () => {
         const container = document.createElement('div');
         container.style.position = 'relative';
         document.body.appendChild(container);
 
-        const selectedIds = ['element-1', 'element-2'];
-        let onDeleteCalled = false;
-        let onUnmeldCalled = false;
+        let deleted = 0;
+        let unmelded = 0;
 
-        // Tim selects multiple elements and action bar appears
-        expect(() => {
-            showActionBar(
-                selectedIds,
-                container,
-                () => { onDeleteCalled = true; },
-                (comp) => { onUnmeldCalled = true; }
-            );
-        }).not.toThrow();
+        showActionBar(
+            ['element-1', 'element-2'],
+            container,
+            () => { deleted++; },
+            () => { unmelded++; }
+        );
 
-        // Cleanup
+        const bar = container.querySelector('.canvas-action-bar');
+        expect(bar).not.toBeNull();
+        expect(bar!.getAttribute('role')).toBe('toolbar');
+        // Neither is in a meld, so there is nothing to unmeld; the one press is the delete.
+        expect(bar!.querySelector('.canvas-action-unmeld')).toBeNull();
+        const del = bar!.querySelector<HTMLElement>('.canvas-action-delete')!;
+        expect(del.dataset.tooltip).toBe('Delete 2 elements');
+        del.click();
+        expect(deleted).toBe(1);
+        expect(unmelded).toBe(0);
+
         document.body.innerHTML = '';
     });
 });

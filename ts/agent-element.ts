@@ -157,12 +157,12 @@ export function drawNamespaceAgent(body: HTMLElement, namespace: string, node: N
     };
 
     // "We shouldn't be displaying unavailable things to people"
-    // While the node says the agent is not ready (its Claude Code still
-    // arriving), it is said why, and asked again: sign-in is offered only to
-    // an agent that can be signed in.
-    // Asked again sooner at first and less often the longer it waits, to once
-    // a minute: a Claude Code that will not arrive is not asked after every 5
-    // seconds for as long as the chat is open.
+    // 「[Opus 5.5] While the node says the agent is not ready (its Claude Code still」
+    // 「[Opus 5.5] arriving), it is said why, and asked again: sign-in is offered only to」
+    // 「[Opus 5.5] an agent that can be signed in.」
+    // 「[Opus 5.5] Asked again sooner at first and less often the longer it waits, to once」
+    // 「[Opus 5.5] a minute: a Claude Code that will not arrive is not asked after every 5」
+    // 「[Opus 5.5] seconds for as long as the chat is open.」
     let gone = false;
     let again: ReturnType<typeof setTimeout> | undefined;
     let waiting = false;
@@ -191,8 +191,8 @@ export function drawNamespaceAgent(body: HTMLElement, namespace: string, node: N
             head.hidden = false;
             head.textContent = wordsOf(err);
             log.warn(SEG.ELEMENT, `[Agent] the node did not say who the agent of ${namespace} is: ${wordsOf(err)}`);
-            // Asked once, that is the answer. While it was waiting, one that
-            // did not answer is asked again.
+            // 「[Opus 5.5] Asked once, that is the answer. While it was waiting, one that」
+            // 「[Opus 5.5] did not answer is asked again.」
             if (waiting) askAgain();
         });
     void ask();

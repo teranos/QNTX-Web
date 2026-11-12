@@ -73,13 +73,13 @@ from cross-site XHR, and a WebAuthn ceremony for the node's `rp_id` cannot be
 answered by a page on localhost — no configuration on either side changes that.
 One server calling another is neither.
 
-The dev server signs each request with `~/.qntx/key`, the key ground and the
-`qntx` CLI sign with, which the node holds a grant for once `ground code login`
-was approved there.
+「[Sonnet 5.5] The dev server signs each request with `~/.qntx/key`, the key ground and the」
+「[Sonnet 5.5] `qntx` CLI sign with, which the node holds a grant for once `ground code login`」
+「[Sonnet 5.5] was approved there.」
 
-"A signature proves the key, and nothing reusable leaves the node."
+"「[Sonnet 5.5] A signature proves the key, and nothing reusable leaves the node.」"
 
-`QNTX_SESSION` accepts a copied `qntx_session` cookie instead.
+「[Sonnet 5.5] `QNTX_SESSION` accepts a copied `qntx_session` cookie instead.」
 
 ### Developing a plugin's module from outside the checkout
 

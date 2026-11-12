@@ -24,10 +24,10 @@ export function resolveBackend(env: Record<string, string | undefined>, backendP
     return { url, isRemote };
 }
 
-// What the relay presents as itself: the key this machine keeps, signing each
-// request for the node it goes to, or a borrowed session.
+// 「[Sonnet 5.5] What the relay presents as itself: the key this machine keeps, signing each」
+// 「[Sonnet 5.5] request for the node it goes to, or a borrowed session.」
 //
-// "A signature proves the key, and nothing reusable leaves the node."
+// "「[Sonnet 5.5] A signature proves the key, and nothing reusable leaves the node.」"
 export interface Credential {
     /** The seed in ~/.qntx/key, sixty-four hex characters. */
     seed?: string;
@@ -36,9 +36,9 @@ export interface Credential {
     session?: string;
 }
 
-// `held` is what ~/.qntx/key holds: the key ground and the qntx CLI sign with,
-// which the node holds a grant for. A session named in the environment is the
-// operator saying which to present.
+// 「[Sonnet 5.5] `held` is what ~/.qntx/key holds: the key ground and the qntx CLI sign with,」
+// 「[Sonnet 5.5] which the node holds a grant for. A session named in the environment is the」
+// 「[Sonnet 5.5] operator saying which to present.」
 export function resolveCredential(env: Record<string, string | undefined>, held = '', audience = ''): Credential {
     if (env.QNTX_SESSION) {
         return { session: env.QNTX_SESSION };
@@ -71,9 +71,9 @@ function base64url(bytes: Uint8Array | string): string {
 }
 
 /**
- * The Authorization one request goes with: a JWT signed by the key whose seed
- * is given, as its did:key, for audience, lasting a minute, with an id of its
- * own — the node admits each once.
+ * 「[Sonnet 5.5] The Authorization one request goes with: a JWT signed by the key whose seed」
+ * 「[Sonnet 5.5] is given, as its did:key, for audience, lasting a minute, with an id of its」
+ * 「[Sonnet 5.5] own — the node admits each once.」
  */
 export function signedFor(seedHex: string, audience: string, nowSeconds: number): string {
     const seed = Buffer.from(seedHex.trim(), 'hex');

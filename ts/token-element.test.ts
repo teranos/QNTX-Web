@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { issuedBy, namespacesField, renderIssued, rolesText, saidLine, type TokenInfo } from './token-element';
+import { askedPress, issuedBy, namespacesField, renderIssued, rolesText, saidLine, type TokenInfo } from './token-element';
 
 function token(): TokenInfo {
     return {
@@ -162,4 +162,30 @@ test('a client that issued nothing says so', () => {
 test('the roles read per namespace, and a dash for none', () => {
     expect(rolesText(token())).toBe('clean: —');
     expect(rolesText({ ...token(), roles: { clean: ['DATAPUNT'] } })).toBe('clean: DATAPUNT');
+});
+
+// "dim everything except for the element, and make the button stand out the most, and a persistent tooltip telling you what to click"
+test('a token a link asks to revoke dims the rest, says what to press, and has the one press', () => {
+    const frame = document.createElement('div');
+    frame.setAttribute('data-element-id', 'token-element-AT_1');
+    const container = document.createElement('div');
+    frame.appendChild(container);
+    const ask = askedPress(container, token());
+    expect(frame.style.boxShadow).not.toBe('');
+    expect(ask.textContent).toContain('Press Revoke below. pond-sensor stops working, and Enable brings it back.');
+    const presses = ask.querySelectorAll('button');
+    expect(presses.length).toBe(1);
+    expect(presses[0]!.textContent).toContain('Revoke');
+});
+
+test('a token already revoked says nothing is left to press, and nothing is dimmed', () => {
+    const frame = document.createElement('div');
+    frame.setAttribute('data-element-id', 'token-element-AT_1');
+    frame.style.boxShadow = '0 0 0 100vmax rgba(0, 0, 0, 0.8)';
+    const container = document.createElement('div');
+    frame.appendChild(container);
+    const ask = askedPress(container, { ...token(), revoked_at: '2026-11-12T12:40:00Z' });
+    expect(frame.style.boxShadow).toBe('');
+    expect(ask.textContent).toBe('pond-sensor is revoked. Nothing is left to press here.');
+    expect(ask.querySelectorAll('button').length).toBe(0);
 });

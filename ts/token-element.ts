@@ -382,13 +382,62 @@ export function renderIssued(container: HTMLElement, issued: TokenInfo[], now: D
 }
 
 /** Exported for tests: what the element draws for one token, given the token. */
-export function renderToken(container: HTMLElement, t: TokenInfo, raw?: string): void {
+/** What a link asked the person to press on this token. */
+export type Asked = 'revoke';
+
+// "dim everything except for the element, and make the button stand out the most, and a persistent tooltip telling you what to click"
+/** Everything but this element's window is dimmed while it asks for a press, and lit again after. */
+function dimTheRest(container: HTMLElement, dimmed: boolean): void {
+    const frame = container.closest<HTMLElement>('[data-element-id]');
+    if (frame) frame.style.boxShadow = dimmed ? '0 0 0 100vmax rgba(0, 0, 0, 0.8)' : '';
+}
+
+/** The one press a link asked for, above everything else the token says, with what to press said beside it. */
+export function askedPress(container: HTMLElement, t: TokenInfo): HTMLElement {
+    const ask = document.createElement('div');
+    ask.dataset.asked = 'revoke';
+    ask.style.display = 'flex';
+    ask.style.flexDirection = 'column';
+    ask.style.gap = '10px';
+    ask.style.padding = '14px';
+    ask.style.border = '2px solid #fff';
+    const says = document.createElement('div');
+    says.style.fontSize = 'var(--font-size-lg)';
+    ask.appendChild(says);
+    const named = t.label || t.id;
+    if (t.revoked_at) {
+        says.textContent = `${named} is revoked. Nothing is left to press here.`;
+        dimTheRest(container, false);
+        return ask;
+    }
+    says.textContent = `Press Revoke below. ${named} stops working, and Enable brings it back.`;
+    // "the action happens"
+    // "on my OK"
+    // One press: Enable undoes it, so nothing is armed first.
+    const revoke = pressFrom({ id: `token-asked-revoke-${t.id}`, title: 'Revoke', does: async () => {
+        await revokeToken(t.id);
+        await redraw(container, t.id, 'revoke');
+    } });
+    revoke.element.style.fontSize = 'var(--font-size-lg)';
+    revoke.element.style.fontWeight = 'bold';
+    revoke.element.style.padding = '12px 28px';
+    revoke.element.style.border = '2px solid #fff';
+    revoke.element.style.background = '#fff';
+    revoke.element.style.color = '#000';
+    ask.appendChild(revoke.element);
+    dimTheRest(container, true);
+    return ask;
+}
+
+export function renderToken(container: HTMLElement, t: TokenInfo, raw?: string, asked?: Asked): void {
     container.innerHTML = '';
     container.style.display = 'flex';
     container.style.flexDirection = 'column';
     container.style.gap = '10px';
     container.style.padding = '12px';
     container.style.fontFamily = 'var(--font-mono)';
+
+    if (asked) container.appendChild(askedPress(container, t));
 
     // The namespaces first, directly below the title bar, the way the
     // namespace bar sits below the system bar.
@@ -517,7 +566,7 @@ export function renderWrote(container: HTMLElement, found: Attestation[]): void 
 }
 
 /** Draws it again from the node, so what is on screen is what is stored. */
-async function redraw(container: HTMLElement, id: string): Promise<void> {
+async function redraw(container: HTMLElement, id: string, asked?: Asked): Promise<void> {
     let t: TokenInfo;
     try {
         t = await fetchToken(id);
@@ -526,7 +575,7 @@ async function redraw(container: HTMLElement, id: string): Promise<void> {
         container.appendChild(errorBox(err instanceof Error ? err.message : String(err)));
         return;
     }
-    renderToken(container, t);
+    renderToken(container, t, undefined, asked);
 }
 
 function elementIdFor(id: string): string {
@@ -535,9 +584,10 @@ function elementIdFor(id: string): string {
 
 /**
  * Opens one token as its own element. `raw` is present only when the token was
- * just minted, which is the one moment it exists at all.
+ * just minted, which is the one moment it exists at all. `asked` is what a link
+ * asked the person to press there.
  */
-export function openTokenElement(id: string, label: string, raw?: string): void {
+export function openTokenElement(id: string, label: string, raw?: string, asked?: Asked): void {
     const elementId = elementIdFor(id);
     if (tray.has(elementId)) {
         tray.open(elementId);
@@ -555,7 +605,7 @@ export function openTokenElement(id: string, label: string, raw?: string): void 
             content.innerHTML = '<div class="element-loading">Loading token…</div>';
 
             fetchToken(id)
-                .then(t => { renderToken(content, t, raw); })
+                .then(t => { renderToken(content, t, raw, asked); })
                 .catch((err: unknown) => {
                     log.error(SEG.UI, '[TokenElement] the node did not answer for this token', err);
                     content.innerHTML = '';

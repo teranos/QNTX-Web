@@ -306,12 +306,15 @@ async function init(): Promise<void> {
     // "on my OK"
     // "not me searhing for it in the ui"
     // A link naming a token opens that token, where Revoke and Enable are.
+    // With press=revoke it asks for that one press, and says so.
     const token = new URLSearchParams(location.search).get('token');
     if (token && who) {
         const { openTokenElement } = await import('./token-element.ts');
-        openTokenElement(token, '');
+        const press = new URLSearchParams(location.search).get('press');
+        openTokenElement(token, '', undefined, press === 'revoke' ? 'revoke' : undefined);
         const cleaned = new URL(location.href);
         cleaned.searchParams.delete('token');
+        cleaned.searchParams.delete('press');
         history.replaceState(null, '', cleaned.toString());
     }
 

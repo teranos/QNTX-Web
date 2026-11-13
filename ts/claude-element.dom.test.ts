@@ -340,6 +340,44 @@ describe('Claude - Jenny', () => {
         stop();
     });
 
+    // "WHEN I PRESS ON THE PENDING MESSAGE AGAIN, IT IS SAYING, SEND NOW? AND THEN YOU CLICK ON IT, AND YOU INTERRUPT AND SEND IT NOW"
+    test('a waiting message pressed asks send now, and pressed again stops the turn and is said next', async () => {
+        const body = document.createElement('div');
+        const sent: string[] = [];
+        const ends: Array<{ resolve: (said: ClaudeSaid) => void; reject: (err: Error) => void }> = [];
+        let stopped = 0;
+        const stop = drawClaude(body, node({
+            say: (says) => { sent.push(says); return new Promise<ClaudeSaid>((resolve, reject) => { ends.push({ resolve, reject }); }); },
+            // Stopped, the turn going ends unanswered, as the node says it.
+            stop: () => { stopped++; ends[0].reject(new Error('Claude Code did not answer')); return Promise.resolve({ ...am, answering: false }); },
+        }), 1);
+        await settled();
+        say(body, 'count to a million');
+        await settled();
+        say(body, 'first that waits');
+        say(body, 'the urgent one');
+        await settled();
+        const rows = () => Array.from(body.querySelectorAll<HTMLElement>('.chat-waiting'));
+        const urgent = rows()[1];
+        expect(urgent.querySelector('.chat-waiting-said')?.textContent).toBe('waiting');
+
+        // Pressed once: it asks, and nothing is stopped.
+        urgent.click();
+        expect(urgent.querySelector('.chat-waiting-said')?.textContent).toBe('send now?');
+        expect(stopped).toBe(0);
+        expect(sent).toEqual(['count to a million']);
+
+        // Pressed again: the turn is stopped, and it is said ahead of what waited before it.
+        urgent.click();
+        await settled();
+        expect(stopped).toBe(1);
+        expect(sent).toEqual(['count to a million', 'the urgent one']);
+        expect(rows().map(r => r.querySelector('.chat-text')?.textContent)).toEqual(['first that waits']);
+        // What the stopped turn was said with is not said again, and no failure is drawn for it.
+        expect(body.querySelector('.claude-failed')?.textContent).toBe('');
+        stop();
+    });
+
     // An agent the node cannot stop keeps its send button.
     test('an agent with no stop keeps its send button while it answers', async () => {
         const body = document.createElement('div');

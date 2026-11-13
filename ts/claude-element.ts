@@ -403,11 +403,29 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     const sayContext = (tokens: number) => {
         if (tokens > 0) context.textContent = `${Math.round(tokens / 1000)}k of context`;
     };
+    // A turn the person stopped is no refusal: what it was said with is not said again.
+    let stoppedByThePerson = false;
+
     // A row of what waits to be said.
+    // "WHEN I PRESS ON THE PENDING MESSAGE AGAIN, IT IS SAYING, SEND NOW? AND THEN YOU CLICK ON IT, AND YOU INTERRUPT AND SEND IT NOW"
+    // Pressed, it asks; pressed again, the turn going is stopped and it is said next.
     const waits = (it: Said) => {
-        it.row = chatRow('you', chatText(it.words), part('span', 'chat-waiting-said'));
+        const label = part('span', 'chat-waiting-said');
+        label.textContent = 'waiting';
+        it.row = chatRow('you', chatText(it.words), label);
         it.row.classList.add('chat-waiting');
-        it.row.querySelector('.chat-waiting-said')!.textContent = 'waiting';
+        let asked = false;
+        it.row.addEventListener('click', () => {
+            if (!node.stop || !sending) return;
+            if (!asked) { asked = true; label.textContent = 'send now?'; it.row!.classList.add('chat-send-now'); return; }
+            const at = waiting.indexOf(it);
+            if (at < 0) return;
+            waiting.splice(at, 1);
+            waiting.unshift(it);
+            label.textContent = 'sending';
+            stoppedByThePerson = true;
+            node.stop().catch((err: unknown) => { stoppedByThePerson = false; label.textContent = 'waiting'; asked = false; fails('stop', err); });
+        });
         keepingBottom(scroller, () => queued.appendChild(it.row!));
     };
 
@@ -468,11 +486,21 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                 return read();
             })
             .then(() => {
+                stoppedByThePerson = false;
                 sending = false;
                 settle();
                 const next = waiting.shift();
                 if (next) { next.row?.remove(); sayIt(next); }
             }, (err: unknown) => {
+                // Stopped by the person: the turn ended as they asked, and what waits is said.
+                if (stoppedByThePerson) {
+                    stoppedByThePerson = false;
+                    sending = false;
+                    settle();
+                    const next = waiting.shift();
+                    if (next) { next.row?.remove(); sayIt(next); }
+                    return;
+                }
                 fails('say', err);
                 // A refusal does not cost the words, nor the picture they were said with: what was
                 // refused waits again ahead of what waited behind it, and none of it is said until Say.
@@ -516,9 +544,10 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     const stopIt = () => {
         send.disabled = true;
         failed.replaceChildren();
+        stoppedByThePerson = true;
         node.stop!()
             .then(is => { if (!is.answering && !sending) settle(); })
-            .catch((err: unknown) => fails('stop', err))
+            .catch((err: unknown) => { stoppedByThePerson = false; fails('stop', err); })
             .finally(() => { send.disabled = false; });
     };
     send.addEventListener('click', () => { if (stops()) stopIt(); else sendIt(); });

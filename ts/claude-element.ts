@@ -160,7 +160,7 @@ export function elementAgent(element: string): NodeAgent {
 const LOOK = 'Look at the picture.';
 
 // "Being able to annotate and send a picture is of critical importance"
-// The node takes a picture whose name says what its bytes are: one marked up on the phone is a JPEG.
+// 「[Opus 5.5] The node takes a picture whose name says what its bytes are: one marked up on the phone is a JPEG.」
 const PICTURE_NAMES: Record<string, string> = {
     'image/png': 'said.png',
     'image/jpeg': 'said.jpg',

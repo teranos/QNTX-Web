@@ -15,6 +15,7 @@ import { Agent, Files, type Transcript } from "./agents";
 import { AgyAgents } from "./agy";
 import { CodexAgents } from "./codex";
 import { Rooms } from "./rooms";
+import { TheCollected } from "./collected";
 
 const here = import.meta.dir;
 const web = join(here, "..");
@@ -167,6 +168,8 @@ function elementAgent(element: string): Agent {
     }
     return held;
 }
+// What agents said to the Node Agent, collected: released, it is said to the Node Agent as a person's is.
+const collected = new TheCollected("Lamplighter", theNodeAgent.did, theNodeAgent.model, says => { void theNodeAgent.say(says, "", "", ""); });
 const files = new Files();
 const codexAgents = new CodexAgents();
 const agyAgents = new AgyAgents();
@@ -426,6 +429,7 @@ async function answer(req: Request, url: URL): Promise<Response> {
         ?? await agyAgents.answer(req)
         ?? await agentAnswer(level, method, path, url, req)
         ?? await rooms.answer(level, method, path, req)
+        ?? await collected.answer(method, path, req)
         ?? await filesAnswer(method, path, req)
         ?? await keysAnswer(level, method, path, req)
         ?? await anthropicAnswer(method, path, req);
@@ -484,6 +488,14 @@ Bun.serve({
             return new Response(null, { status: 303, headers: { Location: "/", "Set-Cookie": `${COOKIE}=${level}; Path=/; SameSite=Lax` } });
         }
         if (path === "/__mock__/") return json({ as: whoIs(req) ?? "nobody", levels: LEVELS });
+        // The mock has no agents that speak: a story has them say what waits, and asks what became of it.
+        if (path === "/__mock__/collected" && req.method === "POST") {
+            const sent = (await req.json()) as { forget?: boolean; said?: { from: string; says: string }[] };
+            if (sent.forget) collected.forget();
+            for (const one of sent.said ?? []) collected.said(one.from, one.says);
+            return json({ sent: collected.sent, canceled: collected.canceled });
+        }
+        if (path === "/__mock__/collected") return json({ sent: collected.sent, canceled: collected.canceled });
 
         if (isBackendPath(path) || path.startsWith("/.well-known/")) return answer(req, url);
 

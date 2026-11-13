@@ -15,7 +15,7 @@ import { apiJson } from './client';
 import { log, SEG } from './logger.ts';
 import { Agent } from './sym';
 import { standingNamespace } from './standing.ts';
-import { drawClaude, sayBody, readLive, type ClaudeAm, type ClaudeSaid, type NodeAgent } from './claude-element';
+import { drawClaude, sayBody, readLive, NODE_AGENT_AT, theNodeAgentsOwn, type ClaudeAm, type ClaudeSaid, type NodeAgent } from './claude-element';
 import { when, type SessionRead } from './chat';
 import { backendPath } from './client/url';
 import { drawNamespaceAgent, agentOf } from './agent-element';
@@ -187,6 +187,8 @@ export function agentIn(at: string, harness: Harness, unwrap: (answer: unknown) 
         read: () => apiJson<{ transcript: SessionRead }>(`${at}/session?harness=${harness}`).then(answer => answer.transcript),
         // Only Claude Code prints to a stream the node tails (QNTX server/agent_live.go).
         live: harness === 'claude' ? (onEvent, onEnd) => readLive(backendPath(`${at}/live?harness=claude`), onEvent, onEnd) : undefined,
+        // The Node Agent in Claude Code is stopped by the node, and what agents say to it is collected.
+        ...(at === NODE_AGENT_AT && harness === 'claude' ? theNodeAgentsOwn : {}),
     };
 }
 

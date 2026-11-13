@@ -348,7 +348,7 @@ describe('Claude - Jenny', () => {
         let stopped = 0;
         const stop = drawClaude(body, node({
             say: (says) => { sent.push(says); return new Promise<ClaudeSaid>((resolve, reject) => { ends.push({ resolve, reject }); }); },
-            // Stopped, the turn going ends unanswered, as the node says it.
+            // 「[Fable 5.2] Stopped, the turn going ends unanswered, as the node says it.」
             stop: () => { stopped++; ends[0].reject(new Error('Claude Code did not answer')); return Promise.resolve({ ...am, answering: false }); },
         }), 1);
         await settled();
@@ -361,19 +361,19 @@ describe('Claude - Jenny', () => {
         const urgent = rows()[1];
         expect(urgent.querySelector('.chat-waiting-said')?.textContent).toBe('waiting');
 
-        // Pressed once: it asks, and nothing is stopped.
+        // 「[Fable 5.2] Pressed once: it asks, and nothing is stopped.」
         urgent.click();
         expect(urgent.querySelector('.chat-waiting-said')?.textContent).toBe('send now?');
         expect(stopped).toBe(0);
         expect(sent).toEqual(['count to a million']);
 
-        // Pressed again: the turn is stopped, and it is said ahead of what waited before it.
+        // 「[Fable 5.2] Pressed again: the turn is stopped, and it is said ahead of what waited before it.」
         urgent.click();
         await settled();
         expect(stopped).toBe(1);
         expect(sent).toEqual(['count to a million', 'the urgent one']);
         expect(rows().map(r => r.querySelector('.chat-text')?.textContent)).toEqual(['first that waits']);
-        // What the stopped turn was said with is not said again, and no failure is drawn for it.
+        // 「[Fable 5.2] What the stopped turn was said with is not said again, and no failure is drawn for it.」
         expect(body.querySelector('.claude-failed')?.textContent).toBe('');
         stop();
     });

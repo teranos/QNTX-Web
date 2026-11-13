@@ -403,12 +403,12 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     const sayContext = (tokens: number) => {
         if (tokens > 0) context.textContent = `${Math.round(tokens / 1000)}k of context`;
     };
-    // A turn the person stopped is no refusal: what it was said with is not said again.
+    // 「[Fable 5.2] A turn the person stopped is no refusal: what it was said with is not said again.」
     let stoppedByThePerson = false;
 
     // A row of what waits to be said.
     // "WHEN I PRESS ON THE PENDING MESSAGE AGAIN, IT IS SAYING, SEND NOW? AND THEN YOU CLICK ON IT, AND YOU INTERRUPT AND SEND IT NOW"
-    // Pressed, it asks; pressed again, the turn going is stopped and it is said next.
+    // 「[Fable 5.2] Pressed, it asks; pressed again, the turn going is stopped and it is said next.」
     const waits = (it: Said) => {
         const label = part('span', 'chat-waiting-said');
         label.textContent = 'waiting';
@@ -492,7 +492,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                 const next = waiting.shift();
                 if (next) { next.row?.remove(); sayIt(next); }
             }, (err: unknown) => {
-                // Stopped by the person: the turn ended as they asked, and what waits is said.
+                // 「[Fable 5.2] Stopped by the person: the turn ended as they asked, and what waits is said.」
                 if (stoppedByThePerson) {
                     stoppedByThePerson = false;
                     sending = false;

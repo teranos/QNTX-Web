@@ -78,10 +78,10 @@ export interface NodeAgent {
     live?(onEvent: (event: LiveEvent) => void, onEnd: () => void): () => void;
     // Stops the turn going, as a person stops it. Only an agent the node can stop has it.
     stop?(): Promise<ClaudeAm>;
-    // What agents said to it, collected (collected-element.ts). Only an agent the node collects for has it.
+    // 「[Fable 5.2] What agents said to it, collected (collected-element.ts). Only an agent the node collects for has it.」
     collected?: Collection;
-    // Whose batch its chat shows, by DID, when that is not who this harness says it is: the node collects
-    // for the Node Agent under its own DID, whatever harness its chat is in.
+    // 「[Opus 5.5] Whose batch its chat shows, by DID, when that is not who this harness says it is: the node collects」
+    // 「[Opus 5.5] for the Node Agent under its own DID, whatever harness its chat is in.」
     collectedFor?(): Promise<string>;
 }
 
@@ -154,8 +154,8 @@ export function readLive(url: string, onEvent: (event: LiveEvent) => void, onEnd
     return () => { stopping.abort(); end(); };
 }
 
-// What only the Node Agent in Claude Code has: the node stops its turn, and collects what agents say to it.
-// Whoever draws its chat hands these to it (agents-element.ts): a chat without them has no stop and shows nothing that waits.
+// 「[Fable 5.2] What only the Node Agent in Claude Code has: the node stops its turn, and collects what agents say to it.」
+// 「[Fable 5.2] Whoever draws its chat hands these to it (agents-element.ts): a chat without them has no stop and shows nothing that waits.」
 // "i want to be able to make it stop"
 export const NODE_AGENT_AT = '/api/agent';
 export const theNodeAgentsOwn: Pick<NodeAgent, 'stop' | 'collected'> = {
@@ -167,7 +167,7 @@ export const theNodeAgentsOwn: Pick<NodeAgent, 'stop' | 'collected'> = {
     collected: theCollection,
 };
 
-// The Node Agent in Claude Code, at the agent signum's path.
+// 「[Fable 5.2] The Node Agent in Claude Code, at the agent signum's path.」
 const theNode: NodeAgent = { ...agentAt(NODE_AGENT_AT), ...theNodeAgentsOwn };
 
 // > AGENT PER ELEMENT, EACH ELEMENT IS ITS OWN CONVERSATION
@@ -277,9 +277,9 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     let following: ReturnType<typeof setInterval> | null = null;
     let picture: Blob | null = null;
     let listening: (() => void) | null = null;
-    // What agents said to it and waits, drawn over this chat while it is open.
+    // 「[Fable 5.2] What agents said to it and waits, drawn over this chat while it is open.」
     let stopCollected: (() => void) | null = null;
-    // The chat was left: what the node answers after that starts nothing over whatever is drawn here next.
+    // 「[Opus 5.5] The chat was left: what the node answers after that starts nothing over whatever is drawn here next.」
     let left = false;
     let draft: HTMLElement | null = null;
     let drafted = '';
@@ -595,7 +595,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             if (reading) void read();
             else session.textContent = 'Nothing has been said to it yet.';
             if (is.answering) { hold(true); follow(); }
-            // Released, it is a turn of the agent's: the chat follows it as it does any.
+            // 「[Fable 5.2] Released, it is a turn of the agent's: the chat follows it as it does any.」
             const collected = node.collected;
             if (collected) {
                 const whose = node.collectedFor ? node.collectedFor().catch(() => is.did) : Promise.resolve(is.did);

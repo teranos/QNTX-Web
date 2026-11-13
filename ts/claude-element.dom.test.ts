@@ -657,8 +657,8 @@ describe('Claude - live read off fetch', () => {
 });
 
 // "Being able to annotate and send a picture is of critical importance"
-// A screenshot marked up on the phone is saved as FullSizeRender.jpeg: JPEG bytes. Named said.png, the
-// node refused it: HTTP 400 file content does not match extension .png.
+// 「[Opus 5.5] A screenshot marked up on the phone is saved as FullSizeRender.jpeg: JPEG bytes. Named said.png, the」
+// 「[Opus 5.5] node refused it: HTTP 400 file content does not match extension .png.」
 describe('Claude - a picture goes up as what it is', () => {
     const sentUp = async (kind: string): Promise<File> => {
         const up: File[] = [];

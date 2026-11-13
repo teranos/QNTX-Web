@@ -1,4 +1,4 @@
-// ROOT's phone: whose token is handed over and when, and what the app opens on.
+// 「[Opus 5.5] ROOT's phone: whose token is handed over and when, and what the app opens on.」
 
 import { describe, test, expect } from 'bun:test';
 import { aboutToBeSaid, rootsPhone, type Phone, type PhoneToken, type SignedIn } from './phone';
@@ -12,7 +12,7 @@ const waits = (did: string, dueIn: number, n = 1): Collected => ({
     waiting: Array.from({ length: n }, (_, i) => ({ from: 'Alder', says: `thing ${i}`, at: '', task: '', id: `s-${i}`, edited: false })),
 });
 
-// Everything already settled has happened.
+// 「[Opus 5.5] Everything already settled has happened.」
 async function settled(): Promise<void> {
     for (let i = 0; i < 8; i++) await new Promise(resolve => setTimeout(resolve, 0));
 }
@@ -66,7 +66,7 @@ describe('what the phone opens on', () => {
         front();
         await settled();
         expect(opened).toEqual([`${NODE} ${first.due}`]);
-        // Held on by the person: another time, and it is opened on again before that one.
+        // 「[Opus 5.5] Held on by the person: another time, and it is opened on again before that one.」
         const held = { ...first, due: new Date(Date.now() + 14 * MIN).toISOString() };
         state.waiting = [held];
         front();

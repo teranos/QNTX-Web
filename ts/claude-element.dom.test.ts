@@ -548,15 +548,16 @@ describe('Claude - Jenny', () => {
         await settled();
         answers[0](answered);
         await settled();
-        // The read say's answer asked for, then settle's, which is held back.
-        reads[0]();
+        // The one read the first answer asks for, settle's, is held back; what was read before it is let through.
+        const at = reads.length - 1;
+        const held = reads[at]!;
+        for (const [i, read] of reads.entries()) if (i < at) read();
         await settled();
-        const held = reads[1];
         answers[1](answered);
         await settled();
-        for (const [i, read] of reads.entries()) if (i > 1) read();
+        for (const [i, read] of reads.entries()) if (i > at) read();
         await settled();
-        for (const [i, read] of reads.entries()) if (i > 1) read();
+        for (const [i, read] of reads.entries()) if (i > at) read();
         await settled();
         expect(body.querySelector('.claude-session')!.textContent).toContain('answer 2');
         held();
@@ -615,6 +616,47 @@ describe('Claude - the session while it runs', () => {
         expect(live.childElementCount).toBe(0);
         expect(body.querySelector('.claude-session')!.textContent).toContain('Up 3 days.');
         expect(body.querySelector<HTMLButtonElement>('.claude-send')!.disabled).toBe(false);
+        stop();
+    });
+
+    // "why do i see the result come in twice on myy phone,a dn then it dissapears, like a bug"
+    // The session was read twice once it answered: after the first read the answer stood in the session
+    // and in the live view, until the second came back. On a slow node that was seconds.
+    test('the answer is never in the session and in the live view at once', async () => {
+        const body = document.createElement('div');
+        let landed: ((e: LiveEvent) => void) | null = null;
+        let answer: ((said: ClaudeSaid) => void) | null = null;
+        const reads: Array<() => void> = [];
+        const after: SessionRead = { ...session, turns: [...session.turns, { at: '2026-10-05T09:01:00Z', speaker: 'assistant', text: 'It answered once.', of: 's-9' }] };
+        let answeredYet = false;
+        const stop = drawClaude(body, node({
+            say: () => new Promise(resolve => { answer = said => { answeredYet = true; resolve(said); }; }),
+            read: () => { const read = answeredYet ? after : session; return new Promise<SessionRead>(resolve => { reads.push(() => resolve(read)); }); },
+            live: onEvent => { landed = onEvent; return () => {}; },
+        }));
+        await settled();
+        for (const read of reads) read();
+        await settled();
+        say(body, 'did it answer?');
+        await settled();
+        landed!(event('text', 'It answered once.'));
+        const live = body.querySelector<HTMLElement>('.chat-live')!;
+        const inSession = () => body.querySelector('.claude-session')!.textContent!.includes('It answered once.');
+        const inLive = () => live.textContent!.includes('It answered once.');
+        expect(inLive()).toBe(true);
+
+        const before = reads.length;
+        answer!(answered);
+        await settled();
+        // Each read of the session let through, one at a time: at no moment is it drawn in both.
+        for (let at = before; at < reads.length; at++) {
+            expect(inSession() && inLive()).toBe(false);
+            reads[at]!();
+            await settled();
+            expect(inSession() && inLive()).toBe(false);
+        }
+        expect(inSession()).toBe(true);
+        expect(inLive()).toBe(false);
         stop();
     });
 

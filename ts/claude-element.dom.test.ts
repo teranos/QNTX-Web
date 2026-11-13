@@ -548,7 +548,7 @@ describe('Claude - Jenny', () => {
         await settled();
         answers[0](answered);
         await settled();
-        // The one read the first answer asks for, settle's, is held back; what was read before it is let through.
+        // 「[Opus 5.5] The one read the first answer asks for, settle's, is held back; what was read before it is let through.」
         const at = reads.length - 1;
         const held = reads[at]!;
         for (const [i, read] of reads.entries()) if (i < at) read();
@@ -619,9 +619,9 @@ describe('Claude - the session while it runs', () => {
         stop();
     });
 
-    // "why do i see the result come in twice on myy phone,a dn then it dissapears, like a bug"
-    // The session was read twice once it answered: after the first read the answer stood in the session
-    // and in the live view, until the second came back. On a slow node that was seconds.
+    // "「[Opus 5.5] why do i see the result come in twice on myy phone,a dn then it dissapears, like a bug」"
+    // 「[Opus 5.5] The session was read twice once it answered: after the first read the answer stood in the session」
+    // 「[Opus 5.5] and in the live view, until the second came back. On a slow node that was seconds.」
     test('the answer is never in the session and in the live view at once', async () => {
         const body = document.createElement('div');
         let landed: ((e: LiveEvent) => void) | null = null;
@@ -648,7 +648,7 @@ describe('Claude - the session while it runs', () => {
         const before = reads.length;
         answer!(answered);
         await settled();
-        // Each read of the session let through, one at a time: at no moment is it drawn in both.
+        // 「[Opus 5.5] Each read of the session let through, one at a time: at no moment is it drawn in both.」
         for (let at = before; at < reads.length; at++) {
             expect(inSession() && inLive()).toBe(false);
             reads[at]!();

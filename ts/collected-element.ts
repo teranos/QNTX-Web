@@ -100,6 +100,24 @@ function part<K extends keyof HTMLElementTagNameMap>(tag: K, className: string):
 
 const wordsOf = (err: unknown): string => (err instanceof Error ? err.message : String(err));
 
+// What waits that is drawn now, by the agent it waits for, and what is to be opened as soon as it is drawn.
+const drawnFor = new Map<string, OverlayHandle>();
+// By the agent it waits for, the time what is to be opened is due: asked for one batch, another is not opened in its place.
+const wantedOpen = new Map<string, string>();
+const dueDrawn = new Map<string, string>();
+
+/**
+ * Opens what waits for the agent whose DID this is and is due at due: now when
+ * it is drawn at rest, and when it is drawn otherwise. ROOT came in from a
+ * notification about it (phone.ts), and what they came for is in front. Gone
+ * before it was drawn, nothing is opened for it.
+ */
+export function openWhenShown(did: string, due: string): void {
+    const drawn = drawnFor.get(did);
+    if (drawn && dueDrawn.get(did) === due) drawn.element.click();
+    else wantedOpen.set(did, due);
+}
+
 /**
  * What waits for the agent whose DID this is, drawn over the chat it is talked
  * to in: nothing while nothing waits. above is what it first rests above, the
@@ -159,7 +177,10 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
         waits = mine;
         if (!mine) {
             overlay?.away();
+            if (overlay && drawnFor.get(did) === overlay) drawnFor.delete(did);
             overlay = null;
+            wantedOpen.delete(did);
+            dueDrawn.delete(did);
             rows.clear();
             list.replaceChildren();
             // It went and the person did not cancel it: the node delivered it, from here or from
@@ -183,6 +204,18 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
                 color: '#000',
                 renderContent: () => whole,
             }, { over, className: 'collected-batch', at: { bottom } });
+            drawnFor.set(did, overlay);
+        }
+        dueDrawn.set(did, mine.due);
+        // Asked for before it was drawn: opened once it rests, which is a press on it. What was asked
+        // for was due at one time, and what is drawn now for another time is not what was asked for.
+        const wanted = wantedOpen.get(did);
+        if (wanted !== undefined) {
+            wantedOpen.delete(did);
+            if (wanted === mine.due) {
+                const mineNow = overlay;
+                setTimeout(() => { if (drawnFor.get(did) === mineNow && mineNow.element.dataset.form === 'overlay') mineNow.element.click(); }, 0);
+            }
         }
         overlay.says(batchSaid(mine));
         const held = mine.held_until ? `, held by you until ${momentSaid(new Date(mine.held_until))}` : '';
@@ -392,6 +425,8 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
         stopped = true;
         clearInterval(looking);
         overlay?.away();
+        if (overlay && drawnFor.get(did) === overlay) drawnFor.delete(did);
         overlay = null;
+        dueDrawn.delete(did);
     };
 }

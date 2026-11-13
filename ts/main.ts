@@ -503,6 +503,14 @@ async function init(): Promise<void> {
             .catch(err => log.error(SEG.UI, '[Init] the mock element was not drawn:', err));
     }
 
+    // ROOT's phone: the node is handed the token it reaches it by, and the app opens on what is about to be said.
+    // In the app only. Who is signed in is asked each time it looks, so one who signs in later is ROOT's phone too.
+    if (window.__TAURI__) {
+        import('./phone.ts')
+            .then(({ rootsPhone }) => { rootsPhone(); })
+            .catch(err => log.error(SEG.UI, "[Init] ROOT's phone was not wired:", err));
+    }
+
     // > think ROOT SHAKE
     import('./shake.ts')
         .then(({ rootShake }) => { if (rootShake(who)) log.info(SEG.UI, '[Init] ROOT SHAKE is felt'); })

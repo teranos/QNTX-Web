@@ -100,17 +100,17 @@ function part<K extends keyof HTMLElementTagNameMap>(tag: K, className: string):
 
 const wordsOf = (err: unknown): string => (err instanceof Error ? err.message : String(err));
 
-// What waits that is drawn now, by the agent it waits for, and what is to be opened as soon as it is drawn.
+// 「[Opus 5.5] What waits that is drawn now, by the agent it waits for, and what is to be opened as soon as it is drawn.」
 const drawnFor = new Map<string, OverlayHandle>();
-// By the agent it waits for, the time what is to be opened is due: asked for one batch, another is not opened in its place.
+// 「[Fable 5.2] By the agent it waits for, the time what is to be opened is due: asked for one batch, another is not opened in its place.」
 const wantedOpen = new Map<string, string>();
 const dueDrawn = new Map<string, string>();
 
 /**
- * Opens what waits for the agent whose DID this is and is due at due: now when
- * it is drawn at rest, and when it is drawn otherwise. ROOT came in from a
- * notification about it (phone.ts), and what they came for is in front. Gone
- * before it was drawn, nothing is opened for it.
+ * 「[Fable 5.2] Opens what waits for the agent whose DID this is and is due at due: now when」
+ * 「[Fable 5.2] it is drawn at rest, and when it is drawn otherwise. ROOT came in from a」
+ * 「[Fable 5.2] notification about it (phone.ts), and what they came for is in front. Gone」
+ * 「[Fable 5.2] before it was drawn, nothing is opened for it.」
  */
 export function openWhenShown(did: string, due: string): void {
     const drawn = drawnFor.get(did);
@@ -207,8 +207,8 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
             drawnFor.set(did, overlay);
         }
         dueDrawn.set(did, mine.due);
-        // Asked for before it was drawn: opened once it rests, which is a press on it. What was asked
-        // for was due at one time, and what is drawn now for another time is not what was asked for.
+        // 「[Fable 5.2] Asked for before it was drawn: opened once it rests, which is a press on it. What was asked」
+        // 「[Fable 5.2] for was due at one time, and what is drawn now for another time is not what was asked for.」
         const wanted = wantedOpen.get(did);
         if (wanted !== undefined) {
             wantedOpen.delete(did);

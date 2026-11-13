@@ -1,4 +1,4 @@
-// What the app opens on while ROOT is in it: what is about to be said to the Node Agent.
+// 「[Fable 5.2] What the app opens on while ROOT is in it: what is about to be said to the Node Agent.」
 
 import { describe, test, expect } from 'bun:test';
 import { aboutToBeSaid, rootsPhone, type Phone, type SignedIn } from './phone';

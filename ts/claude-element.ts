@@ -13,6 +13,7 @@ import { uploadFile } from './api/files';
 import { backendPath } from './client/url';
 import { bearing } from './client/session';
 import { watchCollected, theCollection, type Collection } from './collected-element';
+import { watchOutbox } from './outbox-element';
 
 // Who the Node Agent is and how the node runs it (claude am).
 export interface ClaudeAm {
@@ -279,6 +280,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     let listening: (() => void) | null = null;
     // What agents said to it and waits, drawn over this chat while it is open.
     let stopCollected: (() => void) | null = null;
+    let stopOutbox: (() => void) | null = null;
     // The chat was left: what the node answers after that starts nothing over whatever is drawn here next.
     let left = false;
     let draft: HTMLElement | null = null;
@@ -603,6 +605,8 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                 const whose = node.collectedFor ? node.collectedFor().catch(() => is.did) : Promise.resolve(is.did);
                 void whose.then(did => {
                     if (did && !left) stopCollected = watchCollected(body, did, form, () => { hold(true); follow(); }, collected);
+                    // What it said to other agents and is collected for them, over the same chat.
+                    if (did && !left) stopOutbox = watchOutbox(body, did, form, collected);
                 });
             }
         })
@@ -612,6 +616,6 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             log.warn(SEG.ELEMENT, `[Claude] the node did not say who answers: ${wordsOf(err)}`);
         });
 
-    return () => { left = true; stopCollected?.(); stopCollected = null; settle(); };
+    return () => { left = true; stopCollected?.(); stopCollected = null; stopOutbox?.(); stopOutbox = null; settle(); };
 }
 

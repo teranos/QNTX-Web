@@ -10,6 +10,8 @@ import { log, SEG } from './logger.ts';
 /** One thing an agent said to another, as the node holds it (protocol.CollectedSaid). */
 export interface CollectedSaid {
     from: string;
+    /** Who said it, by DID: what a chat's outbox finds its agent's words by (outbox-element.ts). */
+    from_did?: string;
     says: string;
     at: string;
     task: string;

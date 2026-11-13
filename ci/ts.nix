@@ -18,7 +18,9 @@
 
   jobs.test = {
     name = "TypeScript Tests";
-    runs-on = "ubuntu-latest";
+    # Held to the Ubuntu the pinned @playwright/test installs Chromium on:
+    # ubuntu-latest moved to 26.04, which 1.56.1 refuses.
+    runs-on = "ubuntu-24.04";
     # The two checkouts are siblings: `bun test` walks every directory under
     # it, and a QNTX checkout inside this one once had a web/ts of its own,
     # whose tests ran here without their setup and failed (run 2026-10-21).

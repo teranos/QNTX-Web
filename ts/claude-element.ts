@@ -12,6 +12,7 @@ import { spark } from './claude-spark';
 import { uploadFile } from './api/files';
 import { backendPath } from './client/url';
 import { bearing } from './client/session';
+import { watchCollected, theCollection, type Collection } from './collected-element';
 
 // Who the Node Agent is and how the node runs it (claude am).
 export interface ClaudeAm {
@@ -77,6 +78,11 @@ export interface NodeAgent {
     live?(onEvent: (event: LiveEvent) => void, onEnd: () => void): () => void;
     // Stops the turn going, as a person stops it. Only an agent the node can stop has it.
     stop?(): Promise<ClaudeAm>;
+    // What agents said to it, collected (collected-element.ts). Only an agent the node collects for has it.
+    collected?: Collection;
+    // Whose batch its chat shows, by DID, when that is not who this harness says it is: the node collects
+    // for the Node Agent under its own DID, whatever harness its chat is in.
+    collectedFor?(): Promise<string>;
 }
 
 /** The say body: harness, words, the mode when one is chosen, and what is carried. */
@@ -148,16 +154,21 @@ export function readLive(url: string, onEvent: (event: LiveEvent) => void, onEnd
     return () => { stopping.abort(); end(); };
 }
 
-// The Node Agent in Claude Code, at the agent signum's path.
+// What only the Node Agent in Claude Code has: the node stops its turn, and collects what agents say to it.
+// Whoever draws its chat hands these to it (agents-element.ts): a chat without them has no stop and shows nothing that waits.
 // "i want to be able to make it stop"
-const theNode: NodeAgent = {
-    ...agentAt('/api/agent'),
+export const NODE_AGENT_AT = '/api/agent';
+export const theNodeAgentsOwn: Pick<NodeAgent, 'stop' | 'collected'> = {
     stop: () => apiJson<{ claude: ClaudeAm }>('/api/agent/stop', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ harness: 'claude' }),
     }).then(is => is.claude),
+    collected: theCollection,
 };
+
+// The Node Agent in Claude Code, at the agent signum's path.
+const theNode: NodeAgent = { ...agentAt(NODE_AGENT_AT), ...theNodeAgentsOwn };
 
 // > AGENT PER ELEMENT, EACH ELEMENT IS ITS OWN CONVERSATION
 
@@ -266,6 +277,10 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     let following: ReturnType<typeof setInterval> | null = null;
     let picture: Blob | null = null;
     let listening: (() => void) | null = null;
+    // What agents said to it and waits, drawn over this chat while it is open.
+    let stopCollected: (() => void) | null = null;
+    // The chat was left: what the node answers after that starts nothing over whatever is drawn here next.
+    let left = false;
     let draft: HTMLElement | null = null;
     let drafted = '';
     // One thing said: its words, what was typed for them, its picture, the mode and model it was said in, and its row while it waits.
@@ -580,6 +595,14 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             if (reading) void read();
             else session.textContent = 'Nothing has been said to it yet.';
             if (is.answering) { hold(true); follow(); }
+            // Released, it is a turn of the agent's: the chat follows it as it does any.
+            const collected = node.collected;
+            if (collected) {
+                const whose = node.collectedFor ? node.collectedFor().catch(() => is.did) : Promise.resolve(is.did);
+                void whose.then(did => {
+                    if (did && !left) stopCollected = watchCollected(body, did, form, () => { hold(true); follow(); }, collected);
+                });
+            }
         })
         .catch((err: unknown) => {
             who.textContent = wordsOf(err);
@@ -587,6 +610,6 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             log.warn(SEG.ELEMENT, `[Claude] the node did not say who answers: ${wordsOf(err)}`);
         });
 
-    return settle;
+    return () => { left = true; stopCollected?.(); stopCollected = null; settle(); };
 }
 

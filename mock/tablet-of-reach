@@ -177,6 +177,10 @@ REACH is '/api/vault/owners' '/api/vault/repos' '/api/vault/subdirs'      of ROO
 # talk to it is the whole of what guards it, and that is ROOT.
 REACH is '/api/agent' '/api/agent/say' '/api/agent/session' '/api/agent/login' of ROOT
 
+# What agents said to an agent, collected until it is delivered together (the
+# collected signum): a person sees it, edits it, holds it, releases or cancels it.
+REACH is '/api/collected' '/api/collected/hold' '/api/collected/release' '/api/collected/edit' '/api/collected/later' '/api/collected/cancel' of ROOT
+
 # The element agent (the elements signum, ADR-054): each element is its own
 # agent and its own conversation, and ROOT SHAKE is ROOT's.
 REACH is '/api/elements/{element}' '/api/elements/{element}/say' '/api/elements/{element}/session' of ROOT

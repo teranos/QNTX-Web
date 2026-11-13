@@ -1,7 +1,7 @@
-// What agents said to an agent, collected, drawn over the chat with that agent.
-// stories/37-root-authors-what-agents-say-to-an-agent.feature is what it does.
-// "i dont want a separate screen, a separate ui to have to go to"
-// What is collected and when it goes is the node's (the collected signum); this draws it and says what a person does with it.
+// 「[Opus 5.5] What agents said to an agent, collected, drawn over the chat with that agent.」
+// 「[Opus 5.5] stories/37-root-authors-what-agents-say-to-an-agent.feature is what it does.」
+// "「[Opus 5.5] i dont want a separate screen, a separate ui to have to go to」"
+// 「[Opus 5.5] What is collected and when it goes is the node's (the collected signum); this draws it and says what a person does with it.」
 
 import { overlayFrom, pressFrom, declareScroller, preventDrag, sizeText, AX, type OverlayHandle } from '@teranos/elements';
 import { apiJson } from './client';
@@ -56,11 +56,11 @@ export const theCollection: Collection = {
     cancel: (to, id) => said('/api/collected/cancel', id ? { to, id } : { to }),
 };
 
-// How often what waits is asked again.
+// 「[Opus 5.5] How often what waits is asked again.」
 const LOOK_MS = 5000;
-// How far a finger drags for one hour more, in px.
+// 「[Opus 5.5] How far a finger drags for one hour more, in px.」
 const PX_PER_HOUR = 10;
-// The longest a drag holds it: two weeks.
+// 「[Opus 5.5] The longest a drag holds it: two weeks.」
 const MOST_HOURS = 336;
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -101,23 +101,23 @@ function part<K extends keyof HTMLElementTagNameMap>(tag: K, className: string):
 const wordsOf = (err: unknown): string => (err instanceof Error ? err.message : String(err));
 
 /**
- * What waits for the agent whose DID this is, drawn over the chat it is talked
- * to in: nothing while nothing waits. above is what it first rests above, the
- * chat's field. sent is told when it was released, so the chat follows the
- * turn it starts. What it gives back stops asking.
+ * 「[Opus 5.5] What waits for the agent whose DID this is, drawn over the chat it is talked」
+ * 「[Opus 5.5] to in: nothing while nothing waits. above is what it first rests above, the」
+ * 「[Opus 5.5] chat's field. sent is told when it was released, so the chat follows the」
+ * 「[Opus 5.5] turn it starts. What it gives back stops asking.」
  */
 export function watchCollected(chat: HTMLElement, did: string, above: HTMLElement | null, sent: () => void, node: Collection = theCollection, every: number = LOOK_MS): () => void {
     let overlay: OverlayHandle | null = null;
     let waits: Collected | null = null;
     let stopped = false;
-    // What each thing said is drawn as, by its id: its field, what the node held when the node last
-    // wrote the field, and the edits of it being kept, one after another.
+    // 「[Opus 5.5] What each thing said is drawn as, by its id: its field, what the node held when the node last」
+    // 「[Opus 5.5] wrote the field, and the edits of it being kept, one after another.」
     interface Row { row: HTMLElement; says: HTMLTextAreaElement; who: HTMLElement; failed: HTMLElement; held: string; keeping: Promise<void> }
     const rows = new Map<string, Row>();
-    // Each answer of the node's in the order it was asked for, and the latest drawn: one asked before it is not drawn over it.
+    // 「[Opus 5.5] Each answer of the node's in the order it was asked for, and the latest drawn: one asked before it is not drawn over it.」
     let asked = 0;
     let drawnAt = 0;
-    // Whether a batch was drawn, and whether its going was the person's own cancel.
+    // 「[Opus 5.5] Whether a batch was drawn, and whether its going was the person's own cancel.」
     let had = false;
     let canceledHere = false;
 
@@ -138,7 +138,7 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
     whole.style.flexDirection = 'column';
     whole.style.height = '100%';
     whole.append(header, when, list);
-    // What is typed and pressed here is not a drag of the element.
+    // 「[Opus 5.5] What is typed and pressed here is not a drag of the element.」
     preventDrag(whole);
 
     const fails = (what: string, err: unknown) => log.error(SEG.ELEMENT, `[Collected] ${what}: ${wordsOf(err)}`);
@@ -162,8 +162,8 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
             overlay = null;
             rows.clear();
             list.replaceChildren();
-            // It went and the person did not cancel it: the node delivered it, from here or from
-            // elsewhere, and the chat follows the turn that started.
+            // 「[Opus 5.5] It went and the person did not cancel it: the node delivered it, from here or from」
+            // 「[Opus 5.5] elsewhere, and the chat follows the turn that started.」
             if (had && !canceledHere) sent();
             had = false;
             canceledHere = false;
@@ -172,7 +172,7 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
         had = true;
         if (!overlay) {
             const over = chat.closest<HTMLElement>('[data-element-id]');
-            // The chat is not in its element yet: asked again at the next look.
+            // 「[Opus 5.5] The chat is not in its element yet: asked again at the next look.」
             if (!over) return;
             const held = over.getBoundingClientRect();
             const field = above?.getBoundingClientRect();
@@ -203,7 +203,7 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
                 says.style.boxSizing = 'border-box';
                 says.setAttribute('aria-label', `What ${one.from} said`);
                 says.value = one.says;
-                // What the person wrote is the node's once they leave the field.
+                // 「[Opus 5.5] What the person wrote is the node's once they leave the field.」
                 says.addEventListener('change', () => { keep(one.id).catch(() => { /* said beside the field */ }); });
                 const failed = part('div', 'collected-failed');
                 failed.setAttribute('role', 'alert');
@@ -214,7 +214,7 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
                     title: 'Remove',
                     again: 'never sent',
                     irrevocable: true,
-                    // Removed by the person: if it was the last, the batch went by their hand and no turn started.
+                    // 「[Opus 5.5] Removed by the person: if it was the last, the batch went by their hand and no turn started.」
                     does: async () => {
                         canceledHere = true;
                         try { await ask(() => node.cancel(to, one.id)); } finally { if (had) canceledHere = false; }
@@ -226,8 +226,8 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
                 rows.set(one.id, drawn);
             }
             drawn.who.textContent = `${one.from} · ${momentSaid(new Date(one.at))}${one.edited ? ' · changed by you' : ''}`;
-            // What the person wrote and the node does not hold yet is theirs: the node's words go only
-            // into a field that still says what the node last put there.
+            // 「[Opus 5.5] What the person wrote and the node does not hold yet is theirs: the node's words go only」
+            // 「[Opus 5.5] into a field that still says what the node last put there.」
             if (drawn.says.value === drawn.held) drawn.says.value = one.says;
             drawn.held = one.says;
         }
@@ -237,8 +237,8 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
     };
 
     /**
-     * What the person wrote for one thing said, kept by the node when it differs from what the node holds.
-     * One edit of a thing at a time, each after the one before: what was written last is what is kept last.
+     * 「[Opus 5.5] What the person wrote for one thing said, kept by the node when it differs from what the node holds.」
+     * 「[Opus 5.5] One edit of a thing at a time, each after the one before: what was written last is what is kept last.」
      */
     const keep = (id: string): Promise<void> => {
         const drawn = rows.get(id);
@@ -251,11 +251,11 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
                 const mine = ++asked;
                 const all = await node.edit(to, id, wrote);
                 drawn.failed.hidden = true;
-                // The node holds what was written, and the field says so unless the person wrote on meanwhile.
+                // 「[Opus 5.5] The node holds what was written, and the field says so unless the person wrote on meanwhile.」
                 drawn.held = wrote;
                 if (mine >= drawnAt) { drawnAt = mine; draw(all); }
             } catch (err) {
-                // What they wrote stays in the field, said not to be kept, and is tried again when they leave it or send.
+                // 「[Opus 5.5] What they wrote stays in the field, said not to be kept, and is tried again when they leave it or send.」
                 drawn.failed.textContent = `Not kept by the node: ${wordsOf(err)}`;
                 drawn.failed.hidden = false;
                 fails('edit', err);
@@ -275,11 +275,11 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
         does: async () => {
             if (!waits) return;
             await keepAll();
-            // What goes is what the person saw: what was collected since waits on.
+            // 「[Opus 5.5] What goes is what the person saw: what was collected since waits on.」
             const to = waits.to;
             const saw = Array.from(rows.keys());
             await ask(() => node.release(to, saw));
-            // Something still waits, so the batch did not go from the chat: the turn that started is followed all the same.
+            // 「[Opus 5.5] Something still waits, so the batch did not go from the chat: the turn that started is followed all the same.」
             if (had) sent();
         },
     });
@@ -296,19 +296,19 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
         does: async () => {
             const to = waits?.to;
             if (!to) return;
-            // What is canceled is what the person saw, each by its id: what came in since waits on.
+            // 「[Opus 5.5] What is canceled is what the person saw, each by its id: what came in since waits on.」
             canceledHere = true;
             try {
                 for (const id of Array.from(rows.keys())) await ask(() => node.cancel(to, id));
             } finally {
-                // Something came in meanwhile and still waits: when it goes, it was not this cancel.
+                // 「[Opus 5.5] Something came in meanwhile and still waits: when it goes, it was not this cancel.」
                 if (had) canceledHere = false;
             }
         },
     });
 
-    // "DELAY QUICKLY (GET'S COLLECTED WITH THE NEXT BATCH), DELAY LONGER BY KEEPING IT PRESSED AND DRAGGING HOW MUCH(UP/DOWN)RELEASE-CONFIRM."
-    // Kept pressed and dragged, it says how much longer; let go, it asks once; confirmed, the node holds it.
+    // "「[Opus 5.5] DELAY QUICKLY (GET'S COLLECTED WITH THE NEXT BATCH), DELAY LONGER BY KEEPING IT PRESSED AND DRAGGING HOW MUCH(UP/DOWN)RELEASE-CONFIRM.」"
+    // 「[Opus 5.5] Kept pressed and dragged, it says how much longer; let go, it asks once; confirmed, the node holds it.」
     const hold = part('div', 'collected-hold');
     hold.setAttribute('role', 'slider');
     hold.setAttribute('aria-label', 'Hold longer: keep pressed and drag up or down');
@@ -320,7 +320,7 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
     hold.style.userSelect = 'none';
     hold.style.setProperty('-webkit-user-select', 'none');
     hold.style.cursor = 'ns-resize';
-    // It stands among the presses as one of them: their box, their ground, their ink.
+    // 「[Fable 5.2] It stands among the presses as one of them: their box, their ground, their ink.」
     hold.style.display = 'inline-flex';
     hold.style.alignItems = 'center';
     hold.style.justifyContent = 'center';
@@ -355,7 +355,7 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
             sayLonger();
         },
     });
-    // A press is always drawn: what holds it is what is shown or not.
+    // 「[Fable 5.2] A press is always drawn: what holds it is what is shown or not.」
     const confirmHeld = part('span', 'collected-confirm');
     confirmHeld.appendChild(confirm.element);
     confirmHeld.hidden = true;
@@ -373,7 +373,7 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
     const letGo = () => { if (!from) return; from = null; sayLonger(); };
     hold.addEventListener('pointerup', letGo);
     hold.addEventListener('pointercancel', letGo);
-    // By keyboard: up and down are an hour.
+    // 「[Opus 5.5] By keyboard: up and down are an hour.」
     hold.addEventListener('keydown', (e: KeyboardEvent) => {
         if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
         e.preventDefault();

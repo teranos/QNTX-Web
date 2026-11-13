@@ -75,7 +75,7 @@ export interface NodeAgent {
     // The turn going, each event as it lands, and ended when the node closes
     // it or nothing answers; what it gives back stops listening.
     live?(onEvent: (event: LiveEvent) => void, onEnd: () => void): () => void;
-    // Stops the turn going, as a person stops it. Only an agent the node can stop has it.
+    // 「[Opus 5.5] Stops the turn going, as a person stops it. Only an agent the node can stop has it.」
     stop?(): Promise<ClaudeAm>;
 }
 
@@ -280,8 +280,8 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     // "the sent button needs to change"
     // "into a stop button"
     // "like literally every ai app does"
-    // While it answers, an empty box's button stops the turn; with words in
-    // the box it says them, and they wait for the turn to end.
+    // 「[Opus 5.5] While it answers, an empty box's button stops the turn; with words in」
+    // 「[Opus 5.5] the box it says them, and they wait for the turn to end.」
     let answeringNow = false;
     const stops = (): boolean => answeringNow && !!node.stop && !says.value.trim() && !picture;
     const showSend = () => {

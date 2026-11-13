@@ -498,9 +498,9 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                 reading = answer.session;
                 if (answer.denied.length > 0) denied.textContent = `It reached for ${answer.denied.join(', ')} and was not allowed.`;
                 if (answer.unwritten) fails('session', new Error(`a row of the session was not written down: ${answer.unwritten}`));
-                // "why do i see the result come in twice on myy phone,a dn then it dissapears, like a bug"
-                // The session is read once, by settle, which takes the turn's live rows away as it draws it:
-                // read here as well, the answer stood in the session and in the live view until the second read came back.
+                // "「[Opus 5.5] why do i see the result come in twice on myy phone,a dn then it dissapears, like a bug」"
+                // 「[Opus 5.5] The session is read once, by settle, which takes the turn's live rows away as it draws it:」
+                // 「[Opus 5.5] read here as well, the answer stood in the session and in the live view until the second read came back.」
             })
             .then(() => {
                 stoppedByThePerson = false;

@@ -75,6 +75,8 @@ export interface NodeAgent {
     // The turn going, each event as it lands, and ended when the node closes
     // it or nothing answers; what it gives back stops listening.
     live?(onEvent: (event: LiveEvent) => void, onEnd: () => void): () => void;
+    // Stops the turn going, as a person stops it. Only an agent the node can stop has it.
+    stop?(): Promise<ClaudeAm>;
 }
 
 /** The say body: harness, words, the mode when one is chosen, and what is carried. */
@@ -147,7 +149,15 @@ export function readLive(url: string, onEvent: (event: LiveEvent) => void, onEnd
 }
 
 // The Node Agent in Claude Code, at the agent signum's path.
-const theNode: NodeAgent = agentAt('/api/agent');
+// "i want to be able to make it stop"
+const theNode: NodeAgent = {
+    ...agentAt('/api/agent'),
+    stop: () => apiJson<{ claude: ClaudeAm }>('/api/agent/stop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ harness: 'claude' }),
+    }).then(is => is.claude),
+};
 
 // > AGENT PER ELEMENT, EACH ELEMENT IS ITS OWN CONVERSATION
 
@@ -267,6 +277,23 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     let readsAsked = 0;
     let readDrawn = 0;
 
+    // "the sent button needs to change"
+    // "into a stop button"
+    // "like literally every ai app does"
+    // While it answers, an empty box's button stops the turn; with words in
+    // the box it says them, and they wait for the turn to end.
+    let answeringNow = false;
+    const stops = (): boolean => answeringNow && !!node.stop && !says.value.trim() && !picture;
+    const showSend = () => {
+        const stopping = stops();
+        send.textContent = stopping ? '■' : '→';
+        send.setAttribute('aria-label', stopping ? 'Stop' : 'Say');
+        send.title = stopping ? 'Stop' : 'Say';
+        send.classList.toggle('claude-stop', stopping);
+    };
+    says.addEventListener('input', showSend);
+
+
     // A row of the live view: the thing itself, with no speaker in front of it.
     // "i dont want [tool] [read] [write] etc. because im in a convo, i prefer to
     // just see the whole thing, including +/- diffs fly by"
@@ -326,6 +353,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     // The picture to be said, shown until it is sent or let go of.
     const carry = (image: Blob | null) => {
         picture = image;
+        showSend();
         attached.replaceChildren();
         if (!image) return;
         const shown = part('img', 'claude-picture');
@@ -384,6 +412,8 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     };
 
     const hold = (answering: boolean) => {
+        answeringNow = answering;
+        showSend();
         if (answering) { const said = part('span', 'claude-status-text'); said.textContent = 'answering…'; status.replaceChildren(spark(), said, context); }
         else status.replaceChildren(context);
     };
@@ -483,7 +513,15 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         carry(null);
         return it;
     };
-    send.addEventListener('click', sendIt);
+    const stopIt = () => {
+        send.disabled = true;
+        failed.replaceChildren();
+        node.stop!()
+            .then(is => { if (!is.answering && !sending) settle(); })
+            .catch((err: unknown) => fails('stop', err))
+            .finally(() => { send.disabled = false; });
+    };
+    send.addEventListener('click', () => { if (stops()) stopIt(); else sendIt(); });
     says.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendIt(); }
     });

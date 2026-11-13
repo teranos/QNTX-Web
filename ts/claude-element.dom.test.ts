@@ -306,6 +306,51 @@ describe('Claude - Jenny', () => {
         stop();
     });
 
+    // "the sent button needs to change"
+    // "into a stop button"
+    test('while it answers, an empty box\'s button stops the turn, and words in the box are said instead', async () => {
+        const body = document.createElement('div');
+        let stopped = 0;
+        const sent: string[] = [];
+        const stop = drawClaude(body, node({
+            say: (says) => { sent.push(says); return new Promise<ClaudeSaid>(() => {}); },
+            stop: () => { stopped++; return Promise.resolve({ ...am, answering: false }); },
+        }), 1);
+        await settled();
+        const button = () => body.querySelector<HTMLButtonElement>('.claude-send')!;
+        expect(button().textContent).toBe('→');
+
+        say(body, 'count to a million');
+        await settled();
+        expect(button().textContent).toBe('■');
+        expect(button().getAttribute('aria-label')).toBe('Stop');
+
+        // Words typed while it answers: the button says them.
+        const box = body.querySelector<HTMLTextAreaElement>('.claude-says')!;
+        box.value = 'and then?';
+        box.dispatchEvent(new Event('input'));
+        expect(button().textContent).toBe('→');
+        box.value = '';
+        box.dispatchEvent(new Event('input'));
+
+        button().click();
+        await settled();
+        expect(stopped).toBe(1);
+        expect(sent).toEqual(['count to a million']);
+        stop();
+    });
+
+    // An agent the node cannot stop keeps its send button.
+    test('an agent with no stop keeps its send button while it answers', async () => {
+        const body = document.createElement('div');
+        const stop = drawClaude(body, node({ say: () => new Promise<ClaudeSaid>(() => {}) }), 1);
+        await settled();
+        say(body, 'count to a million');
+        await settled();
+        expect(body.querySelector<HTMLButtonElement>('.claude-send')!.textContent).toBe('→');
+        stop();
+    });
+
     // "i wish to be able to send multipl emessahes, like i do now, here in claude code, if you get me"
     test('what is said while it answers waits, shown as waiting, and is said when the turn before it ends', async () => {
         const body = document.createElement('div');

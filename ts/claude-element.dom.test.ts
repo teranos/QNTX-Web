@@ -655,3 +655,37 @@ describe('Claude - live read off fetch', () => {
         } finally { globalThis.fetch = original; }
     });
 });
+
+// "Being able to annotate and send a picture is of critical importance"
+// A screenshot marked up on the phone is saved as FullSizeRender.jpeg: JPEG bytes. Named said.png, the
+// node refused it: HTTP 400 file content does not match extension .png.
+describe('Claude - a picture goes up as what it is', () => {
+    const sentUp = async (kind: string): Promise<File> => {
+        const up: File[] = [];
+        shelved = (file: File) => { up.push(file); return Promise.resolve({ id: 'f-1', filename: file.name, size: file.size } as realFiles.FileUploadResult); };
+        try {
+            const body = document.createElement('div');
+            const stop = drawClaude(body, node(), 1);
+            await settled();
+            const pick = body.querySelector<HTMLInputElement>('.claude-pick')!;
+            Object.defineProperty(pick, 'files', { value: [new File(['marked up'], 'FullSizeRender.jpeg', { type: kind })], configurable: true });
+            pick.dispatchEvent(new Event('change'));
+            say(body, 'look');
+            for (let tries = 0; up.length === 0 && tries < 50; tries++) await settled();
+            stop();
+            return up[0]!;
+        } finally { shelved = null; }
+    };
+
+    test('Tim: a picture marked up on the phone, a JPEG, goes up named a JPEG', async () => {
+        const file = await sentUp('image/jpeg');
+        expect(file.name).toBe('said.jpg');
+        expect(file.type).toBe('image/jpeg');
+    });
+
+    test('Spike: each kind the node takes keeps its own name', async () => {
+        expect((await sentUp('image/png')).name).toBe('said.png');
+        expect((await sentUp('image/webp')).name).toBe('said.webp');
+        expect((await sentUp('image/gif')).name).toBe('said.gif');
+    });
+});

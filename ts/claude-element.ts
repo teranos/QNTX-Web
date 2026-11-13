@@ -159,6 +159,21 @@ export function elementAgent(element: string): NodeAgent {
 // What is said with a picture and no words.
 const LOOK = 'Look at the picture.';
 
+// "Being able to annotate and send a picture is of critical importance"
+// The node takes a picture whose name says what its bytes are: one marked up on the phone is a JPEG.
+const PICTURE_NAMES: Record<string, string> = {
+    'image/png': 'said.png',
+    'image/jpeg': 'said.jpg',
+    'image/gif': 'said.gif',
+    'image/webp': 'said.webp',
+};
+
+/** The picture as the node takes it: named for what it is. */
+function pictureFile(picture: Blob): File {
+    const type = picture.type || 'image/png';
+    return new File([picture], PICTURE_NAMES[type] ?? `said.${type.split('/')[1] ?? 'png'}`, { type });
+}
+
 // How often a turn that is going is read again.
 const FOLLOW_MS = 2000;
 
@@ -412,7 +427,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         follow();
         // The picture goes up first, as a file of the node's; what comes back names it to say.
         const carries: Promise<Carried | undefined> = it.picture
-            ? uploadFile(new File([it.picture], 'said.png', { type: it.picture.type || 'image/png' })).then(stored => ({ file_id: stored.id }))
+            ? uploadFile(pictureFile(it.picture)).then(stored => ({ file_id: stored.id }))
             : Promise.resolve(undefined);
         carries
             .then(carried => node.say(it.words, it.mode, carried, it.model))

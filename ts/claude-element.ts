@@ -605,7 +605,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                 const whose = node.collectedFor ? node.collectedFor().catch(() => is.did) : Promise.resolve(is.did);
                 void whose.then(did => {
                     if (did && !left) stopCollected = watchCollected(body, did, form, () => { hold(true); follow(); }, collected);
-                    // What it said to other agents and is collected for them, over the same chat.
+                    // 「[Opus 5.5] What it said to other agents and is collected for them, over the same chat.」
                     if (did && !left) stopOutbox = watchOutbox(body, did, form, collected);
                 });
             }

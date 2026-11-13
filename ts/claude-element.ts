@@ -266,7 +266,8 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     const form = part('div', 'claude-say');
     form.append(mode, model, attach, pick, send, attached, says);
     // "the inputfield take up the entire bottom of the screen for chat elements like claude or pi"
-    declareSay(says);
+    // Purple arrows: the + into the field's bottom-left corner, the → into its bottom-right.
+    declareSay(says, { start: attach, end: send });
     // What is typed and pressed here is not a drag of the element.
     preventDrag(form);
     preventDrag(session);

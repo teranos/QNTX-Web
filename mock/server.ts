@@ -168,7 +168,7 @@ function elementAgent(element: string): Agent {
     }
     return held;
 }
-// What agents said to the Node Agent, collected: released, it is said to the Node Agent as a person's is.
+// 「[Fable 5.2] What agents said to the Node Agent, collected: released, it is said to the Node Agent as a person's is.」
 const collected = new TheCollected("Lamplighter", theNodeAgent.did, theNodeAgent.model, says => { void theNodeAgent.say(says, "", "", ""); });
 const files = new Files();
 const codexAgents = new CodexAgents();
@@ -488,7 +488,7 @@ Bun.serve({
             return new Response(null, { status: 303, headers: { Location: "/", "Set-Cookie": `${COOKIE}=${level}; Path=/; SameSite=Lax` } });
         }
         if (path === "/__mock__/") return json({ as: whoIs(req) ?? "nobody", levels: LEVELS });
-        // The mock has no agents that speak: a story has them say what waits, and asks what became of it.
+        // 「[Fable 5.2] The mock has no agents that speak: a story has them say what waits, and asks what became of it.」
         if (path === "/__mock__/collected" && req.method === "POST") {
             const sent = (await req.json()) as { forget?: boolean; said?: { from: string; says: string }[] };
             if (sent.forget) collected.forget();

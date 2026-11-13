@@ -236,3 +236,11 @@ Then('the Node Agent never receives it', async ({ page }) => {
     await expect.poll(async () => (await became(page)).canceled.length).toBe(3);
     expect((await became(page)).sent).toHaveLength(0);
 });
+
+// What waits is the Node Agent's own, whatever harness its chat is in.
+When('I press the codex tab of the chat', async ({ page }) => {
+    await expect(batch(page)).toHaveAttribute('data-form', 'overlay');
+    await page.locator('.agents-tab', { hasText: 'codex' }).click();
+    await expect(page.locator('.agents-tab-on')).toHaveText('codex');
+    await expect(page.locator('.claude-says')).toBeVisible();
+});

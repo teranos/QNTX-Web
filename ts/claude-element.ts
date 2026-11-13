@@ -80,6 +80,9 @@ export interface NodeAgent {
     stop?(): Promise<ClaudeAm>;
     // What agents said to it, collected (collected-element.ts). Only an agent the node collects for has it.
     collected?: Collection;
+    // Whose batch its chat shows, by DID, when that is not who this harness says it is: the node collects
+    // for the Node Agent under its own DID, whatever harness its chat is in.
+    collectedFor?(): Promise<string>;
 }
 
 /** The say body: harness, words, the mode when one is chosen, and what is carried. */
@@ -593,7 +596,13 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             else session.textContent = 'Nothing has been said to it yet.';
             if (is.answering) { hold(true); follow(); }
             // Released, it is a turn of the agent's: the chat follows it as it does any.
-            if (node.collected && is.did && !left) stopCollected = watchCollected(body, is.did, form, () => { hold(true); follow(); }, node.collected);
+            const collected = node.collected;
+            if (collected) {
+                const whose = node.collectedFor ? node.collectedFor().catch(() => is.did) : Promise.resolve(is.did);
+                void whose.then(did => {
+                    if (did && !left) stopCollected = watchCollected(body, did, form, () => { hold(true); follow(); }, collected);
+                });
+            }
         })
         .catch((err: unknown) => {
             who.textContent = wordsOf(err);

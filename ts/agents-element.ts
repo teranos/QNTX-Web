@@ -189,7 +189,11 @@ export function agentIn(at: string, harness: Harness, unwrap: (answer: unknown) 
         live: harness === 'claude' ? (onEvent, onEnd) => readLive(backendPath(`${at}/live?harness=claude`), onEvent, onEnd) : undefined,
         // What agents say to the Node Agent is collected for it whatever harness its chat is in;
         // the node stops its turn in Claude Code.
-        ...(at === NODE_AGENT_AT ? { collected: theNodeAgentsOwn.collected } : {}),
+        ...(at === NODE_AGENT_AT ? {
+            collected: theNodeAgentsOwn.collected,
+            // The batch is the Node Agent's own, by the DID it has in Claude Code, which another harness's am does not say.
+            collectedFor: () => apiJson<unknown>(`${at}?harness=claude`).then(answer => unwrap(answer).claude?.did ?? ''),
+        } : {}),
         ...(at === NODE_AGENT_AT && harness === 'claude' ? { stop: theNodeAgentsOwn.stop } : {}),
     };
 }

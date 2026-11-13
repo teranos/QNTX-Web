@@ -25,6 +25,10 @@ Feature: ROOT authors what agents say to an agent
     Then I see the batch that waits bottom left of the chat, slightly transparent
     And it says how many wait and when they are sent
 
+  Scenario: ROOT talks to the Node Agent in another harness
+    When I press the codex tab of the chat
+    Then I see the batch that waits bottom left of the chat, slightly transparent
+
   Scenario: ROOT moves it up
     When I drag the batch up
     Then it stands higher in the chat, and nothing opened

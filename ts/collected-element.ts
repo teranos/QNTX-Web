@@ -100,6 +100,21 @@ function part<K extends keyof HTMLElementTagNameMap>(tag: K, className: string):
 
 const wordsOf = (err: unknown): string => (err instanceof Error ? err.message : String(err));
 
+// What waits that is drawn now, by the agent it waits for, and what is to be opened as soon as it is drawn.
+const drawnFor = new Map<string, OverlayHandle>();
+const wantedOpen = new Set<string>();
+
+/**
+ * Opens what waits for the agent whose DID this is: now when it is drawn at
+ * rest, and when it is drawn otherwise. ROOT came in from a notification about
+ * it (phone.ts), and what they came for is in front.
+ */
+export function openWhenShown(did: string): void {
+    const drawn = drawnFor.get(did);
+    if (drawn) drawn.element.click();
+    else wantedOpen.add(did);
+}
+
 /**
  * What waits for the agent whose DID this is, drawn over the chat it is talked
  * to in: nothing while nothing waits. above is what it first rests above, the
@@ -159,6 +174,7 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
         waits = mine;
         if (!mine) {
             overlay?.away();
+            if (overlay && drawnFor.get(did) === overlay) drawnFor.delete(did);
             overlay = null;
             rows.clear();
             list.replaceChildren();
@@ -183,6 +199,12 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
                 color: '#000',
                 renderContent: () => whole,
             }, { over, className: 'collected-batch', at: { bottom } });
+            drawnFor.set(did, overlay);
+            // Asked for before it was drawn: opened once it rests, which is a press on it.
+            if (wantedOpen.delete(did)) {
+                const mineNow = overlay;
+                setTimeout(() => { if (drawnFor.get(did) === mineNow) mineNow.element.click(); }, 0);
+            }
         }
         overlay.says(batchSaid(mine));
         const held = mine.held_until ? `, held by you until ${momentSaid(new Date(mine.held_until))}` : '';
@@ -392,6 +414,7 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
         stopped = true;
         clearInterval(looking);
         overlay?.away();
+        if (overlay && drawnFor.get(did) === overlay) drawnFor.delete(did);
         overlay = null;
     };
 }

@@ -1,8 +1,8 @@
-// The phone ROOT carries: it hands the node the token it is reached by, and
-// when ROOT comes in from a notification it opens on what is about to be said.
-// "i want to see it on my phone, for the duration of 15 minutes before a collected message is sent"
-// "listen, a simpler version will work for me, i just want to get the hard part out of the way"
-// The node says it (QNTX server/phones.go); the app asks Apple for the token (QNTX-App push/).
+// 「[Opus 5.5] The phone ROOT carries: it hands the node the token it is reached by, and」
+// 「[Opus 5.5] when ROOT comes in from a notification it opens on what is about to be said.」
+// "「[Opus 5.5] i want to see it on my phone, for the duration of 15 minutes before a collected message is sent」"
+// "「[Opus 5.5] listen, a simpler version will work for me, i just want to get the hard part out of the way」"
+// 「[Opus 5.5] The node says it (QNTX server/phones.go); the app asks Apple for the token (QNTX-App push/).」
 
 import { invoke } from '@tauri-apps/api/core';
 import { apiJson } from './client';
@@ -33,9 +33,9 @@ export interface Phone {
     visible(): boolean;
 }
 
-// How long before it is sent the node tells the phone: what is sent within it is what the phone opens on.
+// 「[Opus 5.5] How long before it is sent the node tells the phone: what is sent within it is what the phone opens on.」
 const ABOUT_TO_MS = 900_000;
-// How often it is asked again while the app stays in front: a batch comes within the fifteen minutes without the app being left.
+// 「[Opus 5.5] How often it is asked again while the app stays in front: a batch comes within the fifteen minutes without the app being left.」
 const LOOK_MS = 60_000;
 
 const wordsOf = (err: unknown): string => (err instanceof Error ? err.message : String(err));
@@ -63,17 +63,17 @@ const theApp: Phone = {
 };
 
 /**
- * ROOT's phone, for as long as the page is open: whoever is signed in is asked
- * each time, so a session that begins later hands over its own token. In front
- * and as ROOT, the token is handed over once for that session, and the Node
- * Agent's chat is opened on what is about to be said to it, once for each time
- * it is due. What it gives back stops it.
+ * 「[Opus 5.5] ROOT's phone, for as long as the page is open: whoever is signed in is asked」
+ * 「[Opus 5.5] each time, so a session that begins later hands over its own token. In front」
+ * 「[Opus 5.5] and as ROOT, the token is handed over once for that session, and the Node」
+ * 「[Opus 5.5] Agent's chat is opened on what is about to be said to it, once for each time」
+ * 「[Opus 5.5] it is due. What it gives back stops it.」
  */
 export function rootsPhone(phone: Phone = theApp, every: number = LOOK_MS): () => void {
-    // Who the token was last handed over as, tried once for each: one who turned notifications off is not asked every minute.
+    // 「[Opus 5.5] Who the token was last handed over as, tried once for each: one who turned notifications off is not asked every minute.」
     let handedAs = '';
     let nodeAgent = '';
-    // Each time it is due is opened on once: closed by the person, it is not opened again for that time.
+    // 「[Opus 5.5] Each time it is due is opened on once: closed by the person, it is not opened again for that time.」
     const opened = new Set<string>();
     let looking = false;
 
@@ -83,14 +83,14 @@ export function rootsPhone(phone: Phone = theApp, every: number = LOOK_MS): () =
         try {
             const is = await phone.who();
             if (is.level !== 'ROOT' || !is.identity) {
-                // Nobody, or somebody else: the next ROOT hands over their own, and the Node Agent is asked for anew.
+                // 「[Opus 5.5] Nobody, or somebody else: the next ROOT hands over their own, and the Node Agent is asked for anew.」
                 handedAs = '';
                 nodeAgent = '';
                 return;
             }
             if (handedAs !== is.identity) {
                 handedAs = is.identity;
-                // Refused off iOS, and when notifications are off for QNTX: said, and nothing else changes.
+                // 「[Opus 5.5] Refused off iOS, and when notifications are off for QNTX: said, and nothing else changes.」
                 phone.token()
                     .then(held => phone.keep(held))
                     .then(() => log.info(SEG.UI, '[Phone] the node holds the token it reaches this phone by'))
@@ -98,9 +98,9 @@ export function rootsPhone(phone: Phone = theApp, every: number = LOOK_MS): () =
             }
             if (!nodeAgent) nodeAgent = await phone.nodeAgent();
             const all = await phone.waits();
-            // Left for the background while the node answered: nothing is opened behind the person's back.
+            // 「[Opus 5.5] Left for the background while the node answered: nothing is opened behind the person's back.」
             if (!phone.visible()) return;
-            // The chat that is opened is the Node Agent's, so what is opened on is what waits for it, and the first of it not opened on yet.
+            // 「[Opus 5.5] The chat that is opened is the Node Agent's, so what is opened on is what waits for it, and the first of it not opened on yet.」
             const next = aboutToBeSaid(all).find(one => one.did === nodeAgent && !opened.has(`${one.did} ${one.due}`));
             if (!next) return;
             opened.add(`${next.did} ${next.due}`);

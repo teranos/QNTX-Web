@@ -1,4 +1,4 @@
-// What the batch says, and how a drag is read: the parts of collected-element.ts with no page in them.
+// 「[Fable 5.2] What the batch says, and how a drag is read: the parts of collected-element.ts with no page in them.」
 
 import { describe, test, expect } from 'bun:test';
 import { batchSaid, momentSaid, hoursAfter, longerSaid, type Collected } from './collected-element';

@@ -1,11 +1,11 @@
-// The steps of what agents said to an agent, collected, walked against the mock as ROOT on a phone.
+// 「[Opus 5.5] The steps of what agents said to an agent, collected, walked against the mock as ROOT on a phone.」
 
 import { expect, type Page } from '@playwright/test';
 import { createBdd } from 'playwright-bdd';
 
 const { Given, When, Then } = createBdd();
 
-// Where the pictures of the walk are kept, to be looked at.
+// 「[Opus 5.5] Where the pictures of the walk are kept, to be looked at.」
 const SHOTS = 'test-results/collected';
 
 const batch = (page: Page) => page.locator('[data-element-id^="collected:"]');
@@ -27,7 +27,7 @@ const became = (page: Page): Promise<{ sent: string[]; canceled: { says: string 
     page.evaluate(async () => (await fetch('/__mock__/collected')).json());
 
 const HOUR = 3_600_000;
-// What was due when the batch was pressed, for the steps that ask how much later it is.
+// 「[Opus 5.5] What was due when the batch was pressed, for the steps that ask how much later it is.」
 let dueWas = 0;
 
 Given('I am ROOT on my phone, and agents said three things to the Node Agent that wait', async ({ page }) => {
@@ -50,7 +50,7 @@ Given('I am ROOT on my phone, and agents said three things to the Node Agent tha
 });
 
 Given('I open the Node Agent', async ({ page }) => {
-    // The App opens into the Node Room on a phone: out of it, and the sidebar is where the agents are.
+    // 「[Fable 5.2] The App opens into the Node Room on a phone: out of it, and the sidebar is where the agents are.」
     await expect(page.locator('[data-element-id^="room:"][data-form="panel"]')).toBeVisible({ timeout: 15_000 });
     await page.keyboard.press('Escape');
     await expect(page.locator('[data-element-id^="room:"][data-form="panel"]')).toHaveCount(0);
@@ -65,7 +65,7 @@ Then('I see the batch that waits bottom left of the chat, slightly transparent',
     const mine = (await batch(page).boundingBox())!;
     const over = (await chat(page).boundingBox())!;
     const field = (await page.locator('.claude-says').boundingBox())!;
-    // Left in the chat, low in it, and above where I type.
+    // 「[Opus 5.5] Left in the chat, low in it, and above where I type.」
     expect(mine.x - over.x).toBeLessThan(24);
     expect(mine.y + mine.height).toBeLessThanOrEqual(field.y);
     expect(mine.y).toBeGreaterThan(over.y + over.height / 2);
@@ -135,7 +135,7 @@ Then('send now, later, hold and cancel are in its header', async ({ page }) => {
     await expect(header.locator('[data-press="collected-later"]')).toBeVisible();
     await expect(header.locator('.collected-hold')).toBeVisible();
     await expect(header.locator('[data-press="collected-cancel"]')).toBeVisible();
-    // The header is above what was said, and stays there.
+    // 「[Opus 5.5] The header is above what was said, and stays there.」
     const top = (await header.boundingBox())!;
     const first = (await batch(page).locator('.collected-one').first().boundingBox())!;
     expect(top.y + top.height).toBeLessThanOrEqual(first.y + 1);
@@ -164,7 +164,7 @@ Then('the Node Agent receives all of it as one thing said', async ({ page }) => 
     await expect.poll(async () => (await became(page)).sent.length).toBe(1);
     const sent = (await became(page)).sent[0]!;
     for (const part of ['pull request one is open', 'the pond is drained', 'pull request two is open', 'Alder', 'Hazel']) expect(sent).toContain(part);
-    // And it is in the chat I was in all along, as a turn of the agent's.
+    // 「[Opus 5.5] And it is in the chat I was in all along, as a turn of the agent's.」
     await expect(page.locator('.chat-scroll')).toContainText('Collected for you', { timeout: 15_000 });
     await page.screenshot({ path: `${SHOTS}/6-sent.png` });
 });
@@ -200,14 +200,14 @@ When('I keep hold pressed and drag up', async ({ page }) => {
     const hold = (await batch(page).locator('.collected-hold').boundingBox())!;
     await page.mouse.move(hold.x + hold.width / 2, hold.y + hold.height / 2);
     await page.mouse.down();
-    // Up for more, then down a little for less: fifteen hours in all.
+    // 「[Opus 5.5] Up for more, then down a little for less: fifteen hours in all.」
     await page.mouse.move(hold.x + hold.width / 2, hold.y + hold.height / 2 - 200, { steps: 10 });
     await page.mouse.move(hold.x + hold.width / 2, hold.y + hold.height / 2 - 150, { steps: 5 });
 });
 
 Then('it says how much longer as I drag', async ({ page }) => {
     await expect(batch(page).locator('.collected-longer')).toContainText('15h longer');
-    // Still pressed: nothing to confirm yet, and the node holds what it held.
+    // 「[Opus 5.5] Still pressed: nothing to confirm yet, and the node holds what it held.」
     await expect(batch(page).locator('.collected-confirm')).toBeHidden();
     expect(Date.parse((await held(page))!.due)).toBe(dueWas);
     await page.screenshot({ path: `${SHOTS}/8-holding.png` });
@@ -237,7 +237,7 @@ Then('the Node Agent never receives it', async ({ page }) => {
     expect((await became(page)).sent).toHaveLength(0);
 });
 
-// What waits is the Node Agent's own, whatever harness its chat is in.
+// 「[Fable 5.2] What waits is the Node Agent's own, whatever harness its chat is in.」
 When('I press the codex tab of the chat', async ({ page }) => {
     await expect(batch(page)).toHaveAttribute('data-form', 'overlay');
     await page.locator('.agents-tab', { hasText: 'codex' }).click();

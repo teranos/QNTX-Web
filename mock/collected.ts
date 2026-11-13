@@ -1,6 +1,6 @@
-// What agents said to an agent, collected, as the mock holds it (QNTX server/collected.go).
-// What a person does with it is answered as the node answers it; what agents
-// say is put in by the mock itself, since the mock has no agents that speak.
+// 「[Opus 5.5] What agents said to an agent, collected, as the mock holds it (QNTX server/collected.go).」
+// 「[Opus 5.5] What a person does with it is answered as the node answers it; what agents」
+// 「[Opus 5.5] say is put in by the mock itself, since the mock has no agents that speak.」
 
 export interface CollectedSaid {
     from: string;
@@ -22,7 +22,7 @@ export interface Collected {
     waiting: CollectedSaid[];
 }
 
-// Six hours, as the node holds an agent on Fable to.
+// 「[Opus 5.5] Six hours, as the node holds an agent on Fable to.」
 const WAIT_MS = 21_600_000;
 
 function json(body: unknown, status = 200): Response {

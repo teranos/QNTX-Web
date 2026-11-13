@@ -1,5 +1,5 @@
-// The chat a person opens on the Node Agent is the one that stops it and shows what waits for it.
-// The stop and the collection were once the Node Agent's in a chat the page never drew.
+// 「[Fable 5.2] The chat a person opens on the Node Agent is the one that stops it and shows what waits for it.」
+// 「[Fable 5.2] The stop and the collection were once the Node Agent's in a chat the page never drew.」
 
 import { describe, test, expect } from 'bun:test';
 import { agentIn } from './agents-element';

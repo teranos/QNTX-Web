@@ -1,4 +1,4 @@
-// What goes out, and what it says at rest: the parts of outbox-element.ts with no page in them.
+// 「[Opus 5.5] What goes out, and what it says at rest: the parts of outbox-element.ts with no page in them.」
 
 import { describe, test, expect } from 'bun:test';
 import { outboxOf, outgoingSaid } from './outbox-element';

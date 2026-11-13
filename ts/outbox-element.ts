@@ -1,6 +1,6 @@
-// What a chat's agent said to other agents and is collected for them, drawn over that chat: one batch per agent addressed.
+// 「[Opus 5.5] What a chat's agent said to other agents and is collected for them, drawn over that chat: one batch per agent addressed.」
 // "similar to how we see what's waiting to wake up this chat with an overlaid element (inbox), I would like to have the same thing for known outbox message collection per addressed session"
-// What is collected and when it goes is the node's (the collected signum); collected-element.ts draws what waits for this chat's agent, this what it said.
+// 「[Opus 5.5] What is collected and when it goes is the node's (the collected signum); collected-element.ts draws what waits for this chat's agent, this what it said.」
 
 import { overlayFrom, pressFrom, declareScroller, preventDrag, type OverlayHandle } from '@teranos/elements';
 import { theCollection, momentSaid, type Collection, type Collected, type CollectedSaid } from './collected-element';
@@ -40,14 +40,14 @@ function part<K extends keyof HTMLElementTagNameMap>(tag: K, className: string):
 
 const wordsOf = (err: unknown): string => (err instanceof Error ? err.message : String(err));
 
-// How often what goes out is asked again, and how far above the chat's field each batch rests over the one below it, in px.
+// 「[Opus 5.5] How often what goes out is asked again, and how far above the chat's field each batch rests over the one below it, in px.」
 const LOOK_MS = 5000;
 const STACK_PX = 56;
 
 /**
- * What the agent whose DID this is said and is collected for others, drawn over
- * the chat it is talked to in: one batch per agent addressed, resting above the
- * inbox (collected-element.ts). What it gives back stops asking.
+ * 「[Opus 5.5] What the agent whose DID this is said and is collected for others, drawn over」
+ * 「[Opus 5.5] the chat it is talked to in: one batch per agent addressed, resting above the」
+ * 「[Opus 5.5] inbox (collected-element.ts). What it gives back stops asking.」
  */
 export function watchOutbox(chat: HTMLElement, did: string, above: HTMLElement | null, node: Collection = theCollection, every: number = LOOK_MS): () => void {
     let stopped = false;
@@ -96,10 +96,10 @@ export function watchOutbox(chat: HTMLElement, did: string, above: HTMLElement |
                 { over, className: 'outbox-batch', at: { bottom: base + STACK_PX * (place + 1) } }),
             when, list, rows: new Map(), going,
         };
-        // What goes is what the person saw: the batch's own, what others said in it included, as the inbox sends it.
+        // 「[Opus 5.5] What goes is what the person saw: the batch's own, what others said in it included, as the inbox sends it.」
         const now = pressFrom({ id: `outbox-now-${going.did}`, title: 'Send now', again: 'it is sent', does: () => ask(() => node.release(to, [])) });
         const later = pressFrom({ id: `outbox-later-${going.did}`, title: 'Later', does: () => ask(() => node.later(to)) });
-        // What is canceled is what this chat's agent said, each by its id: what others said waits on.
+        // 「[Opus 5.5] What is canceled is what this chat's agent said, each by its id: what others said waits on.」
         const cancel = pressFrom({
             id: `outbox-cancel-${going.did}`, title: 'Cancel', again: 'never sent', irrevocable: true,
             does: async () => { for (const id of Array.from(batch.rows.keys())) await ask(() => node.cancel(to, id)); },
@@ -141,7 +141,7 @@ export function watchOutbox(chat: HTMLElement, did: string, above: HTMLElement |
                     says.value = said.says;
                     const to = one.to;
                     const id = said.id;
-                    // What the person wrote is the node's once they leave the field.
+                    // 「[Opus 5.5] What the person wrote is the node's once they leave the field.」
                     says.addEventListener('change', () => {
                         const wrote = says.value;
                         ask(() => node.edit(to, id, wrote)).then(() => { const kept = batch?.rows.get(id); if (kept) kept.held = wrote; })
@@ -153,7 +153,7 @@ export function watchOutbox(chat: HTMLElement, did: string, above: HTMLElement |
                     batch.rows.set(said.id, drawn);
                 }
                 drawn.who.textContent = `${momentSaid(new Date(said.at))}${said.edited ? ' · changed by you' : ''}`;
-                // The node's words go only into a field that still says what the node last put there.
+                // 「[Opus 5.5] The node's words go only into a field that still says what the node last put there.」
                 if (drawn.says.value === drawn.held) drawn.says.value = said.says;
                 drawn.held = said.says;
             }

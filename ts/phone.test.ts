@@ -1,7 +1,7 @@
-// ROOT's phone: whose token is handed over and when, and what the app opens on.
+// What the app opens on while ROOT is in it: what is about to be said to the Node Agent.
 
 import { describe, test, expect } from 'bun:test';
-import { aboutToBeSaid, rootsPhone, type Phone, type PhoneToken, type SignedIn } from './phone';
+import { aboutToBeSaid, rootsPhone, type Phone, type SignedIn } from './phone';
 import type { Collected } from './collected-element';
 
 const MIN = 60_000;
@@ -17,22 +17,19 @@ async function settled(): Promise<void> {
     for (let i = 0; i < 8; i++) await new Promise(resolve => setTimeout(resolve, 0));
 }
 
-/** A phone standing in for the app, the node and the page, keeping what was done with it. */
+/** A phone standing in for the node and the page, keeping what was done with it. */
 function aPhone(over: Partial<Phone> = {}) {
-    const kept: PhoneToken[] = [];
     const opened: string[] = [];
-    const state = { who: { identity: 'root', level: 'ROOT' } as SignedIn, waiting: [] as Collected[], visible: true, asked: 0 };
+    const state = { who: { identity: 'root', level: 'ROOT' } as SignedIn, waiting: [] as Collected[], visible: true };
     const phone: Phone = {
         who: () => Promise.resolve(state.who),
-        token: () => { state.asked++; return Promise.resolve({ token: `token-of-${state.who.identity}`, platform: 'ios' }); },
-        keep: held => { kept.push(held); return Promise.resolve(); },
         waits: () => Promise.resolve(state.waiting),
         nodeAgent: () => Promise.resolve(NODE),
         open: (did, due) => { opened.push(`${did} ${due}`); },
         visible: () => state.visible,
         ...over,
     };
-    return { phone, kept, opened, state };
+    return { phone, opened, state };
 }
 
 const front = () => document.dispatchEvent(new Event('visibilitychange'));
@@ -110,52 +107,28 @@ describe('what the phone opens on', () => {
     });
 });
 
-describe('the token', () => {
-    test('handed over once for ROOT, and by nobody else', async () => {
-        const { phone, kept, state } = aPhone();
-        const stop = rootsPhone(phone, 1_000_000);
-        await settled();
-        front();
-        await settled();
-        expect(kept).toEqual([{ token: 'token-of-root', platform: 'ios' }]);
-        expect(state.asked).toBe(1);
-        stop();
-
+describe('who it opens for', () => {
+    test('ROOT, and nobody else', async () => {
         const user = aPhone();
         user.state.who = { identity: 'spike', level: 'USER' };
-        const stopUser = rootsPhone(user.phone, 1_000_000);
+        user.state.waiting = [waits(NODE, 10 * MIN)];
+        const stop = rootsPhone(user.phone, 1_000_000);
         await settled();
-        expect(user.kept).toEqual([]);
-        expect(user.state.asked).toBe(0);
-        stopUser();
-    });
-
-    test('one who signs in later, on the same page, hands over their own', async () => {
-        const { phone, kept, state } = aPhone();
-        state.who = {};
-        const stop = rootsPhone(phone, 1_000_000);
-        await settled();
-        expect(kept).toEqual([]);
-        state.who = { identity: 'root', level: 'ROOT' };
-        front();
-        await settled();
-        state.who = {};
-        front();
-        await settled();
-        state.who = { identity: 'another-root', level: 'ROOT' };
-        front();
-        await settled();
-        expect(kept.map(held => held.token)).toEqual(['token-of-root', 'token-of-another-root']);
+        expect(user.opened).toEqual([]);
         stop();
     });
 
-    test('a phone that gives none hands the node nothing, and what waits is still opened on', async () => {
-        const { phone, kept, opened, state } = aPhone({ token: () => Promise.reject(new Error('notifications are turned off for QNTX in Settings')) });
+    test('one who signs in later, on the same page', async () => {
+        const { phone, opened, state } = aPhone();
         const mine = waits(NODE, 10 * MIN);
+        state.who = {};
         state.waiting = [mine];
         const stop = rootsPhone(phone, 1_000_000);
         await settled();
-        expect(kept).toEqual([]);
+        expect(opened).toEqual([]);
+        state.who = { identity: 'root', level: 'ROOT' };
+        front();
+        await settled();
         expect(opened).toEqual([`${NODE} ${mine.due}`]);
         stop();
     });

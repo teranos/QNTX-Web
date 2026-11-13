@@ -503,8 +503,8 @@ async function init(): Promise<void> {
             .catch(err => log.error(SEG.UI, '[Init] the mock element was not drawn:', err));
     }
 
-    // ROOT's phone: the node is handed the token it reaches it by, and the app opens on what is about to be said.
-    // In the app only. Who is signed in is asked each time it looks, so one who signs in later is ROOT's phone too.
+    // In the app, the Node Agent's chat opens on what is about to be said to it (phone.ts).
+    // Who is signed in is asked each time it looks, so one who signs in later is ROOT too.
     if (window.__TAURI__) {
         import('./phone.ts')
             .then(({ rootsPhone }) => { rootsPhone(); })

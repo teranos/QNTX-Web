@@ -187,8 +187,10 @@ export function agentIn(at: string, harness: Harness, unwrap: (answer: unknown) 
         read: () => apiJson<{ transcript: SessionRead }>(`${at}/session?harness=${harness}`).then(answer => answer.transcript),
         // Only Claude Code prints to a stream the node tails (QNTX server/agent_live.go).
         live: harness === 'claude' ? (onEvent, onEnd) => readLive(backendPath(`${at}/live?harness=claude`), onEvent, onEnd) : undefined,
-        // The Node Agent in Claude Code is stopped by the node, and what agents say to it is collected.
-        ...(at === NODE_AGENT_AT && harness === 'claude' ? theNodeAgentsOwn : {}),
+        // What agents say to the Node Agent is collected for it whatever harness its chat is in;
+        // the node stops its turn in Claude Code.
+        ...(at === NODE_AGENT_AT ? { collected: theNodeAgentsOwn.collected } : {}),
+        ...(at === NODE_AGENT_AT && harness === 'claude' ? { stop: theNodeAgentsOwn.stop } : {}),
     };
 }
 

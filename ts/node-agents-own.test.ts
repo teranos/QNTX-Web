@@ -11,8 +11,14 @@ describe('the Node Agent as the Agents element draws it', () => {
         expect(node.collected).toBeDefined();
     });
 
-    test('in another harness, and any other agent, has neither', () => {
-        for (const other of [agentIn('/api/agent', 'codex'), agentIn('/api/agents/pond', 'claude'), agentIn('/api/elements/story-1-x', 'claude')]) {
+    test('in another harness what waits for it still shows, and nothing stops it', () => {
+        const node = agentIn('/api/agent', 'codex');
+        expect(node.collected).toBeDefined();
+        expect(node.stop).toBeUndefined();
+    });
+
+    test('any other agent has neither', () => {
+        for (const other of [agentIn('/api/agents/pond', 'claude'), agentIn('/api/elements/story-1-x', 'claude')]) {
             expect(other.stop).toBeUndefined();
             expect(other.collected).toBeUndefined();
         }

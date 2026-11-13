@@ -110,8 +110,16 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
     let overlay: OverlayHandle | null = null;
     let waits: Collected | null = null;
     let stopped = false;
-    // What each thing said is drawn as, by its id.
-    const rows = new Map<string, { row: HTMLElement; says: HTMLTextAreaElement; who: HTMLElement }>();
+    // What each thing said is drawn as, by its id: its field, what the node held when the node last
+    // wrote the field, and the edits of it being kept, one after another.
+    interface Row { row: HTMLElement; says: HTMLTextAreaElement; who: HTMLElement; failed: HTMLElement; held: string; keeping: Promise<void> }
+    const rows = new Map<string, Row>();
+    // Each answer of the node's in the order it was asked for, and the latest drawn: one asked before it is not drawn over it.
+    let asked = 0;
+    let drawnAt = 0;
+    // Whether a batch was drawn, and whether its going was the person's own cancel.
+    let had = false;
+    let canceledHere = false;
 
     const header = part('div', 'collected-header');
     header.style.display = 'flex';
@@ -135,6 +143,15 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
 
     const fails = (what: string, err: unknown) => log.error(SEG.ELEMENT, `[Collected] ${what}: ${wordsOf(err)}`);
 
+    /** One thing asked of the node, drawn when it answers unless something asked later was drawn first. */
+    const ask = async (answer: () => Promise<Collected[]>): Promise<void> => {
+        const mine = ++asked;
+        const all = await answer();
+        if (mine < drawnAt) return;
+        drawnAt = mine;
+        draw(all);
+    };
+
     /** What the node holds now, drawn: the batch at rest, and who said what when it is open. */
     const draw = (all: Collected[]) => {
         if (stopped) return;
@@ -145,8 +162,14 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
             overlay = null;
             rows.clear();
             list.replaceChildren();
+            // It went and the person did not cancel it: the node delivered it, from here or from
+            // elsewhere, and the chat follows the turn that started.
+            if (had && !canceledHere) sent();
+            had = false;
+            canceledHere = false;
             return;
         }
+        had = true;
         if (!overlay) {
             const over = chat.closest<HTMLElement>('[data-element-id]');
             // The chat is not in its element yet: asked again at the next look.
@@ -181,42 +204,66 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
                 says.setAttribute('aria-label', `What ${one.from} said`);
                 says.value = one.says;
                 // What the person wrote is the node's once they leave the field.
-                says.addEventListener('change', () => { keep(one.id).catch(() => { /* said by keep */ }); });
+                says.addEventListener('change', () => { keep(one.id).catch(() => { /* said beside the field */ }); });
+                const failed = part('div', 'collected-failed');
+                failed.setAttribute('role', 'alert');
+                failed.hidden = true;
+                const to = mine.to;
                 const remove = pressFrom({
                     id: `collected-remove-${one.id}`,
                     title: 'Remove',
                     again: 'never sent',
                     irrevocable: true,
-                    does: async () => { draw(await node.cancel(mine.to, one.id)); },
+                    // Removed by the person: if it was the last, the batch went by their hand and no turn started.
+                    does: async () => {
+                        canceledHere = true;
+                        try { await ask(() => node.cancel(to, one.id)); } finally { if (had) canceledHere = false; }
+                    },
                 });
-                row.append(who, says, remove.element);
+                row.append(who, says, failed, remove.element);
                 list.appendChild(row);
-                drawn = { row, says, who };
+                drawn = { row, says, who, failed, held: one.says, keeping: Promise.resolve() };
                 rows.set(one.id, drawn);
             }
             drawn.who.textContent = `${one.from} · ${momentSaid(new Date(one.at))}${one.edited ? ' · changed by you' : ''}`;
-            // What the person is typing is theirs until they leave it.
-            if (document.activeElement !== drawn.says && drawn.says.dataset.typed !== 'yes') drawn.says.value = one.says;
+            // What the person wrote and the node does not hold yet is theirs: the node's words go only
+            // into a field that still says what the node last put there.
+            if (drawn.says.value === drawn.held) drawn.says.value = one.says;
+            drawn.held = one.says;
         }
         for (const [id, drawn] of rows) {
             if (!seen.has(id)) { drawn.row.remove(); rows.delete(id); }
         }
     };
 
-    /** What the person wrote for one thing said, kept by the node when it differs from what the node holds. */
-    const keep = async (id: string): Promise<void> => {
+    /**
+     * What the person wrote for one thing said, kept by the node when it differs from what the node holds.
+     * One edit of a thing at a time, each after the one before: what was written last is what is kept last.
+     */
+    const keep = (id: string): Promise<void> => {
         const drawn = rows.get(id);
-        const held = waits?.waiting.find(one => one.id === id);
-        if (!drawn || !held || !waits || drawn.says.value === held.says) return;
-        drawn.says.dataset.typed = 'yes';
-        try {
-            const all = await node.edit(waits.to, id, drawn.says.value);
-            delete drawn.says.dataset.typed;
-            draw(all);
-        } catch (err) {
-            fails('edit', err);
-            throw err;
-        }
+        if (!drawn) return Promise.resolve();
+        const kept = drawn.keeping.catch(() => { /* the one before said its own */ }).then(async () => {
+            const to = waits?.to;
+            const wrote = drawn.says.value;
+            if (!to || !rows.has(id) || wrote === drawn.held) return;
+            try {
+                const mine = ++asked;
+                const all = await node.edit(to, id, wrote);
+                drawn.failed.hidden = true;
+                // The node holds what was written, and the field says so unless the person wrote on meanwhile.
+                drawn.held = wrote;
+                if (mine >= drawnAt) { drawnAt = mine; draw(all); }
+            } catch (err) {
+                // What they wrote stays in the field, said not to be kept, and is tried again when they leave it or send.
+                drawn.failed.textContent = `Not kept by the node: ${wordsOf(err)}`;
+                drawn.failed.hidden = false;
+                fails('edit', err);
+                throw err;
+            }
+        });
+        drawn.keeping = kept;
+        return kept;
     };
     /** Everything typed and not yet the node's, kept before anything is done with the batch. */
     const keepAll = async (): Promise<void> => { for (const id of Array.from(rows.keys())) await keep(id); };
@@ -229,21 +276,35 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
             if (!waits) return;
             await keepAll();
             // What goes is what the person saw: what was collected since waits on.
-            draw(await node.release(waits.to, Array.from(rows.keys())));
-            sent();
+            const to = waits.to;
+            const saw = Array.from(rows.keys());
+            await ask(() => node.release(to, saw));
+            // Something still waits, so the batch did not go from the chat: the turn that started is followed all the same.
+            if (had) sent();
         },
     });
     const later = pressFrom({
         id: 'collected-later',
         title: 'Later',
-        does: async () => { if (waits) draw(await node.later(waits.to)); },
+        does: async () => { const to = waits?.to; if (to) await ask(() => node.later(to)); },
     });
     const cancel = pressFrom({
         id: 'collected-cancel',
         title: 'Cancel',
         again: 'never sent',
         irrevocable: true,
-        does: async () => { if (waits) draw(await node.cancel(waits.to)); },
+        does: async () => {
+            const to = waits?.to;
+            if (!to) return;
+            // What is canceled is what the person saw, each by its id: what came in since waits on.
+            canceledHere = true;
+            try {
+                for (const id of Array.from(rows.keys())) await ask(() => node.cancel(to, id));
+            } finally {
+                // Something came in meanwhile and still waits: when it goes, it was not this cancel.
+                if (had) canceledHere = false;
+            }
+        },
     });
 
     // "DELAY QUICKLY (GET'S COLLECTED WITH THE NEXT BATCH), DELAY LONGER BY KEEPING IT PRESSED AND DRAGGING HOW MUCH(UP/DOWN)RELEASE-CONFIRM."
@@ -286,11 +347,12 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
         id: 'collected-hold-confirm',
         title: 'Confirm',
         does: async () => {
-            if (!waits || hours === 0) return;
-            const all = await node.hold(waits.to, until());
+            const to = waits?.to;
+            if (!to || hours === 0) return;
+            const at = until();
+            await ask(() => node.hold(to, at));
             hours = 0;
             sayLonger();
-            draw(all);
         },
     });
     // A press is always drawn: what holds it is what is shown or not.
@@ -321,7 +383,7 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
 
     header.append(now.element, later.element, hold, cancel.element, longer, confirmHeld);
 
-    const look = () => { node.list().then(draw).catch((err: unknown) => fails('list', err)); };
+    const look = () => { ask(() => node.list()).catch((err: unknown) => fails('list', err)); };
     look();
     const looking = setInterval(look, every);
     declareScroller(list);

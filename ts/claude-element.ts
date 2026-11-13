@@ -276,6 +276,8 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     let listening: (() => void) | null = null;
     // What agents said to it and waits, drawn over this chat while it is open.
     let stopCollected: (() => void) | null = null;
+    // The chat was left: what the node answers after that starts nothing over whatever is drawn here next.
+    let left = false;
     let draft: HTMLElement | null = null;
     let drafted = '';
     // One thing said: its words, what was typed for them, its picture, the mode and model it was said in, and its row while it waits.
@@ -591,7 +593,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             else session.textContent = 'Nothing has been said to it yet.';
             if (is.answering) { hold(true); follow(); }
             // Released, it is a turn of the agent's: the chat follows it as it does any.
-            if (node.collected && is.did) stopCollected = watchCollected(body, is.did, form, () => { hold(true); follow(); }, node.collected);
+            if (node.collected && is.did && !left) stopCollected = watchCollected(body, is.did, form, () => { hold(true); follow(); }, node.collected);
         })
         .catch((err: unknown) => {
             who.textContent = wordsOf(err);
@@ -599,6 +601,6 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             log.warn(SEG.ELEMENT, `[Claude] the node did not say who answers: ${wordsOf(err)}`);
         });
 
-    return () => { stopCollected?.(); stopCollected = null; settle(); };
+    return () => { left = true; stopCollected?.(); stopCollected = null; settle(); };
 }
 

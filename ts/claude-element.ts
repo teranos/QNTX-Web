@@ -209,7 +209,7 @@ function part<K extends keyof HTMLElementTagNameMap>(tag: K, className: string):
 const ICONS: Record<string, string> = {
     '+': '<path d="M12 5v14M5 12h14"/>',
     '↑': '<path d="M12 19V5M6 11l6-6 6 6"/>',
-    '■': '<rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" stroke="none"/>',
+    '■': '<rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor" stroke="none"/>',
 };
 
 function drawIcon(button: HTMLElement, glyph: string): void {

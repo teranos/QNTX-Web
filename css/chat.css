@@ -5,8 +5,7 @@
 .claude-say [data-say-box] { min-height: 52px; box-sizing: border-box; border: 1px solid rgba(255, 255, 255, 0.12); background-color: #1d1d1d; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35); }
 .claude-says { color: #ececec; font-family: -apple-system, system-ui, 'Segoe UI', sans-serif; font-size: var(--font-size-field); line-height: 1.4; padding: 0; outline: none; }
 .claude-says::placeholder { color: #8e8c87; }
-.claude-say .claude-attach, .claude-say .claude-send { width: 36px; height: 36px; padding: 0; border: none; background: #2c2c2c; color: #fff; font-size: 22px; font-family: -apple-system, system-ui, sans-serif; line-height: 1; display: flex; align-items: center; justify-content: center; }
-.claude-say .claude-send:not(.claude-stop) { background: #b9774f; }
+.claude-say .claude-attach, .claude-say .claude-send { height: 36px; padding: 7px; box-sizing: border-box; border: none; border-radius: 50%; background: #2c2c2c; color: #fff; font-size: 22px; font-family: -apple-system, system-ui, sans-serif; line-height: 1; display: flex; align-items: center; justify-content: center; }
 .claude-picks { display: flex; gap: 4px; padding: 2px 8px; flex-shrink: 0; }
 .claude-picks select { flex: 0 1 auto; min-width: 0; font-size: var(--font-size-xs); }
 .claude-status { padding: 6px 16px; color: #8e8c87; font-size: var(--font-size-sm); }

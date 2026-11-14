@@ -34,4 +34,13 @@ describe('what goes out from a chat', () => {
         const [going] = outboxOf([waitsFor('Alder', 'did:key:alder', at(21, 1), [['Lamplighter', 'did:key:lamp']])], 'did:key:lamp');
         expect(outgoingSaid(going, now)).toBe('→ Alder · 1 · 21:01');
     });
+
+    test('what goes with what wakes next says so, and stands after what has a time', () => {
+        const quiet = waitsFor('Rowan', 'did:key:rowan', at(21, 1), [['Lamplighter', 'did:key:lamp']]);
+        quiet.due = '';
+        const timed = waitsFor('Alder', 'did:key:alder', at(21, 1), [['Lamplighter', 'did:key:lamp']]);
+        const out = outboxOf([quiet, timed], 'did:key:lamp');
+        expect(out.map(o => o.to)).toEqual(['Alder', 'Rowan']);
+        expect(outgoingSaid(out[1], now)).toBe('→ Rowan · 1 · with what wakes next');
+    });
 });

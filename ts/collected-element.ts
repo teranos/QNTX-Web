@@ -91,6 +91,11 @@ export function batchSaid(waits: Collected, now: Date = new Date()): string {
     return `${n} ${n === 1 ? 'waits' : 'wait'} · ${sentSaid(waits.due, now)}`;
 }
 
+/** The moment it is held until, hours longer than it is due: from when it is due, and from now where it is due at no time. */
+export function heldUntil(due: string, hours: number, now: number = Date.now()): Date {
+    return new Date((due ? new Date(due).getTime() : now) + hours * 3_600_000);
+}
+
 /** The hours it is held longer after a drag of dy px from what it was: up is more, down is less, never under none. */
 export function hoursAfter(was: number, dy: number): number {
     return Math.max(0, Math.min(MOST_HOURS, was + Math.round(-dy / PX_PER_HOUR)));
@@ -379,8 +384,7 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
     longer.hidden = true;
     let hours = 0;
     let from: { y: number; hours: number } | null = null;
-    // Held longer from when it is due, and from now where it is due at no time.
-    const until = (): Date => new Date((waits?.due ? new Date(waits.due).getTime() : Date.now()) + hours * 3_600_000);
+    const until = (): Date => heldUntil(waits?.due ?? '', hours);
     const sayLonger = () => {
         hold.setAttribute('aria-valuenow', String(hours));
         longer.hidden = hours === 0;

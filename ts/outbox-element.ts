@@ -3,7 +3,7 @@
 // What is collected and when it goes is the node's (the collected signum); collected-element.ts draws what waits for this chat's agent, this what it said.
 
 import { overlayFrom, pressFrom, declareScroller, preventDrag, type OverlayHandle } from '@teranos/elements';
-import { theCollection, momentSaid, type Collection, type Collected, type CollectedSaid } from './collected-element';
+import { theCollection, momentSaid, sentSaid, type Collection, type Collected, type CollectedSaid } from './collected-element';
 import { log, SEG } from './logger.ts';
 
 /** What one agent addressed waits on that this chat's agent said, and what others said with it. */
@@ -24,12 +24,14 @@ export function outboxOf(all: Collected[], did: string): Outgoing[] {
         if (mine.length === 0) continue;
         out.push({ to: waits.to, did: waits.did, due: waits.due, held_until: waits.held_until, mine, others: waits.waiting.length - mine.length });
     }
-    return out.sort((a, b) => new Date(a.due).getTime() - new Date(b.due).getTime());
+    // What goes with what wakes next has no time: it stands after everything that has one.
+    const at = (due: string) => (due ? new Date(due).getTime() : Number.POSITIVE_INFINITY);
+    return out.sort((a, b) => at(a.due) - at(b.due));
 }
 
 /** What a batch going out says at rest: to whom, how many, and when they are sent. */
 export function outgoingSaid(going: Outgoing, now: Date = new Date()): string {
-    return `→ ${going.to} · ${going.mine.length} · ${momentSaid(new Date(going.due), now)}`;
+    return `→ ${going.to} · ${going.mine.length} · ${sentSaid(going.due, now)}`;
 }
 
 function part<K extends keyof HTMLElementTagNameMap>(tag: K, className: string): HTMLElementTagNameMap[K] {
@@ -124,7 +126,7 @@ export function watchOutbox(chat: HTMLElement, did: string, above: HTMLElement |
             batch.overlay.says(outgoingSaid(one));
             const others = one.others > 0 ? ` With ${one.others} from others.` : '';
             const held = one.held_until ? `, held until ${momentSaid(new Date(one.held_until))}` : '';
-            batch.when.textContent = `To ${one.to}. Sent ${momentSaid(new Date(one.due))}${held}.${others}`;
+            batch.when.textContent = `To ${one.to}. Sent ${sentSaid(one.due)}${held}.${others}`;
             const ids = new Set<string>();
             for (const said of one.mine) {
                 ids.add(said.id);

@@ -1,7 +1,7 @@
 // What the batch says, and how a drag is read: the parts of collected-element.ts with no page in them.
 
 import { describe, test, expect } from 'bun:test';
-import { batchSaid, momentSaid, hoursAfter, longerSaid, type Collected } from './collected-element';
+import { batchSaid, momentSaid, sentSaid, heldUntil, hoursAfter, longerSaid, type Collected } from './collected-element';
 
 const at = (y: number, m: number, d: number, h: number, min: number) => new Date(y, m - 1, d, h, min);
 const now = at(2026, 11, 13, 13, 30);
@@ -42,5 +42,18 @@ describe('a drag on hold', () => {
     test('how much longer is said in days and hours', () => {
         expect(longerSaid(15)).toBe('15h');
         expect(longerSaid(50)).toBe('2d 2h');
+    });
+});
+
+describe('what is due at no time', () => {
+    test('its Sent line says it goes with what wakes next', () => {
+        expect(sentSaid('', now)).toBe('with what wakes next');
+        expect(sentSaid(at(2026, 11, 13, 19, 5).toISOString(), now)).toBe('19:05');
+    });
+
+    test('held longer, it is held from now; with a time, from that time', () => {
+        expect(heldUntil('', 3, now.getTime()).getTime()).toBe(now.getTime() + 3 * 3_600_000);
+        const due = at(2026, 11, 13, 19, 0);
+        expect(heldUntil(due.toISOString(), 2, now.getTime()).getTime()).toBe(due.getTime() + 2 * 3_600_000);
     });
 });

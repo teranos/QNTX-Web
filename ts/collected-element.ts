@@ -77,10 +77,23 @@ export function momentSaid(at: Date, now: Date = new Date()): string {
     return within ? `${DAYS[at.getDay()]} ${time}` : `${at.getDate()}/${at.getMonth() + 1} ${time}`;
 }
 
+/**
+ * When what waits is sent. What holds only what wakes nobody is due at no
+ * time, and the node says so with no time: it goes with what wakes next.
+ */
+export function sentSaid(due: string, now: Date = new Date()): string {
+    return due ? momentSaid(new Date(due), now) : 'with what wakes next';
+}
+
 /** What the batch says at rest: how many wait, and when they are sent. */
 export function batchSaid(waits: Collected, now: Date = new Date()): string {
     const n = waits.waiting.length;
-    return `${n} ${n === 1 ? 'waits' : 'wait'} · ${momentSaid(new Date(waits.due), now)}`;
+    return `${n} ${n === 1 ? 'waits' : 'wait'} · ${sentSaid(waits.due, now)}`;
+}
+
+/** The moment it is held until, hours longer than it is due: from when it is due, and from now where it is due at no time. */
+export function heldUntil(due: string, hours: number, now: number = Date.now()): Date {
+    return new Date((due ? new Date(due).getTime() : now) + hours * 3_600_000);
 }
 
 /** The hours it is held longer after a drag of dy px from what it was: up is more, down is less, never under none. */
@@ -221,7 +234,7 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
         }
         overlay.says(batchSaid(mine));
         const held = mine.held_until ? `, held by you until ${momentSaid(new Date(mine.held_until))}` : '';
-        when.textContent = `For ${mine.to}. Sent ${momentSaid(new Date(mine.due))}${held}.`;
+        when.textContent = `For ${mine.to}. Sent ${sentSaid(mine.due)}${held}.`;
 
         const seen = new Set<string>();
         for (const one of mine.waiting) {
@@ -371,7 +384,7 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
     longer.hidden = true;
     let hours = 0;
     let from: { y: number; hours: number } | null = null;
-    const until = (): Date => new Date((waits ? new Date(waits.due).getTime() : Date.now()) + hours * 3_600_000);
+    const until = (): Date => heldUntil(waits?.due ?? '', hours);
     const sayLonger = () => {
         hold.setAttribute('aria-valuenow', String(hours));
         longer.hidden = hours === 0;

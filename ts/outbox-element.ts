@@ -24,7 +24,7 @@ export function outboxOf(all: Collected[], did: string): Outgoing[] {
         if (mine.length === 0) continue;
         out.push({ to: waits.to, did: waits.did, due: waits.due, held_until: waits.held_until, mine, others: waits.waiting.length - mine.length });
     }
-    // What goes with what wakes next has no time: it stands after everything that has one.
+    // 「[Fable 5.2, Opus 5.5] What goes with what wakes next has no time: it stands after everything that has one.」
     const at = (due: string) => (due ? new Date(due).getTime() : Number.POSITIVE_INFINITY);
     return out.sort((a, b) => at(a.due) - at(b.due));
 }

@@ -78,8 +78,8 @@ export function momentSaid(at: Date, now: Date = new Date()): string {
 }
 
 /**
- * When what waits is sent. What holds only what wakes nobody is due at no
- * time, and the node says so with no time: it goes with what wakes next.
+ * 「[Fable 5.2, Opus 5.5] When what waits is sent. What holds only what wakes nobody is due at no」
+ * 「[Fable 5.2, Opus 5.5] time, and the node says so with no time: it goes with what wakes next.」
  */
 export function sentSaid(due: string, now: Date = new Date()): string {
     return due ? momentSaid(new Date(due), now) : 'with what wakes next';

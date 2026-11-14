@@ -474,7 +474,10 @@
 
 /* "you made it unusable on mobile": on a phone the chat is the screen, the composer within thumb's reach. */
 @media (max-width: 768px) {
-    .claude, .chat { width: 100%; height: 100%; padding-bottom: env(safe-area-inset-bottom, 0); }
+    .claude, .chat { width: 100%; height: 100%; }
+    /* "missed opportunity", in red, under the field, five times. The home bar's strip is the field's (the package's
+       panel gives it), and nothing of the chat's own is left under it. */
+    .content-area.chat, .chat .claude-say { padding-bottom: 0; }
     .chat-you { max-width: 92%; }
     .chat .claude-say select { flex: 1 1 40%; max-width: none; }
     .claude-says { font-size: var(--font-size-field); }

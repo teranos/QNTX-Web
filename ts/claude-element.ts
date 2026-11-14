@@ -4,6 +4,7 @@
 // What it is and why is ADR-048's; this draws what the claude signum answers.
 
 import { declareSay, preventDrag } from '@teranos/elements';
+import { Pulse } from './sym';
 import { apiJson } from './client';
 import { log, SEG } from './logger.ts';
 import { apiError, sacredEntry } from './components/sacred';
@@ -209,9 +210,22 @@ function part<K extends keyof HTMLElementTagNameMap>(tag: K, className: string):
 const ICONS: Record<string, string> = {
     // "Replace + with a small paperclip like telegram does"
     '📎': '<path transform="translate(12 12) scale(0.72) translate(-12 -12)" stroke-width="2.4" d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>',
-    '↑': '<path d="M12 19V5M6 11l6-6 6 6"/>',
     '■': '<rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor" stroke="none"/>',
 };
+
+// "the send button should be the pulse symbol, not an up arrow": ꩜ drawn as its spiral, two and a half turns out from
+// the middle, so it is as sharp as the paperclip whatever font the device has.
+function spiral(): string {
+    const at: string[] = [];
+    for (let i = 0; i <= 60; i++) {
+        const t = i / 60;
+        const turn = t * 2.5 * 2 * Math.PI;
+        const r = 0.6 + 7.9 * t;
+        at.push(`${(12 + r * Math.cos(turn)).toFixed(2)} ${(12 + r * Math.sin(turn)).toFixed(2)}`);
+    }
+    return `<path d="M${at.join(' L')}"/>`;
+}
+ICONS[Pulse] = spiral();
 
 function drawIcon(button: HTMLElement, glyph: string): void {
     button.innerHTML = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[glyph]}</svg>`;
@@ -263,7 +277,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     // "I dont want to diverge from what industry is doing": a chat's buttons
     // are glyphs, as the Claude app's are and as the room's send is. The words
     // stay, for a reader and a hover.
-    drawIcon(send, '↑');
+    drawIcon(send, Pulse);
     send.setAttribute('aria-label', 'Say');
     send.title = 'Say';
     // > being able to attach an imagine whne in a mobile chat
@@ -320,7 +334,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     const stops = (): boolean => answeringNow && !!node.stop && !says.value.trim() && !picture;
     const showSend = () => {
         const stopping = stops();
-        drawIcon(send, stopping ? '■' : '↑');
+        drawIcon(send, stopping ? '■' : Pulse);
         send.setAttribute('aria-label', stopping ? 'Stop' : 'Say');
         send.title = stopping ? 'Stop' : 'Say';
         send.classList.toggle('claude-stop', stopping);

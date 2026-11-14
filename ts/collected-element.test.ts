@@ -18,6 +18,10 @@ describe('what the batch says at rest', () => {
         expect(batchSaid(waits(1, at(2026, 11, 13, 14, 0)), now)).toBe('1 waits · 14:00');
     });
 
+    test('what wakes nobody is due at no time, and says what it goes with', () => {
+        expect(batchSaid({ ...waits(2, now), due: '' }, now)).toBe('2 wait · with what wakes next');
+    });
+
     test('another day is said with its day', () => {
         expect(momentSaid(at(2026, 11, 14, 9, 0), now)).toBe('Sat 09:00');
         expect(momentSaid(at(2026, 11, 27, 9, 0), now)).toBe('27/11 09:00');

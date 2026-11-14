@@ -205,6 +205,17 @@ function part<K extends keyof HTMLElementTagNameMap>(tag: K, className: string):
     return el;
 }
 
+// The composer's presses are drawn, as every chat app's are: a character is text, and text is the package's size.
+const ICONS: Record<string, string> = {
+    '+': '<path d="M12 5v14M5 12h14"/>',
+    '↑': '<path d="M12 19V5M6 11l6-6 6 6"/>',
+    '■': '<rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" stroke="none"/>',
+};
+
+function drawIcon(button: HTMLElement, glyph: string): void {
+    button.innerHTML = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[glyph]}</svg>`;
+}
+
 function choice(value: string, label: string): HTMLOptionElement {
     const option = document.createElement('option');
     option.value = value;
@@ -244,13 +255,14 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     const model = part('select', 'claude-model');
     model.hidden = true;
     const says = part('textarea', 'claude-says');
-    says.rows = 2;
-    says.placeholder = 'Say something to the Node Agent';
+    says.rows = 1;
+    const SAY = 'Say something to the Node Agent';
+    says.placeholder = SAY;
     const send = part('button', 'qntx-btn qntx-btn-small claude-send');
     // "I dont want to diverge from what industry is doing": a chat's buttons
     // are glyphs, as the Claude app's are and as the room's send is. The words
     // stay, for a reader and a hover.
-    send.textContent = '→';
+    drawIcon(send, '↑');
     send.setAttribute('aria-label', 'Say');
     send.title = 'Say';
     // > being able to attach an imagine whne in a mobile chat
@@ -259,12 +271,15 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     pick.accept = 'image/*';
     pick.hidden = true;
     const attach = part('button', 'qntx-btn qntx-btn-small claude-attach');
-    attach.textContent = '+';
+    drawIcon(attach, '+');
     attach.setAttribute('aria-label', 'Picture');
     attach.title = 'Picture';
     const attached = part('div', 'claude-attached');
+    // "This i want", "I want this only": the composer is the field and its two presses. The pickers stand above the talk.
+    const picks = part('div', 'claude-picks');
+    picks.append(mode, model);
     const form = part('div', 'claude-say');
-    form.append(mode, model, attach, pick, send, attached, says);
+    form.append(attach, pick, send, attached, says);
     // "the inputfield take up the entire bottom of the screen for chat elements like claude or pi"
     // Purple arrows: the + into the field's bottom-left corner, the → into its bottom-right.
     declareSay(says, { start: attach, end: send });
@@ -272,7 +287,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     preventDrag(form);
     preventDrag(session);
 
-    body.replaceChildren(who, scroller, status, denied, failed, form);
+    body.replaceChildren(who, picks, scroller, status, denied, failed, form);
 
     let reading = '';
     let sending = false;
@@ -304,7 +319,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     const stops = (): boolean => answeringNow && !!node.stop && !says.value.trim() && !picture;
     const showSend = () => {
         const stopping = stops();
-        send.textContent = stopping ? '■' : '→';
+        drawIcon(send, stopping ? '■' : '↑');
         send.setAttribute('aria-label', stopping ? 'Stop' : 'Say');
         send.title = stopping ? 'Stop' : 'Say';
         send.classList.toggle('claude-stop', stopping);
@@ -447,11 +462,23 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         keepingBottom(scroller, () => queued.appendChild(it.row!));
     };
 
+    // "8s · thinking…", and what is typed meanwhile waits for the turn to end.
+    let thinking: ReturnType<typeof setInterval> | null = null;
     const hold = (answering: boolean) => {
+        const was = answeringNow;
         answeringNow = answering;
         showSend();
-        if (answering) { const said = part('span', 'claude-status-text'); said.textContent = 'answering…'; status.replaceChildren(spark(), said, context); }
-        else status.replaceChildren(context);
+        says.placeholder = answering ? 'Queue for after this turn…' : SAY;
+        if (answering && was && thinking) return;
+        if (thinking) { clearInterval(thinking); thinking = null; }
+        if (answering) {
+            const said = part('span', 'claude-status-text');
+            const since = Date.now();
+            const tick = () => { said.textContent = `${Math.floor((Date.now() - since) / 1000)}s · thinking…`; };
+            tick();
+            thinking = setInterval(tick, 1000);
+            status.replaceChildren(spark(), said, context);
+        } else status.replaceChildren(context);
     };
 
     const settle = () => {

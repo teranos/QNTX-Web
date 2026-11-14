@@ -386,7 +386,6 @@
 @keyframes claude-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 .claude-denied { padding: 0 6px; color: var(--color-warning); font-size: var(--font-size-xs); flex-shrink: 0; }
 .claude-failed { padding: 0 6px; flex-shrink: 0; }
-.claude-say { display: flex; gap: 4px; align-items: stretch; padding: 4px 6px; border-top: 1px solid var(--border-on-dark); flex-shrink: 0; }
 .claude-mode { background: var(--bg-almost-black); color: var(--text-on-dark-secondary); border: 1px solid var(--border-on-dark); font: inherit; font-size: var(--font-size-xs); }
 /* The Claude element in Claude's own colours: Clay, Ivory and Slate, from Anthropic's media resources */
 .shake-body { display: flex; flex-direction: column; }
@@ -468,17 +467,12 @@
 .room-says:focus-visible { outline: 1px solid var(--accent-on-dark); outline-offset: 4px; }
 .room-send { flex: none; border-radius: 50%; font-size: var(--font-size-field); }
 .room-agent.room-agent-on { color: var(--accent-on-dark); border-color: var(--accent-on-dark); background: var(--bg-dark-hover); }
-.chat .claude-say { flex-wrap: wrap; }
-.chat .claude-say select { flex: 0 1 auto; min-width: 0; max-width: 46%; font-size: var(--font-size-xs); }
-.chat .claude-says { flex-basis: 100%; }
 
 /* "you made it unusable on mobile": on a phone the chat is the screen, the composer within thumb's reach. */
 @media (max-width: 768px) {
     .claude, .chat { width: 100%; height: 100%; }
     /* "missed opportunity", in red, under the field, five times. The home bar's strip is the field's (the package's
        panel gives it), and nothing of the chat's own is left under it. */
-    .content-area.chat, .chat .claude-say { padding-bottom: 0; }
+    .content-area.chat { padding-bottom: 0; }
     .chat-you { max-width: 92%; }
-    .chat .claude-say select { flex: 1 1 40%; max-width: none; }
-    .claude-says { font-size: var(--font-size-field); }
 }

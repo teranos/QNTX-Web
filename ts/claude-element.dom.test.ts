@@ -289,7 +289,7 @@ describe('Claude - Jenny', () => {
         await settled();
         await new Promise(resolve => setTimeout(resolve, 20));
         expect(reads).toBeGreaterThan(1);
-        expect(body.querySelector('.claude-status')?.textContent).toContain('answering');
+        expect(body.querySelector('.claude-status')?.textContent).toContain('s · thinking…');
         stop();
     });
 
@@ -302,7 +302,7 @@ describe('Claude - Jenny', () => {
         say(body, 'hey, own https://github.com/teranos/QNTX/pull/1508 please');
         await settled();
         expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('');
-        expect(body.querySelector('.claude-status')?.textContent).toContain('answering');
+        expect(body.querySelector('.claude-status')?.textContent).toContain('s · thinking…');
         stop();
     });
 
@@ -318,18 +318,17 @@ describe('Claude - Jenny', () => {
         }), 1);
         await settled();
         const button = () => body.querySelector<HTMLButtonElement>('.claude-send')!;
-        expect(button().textContent).toBe('→');
+        expect(button().getAttribute('aria-label')).toBe('Say');
 
         say(body, 'count to a million');
         await settled();
-        expect(button().textContent).toBe('■');
-        expect(button().getAttribute('aria-label')).toBe('Stop');
+                expect(button().getAttribute('aria-label')).toBe('Stop');
 
         // Words typed while it answers: the button says them.
         const box = body.querySelector<HTMLTextAreaElement>('.claude-says')!;
         box.value = 'and then?';
         box.dispatchEvent(new Event('input'));
-        expect(button().textContent).toBe('→');
+        expect(button().getAttribute('aria-label')).toBe('Say');
         box.value = '';
         box.dispatchEvent(new Event('input'));
 
@@ -385,7 +384,7 @@ describe('Claude - Jenny', () => {
         await settled();
         say(body, 'count to a million');
         await settled();
-        expect(body.querySelector<HTMLButtonElement>('.claude-send')!.textContent).toBe('→');
+        expect(body.querySelector<HTMLButtonElement>('.claude-send')!.getAttribute('aria-label')).toBe('Say');
         stop();
     });
 
@@ -413,7 +412,7 @@ describe('Claude - Jenny', () => {
         await settled();
         expect(sent).toEqual(['first', 'second']);
         expect(waiting()).toEqual(['third']);
-        expect(body.querySelector('.claude-status')?.textContent).toContain('answering');
+        expect(body.querySelector('.claude-status')?.textContent).toContain('s · thinking…');
 
         answers[1](answered);
         await settled();
@@ -604,7 +603,7 @@ describe('Claude - the session while it runs', () => {
         expect(rows).toEqual(['how long has the box been up?', '$ uptime', 'up 3 days, 2 users', 'Up 3 days.']);
         expect(live.textContent).not.toContain('[tool]');
         // Still answering: say has not come back.
-        expect(body.querySelector('.claude-status')?.textContent).toContain('answering');
+        expect(body.querySelector('.claude-status')?.textContent).toContain('s · thinking…');
 
         landed!(event('text', 'Up 3 days.'));
         expect(live.querySelectorAll('.chat-said').length).toBe(1);

@@ -207,7 +207,8 @@ function part<K extends keyof HTMLElementTagNameMap>(tag: K, className: string):
 
 // The composer's presses are drawn, as every chat app's are: a character is text, and text is the package's size.
 const ICONS: Record<string, string> = {
-    '+': '<path d="M12 5v14M5 12h14"/>',
+    // "Replace + with a small paperclip like telegram does"
+    '📎': '<path transform="translate(12 12) scale(0.72) translate(-12 -12)" stroke-width="2.4" d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>',
     '↑': '<path d="M12 19V5M6 11l6-6 6 6"/>',
     '■': '<rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor" stroke="none"/>',
 };
@@ -271,7 +272,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     pick.accept = 'image/*';
     pick.hidden = true;
     const attach = part('button', 'qntx-btn qntx-btn-small claude-attach');
-    drawIcon(attach, '+');
+    drawIcon(attach, '📎');
     attach.setAttribute('aria-label', 'Picture');
     attach.title = 'Picture';
     const attached = part('div', 'claude-attached');

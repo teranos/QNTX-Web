@@ -10,14 +10,9 @@
 .claude-picks { display: flex; gap: 4px; padding: 2px 8px; flex-shrink: 0; }
 .claude-picks select { flex: 0 1 auto; min-width: 0; font-size: var(--font-size-xs); }
 .claude-status { padding: 6px 16px; color: #8e8c87; font-size: var(--font-size-sm); }
-/* The whole chat is one page, as Gemini's, ChatGPT's, Manus's and Claude's are: proportional words on one surface, the
-   harness a segmented pill at the top, what you said in a bubble, what it says as prose. */
-.content-area.chat { font-family: -apple-system, system-ui, 'Segoe UI', sans-serif; }
+/* The harness a segmented pill at the top, as ChatGPT's Chat | Work is. */
 .chat .agents-tabs { position: static; align-self: flex-start; display: inline-flex; gap: 0; margin: 4px 0 4px; padding: 3px; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 9999px; background: #1d1d1d; }
 .chat .agents-tab { background: transparent; border: none; border-radius: 9999px; color: #b8b6b0; padding: 6px 14px; }
 .chat .agents-tab.agents-tab-on { background: #353535; color: #fff; border-bottom: none; }
 .chat .claude-picks { padding: 4px 0; }
 .chat .claude-picks select { appearance: none; -webkit-appearance: none; background: #1d1d1d; color: #ececec; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 9999px; padding: 6px 14px; font-family: inherit; }
-.chat .chat-scroll { padding: 8px 4px; color: #ececec; line-height: 1.5; }
-.chat .chat-you { align-self: flex-end; max-width: 85%; margin: 12px 0 8px; padding: 8px 14px; border-radius: 18px; background: #2c2c2c; }
-.chat .chat-you::before, .chat .chat-said::before { content: none; }

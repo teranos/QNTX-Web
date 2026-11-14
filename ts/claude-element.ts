@@ -213,7 +213,7 @@ const ICONS: Record<string, string> = {
 };
 
 function drawIcon(button: HTMLElement, glyph: string): void {
-    button.innerHTML = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[glyph]}</svg>`;
+    button.innerHTML = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[glyph]}</svg>`;
 }
 
 function choice(value: string, label: string): HTMLOptionElement {

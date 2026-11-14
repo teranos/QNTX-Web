@@ -1,17 +1,14 @@
 /* The chat's composer, the Claude app's: one pill floating on the page, the + at its start, what is typed, the send at its end.
-   "This i want", "I want this only", "LOOK AT THIS THE SHAPE" */
-.claude-say { display: flex; padding: 8px 0 0; flex-shrink: 0; }
+   "This i want", "I want this only", "LOOK AT THIS THE SHAPE". Its shape and sizes are @teranos/elements' (declareSay); its look is ours. */
+.claude-say { display: flex; flex-shrink: 0; }
 .chat .chat-scroll { background: transparent; }
-.claude-say [data-say-box] { min-height: 52px; box-sizing: border-box; border: 1px solid rgba(255, 255, 255, 0.12); background-color: #1d1d1d; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35); }
-.claude-says { color: #ececec; font-family: -apple-system, system-ui, 'Segoe UI', sans-serif; font-size: var(--font-size-field); line-height: 1.4; padding: 0; outline: none; }
+.claude-say [data-say-box] { border: 1px solid rgba(255, 255, 255, 0.12); background-color: #1d1d1d; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35); }
+.claude-says { color: #ececec; font-family: -apple-system, system-ui, 'Segoe UI', sans-serif; padding: 0; outline: none; }
 .claude-says::placeholder { color: #8e8c87; }
-.claude-say .claude-attach, .claude-say .claude-send { height: 36px; padding: 7px; box-sizing: border-box; border: none; border-radius: 50%; background: #2c2c2c; color: #fff; font-size: 22px; font-family: -apple-system, system-ui, sans-serif; line-height: 1; display: flex; align-items: center; justify-content: center; }
-.claude-picks { display: flex; gap: 4px; padding: 2px 8px; flex-shrink: 0; }
-.claude-picks select { flex: 0 1 auto; min-width: 0; font-size: var(--font-size-xs); }
-.claude-status { padding: 6px 16px; color: #8e8c87; font-size: var(--font-size-sm); }
+.claude-say .claude-attach, .claude-say .claude-send { border: none; background: #2c2c2c; color: #fff; }
+.claude-picks { display: flex; gap: 4px; flex-shrink: 0; }
+.claude-status { color: #8e8c87; font-size: var(--font-size-sm); }
 /* The harness a segmented pill at the top, as ChatGPT's Chat | Work is. */
-.chat .agents-tabs { position: static; align-self: flex-start; display: inline-flex; gap: 0; margin: 4px 0 4px; padding: 3px; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 9999px; background: #1d1d1d; }
-.chat .agents-tab { background: transparent; border: none; border-radius: 9999px; color: #b8b6b0; padding: 6px 14px; }
+.chat .agents-tabs { position: static; align-self: flex-start; display: inline-flex; gap: 0; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 9999px; background: #1d1d1d; }
+.chat .agents-tab { background: transparent; border: none; border-radius: 9999px; color: #b8b6b0; }
 .chat .agents-tab.agents-tab-on { background: #353535; color: #fff; border-bottom: none; }
-.chat .claude-picks { padding: 4px 0; }
-.chat .claude-picks select { appearance: none; -webkit-appearance: none; background: #1d1d1d; color: #ececec; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 9999px; padding: 6px 14px; font-family: inherit; }

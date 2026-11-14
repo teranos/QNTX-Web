@@ -157,6 +157,20 @@ export async function existsAttestation(id: string): Promise<boolean> {
     return await timedAsync('ats', 'exists_attestation', () => wasm.exists_attestation(id));
 }
 
+/**
+ * The bytes an attestation's signature is over, as the node verifies them.
+ * QNTX makes them; laye signs them without knowing what an attestation is.
+ */
+export async function canonicalAttestation(attestation: { id: string }): Promise<Uint8Array> {
+    await ensureInit();
+    const json = JSON.stringify(attestation);
+    const answer = JSON.parse(timed('ats', 'canonical_attestation', () => wasm.canonical_attestation(json)));
+    if ('error' in answer) {
+        throw new Error(`${attestation.id} has no canonical bytes: ${answer.error}`);
+    }
+    return new TextEncoder().encode(answer.canonical);
+}
+
 /** The limit that reads every row, said; Rust's `EVERY_ROW`. */
 export const EVERY_ROW = 2147483647;
 

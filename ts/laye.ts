@@ -4,6 +4,7 @@ import init, * as laye from 'laye-p2p';
 import { log, SEG } from './logger.ts';
 import { apiFetch } from './client';
 import { timed, timedAsync } from './wasm-metrics';
+import { canonicalAttestation } from './ats-wasm';
 
 export interface BindingClaim {
     peer_pubkey_hex: string;
@@ -205,8 +206,7 @@ export async function signAttestation(attestation: { id: string }): Promise<{ si
     if (!await whenReady()) {
         throw new Error(`laye did not start, so ${attestation.id} has no key to be signed with`);
     }
-    const attestationJson = JSON.stringify(attestation);
-    const signature = timed('laye', 'sign_attestation', () => laye.sign_attestation(attestationJson));
+    const signature = sign(await canonicalAttestation(attestation));
     if (signature.length !== ED25519_SIGNATURE_BYTES) {
         throw new Error(`laye did not sign ${attestation.id}: ${laye.errors()}`);
     }

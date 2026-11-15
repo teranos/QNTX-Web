@@ -1,7 +1,7 @@
 // What the batch says, and how a drag is read: the parts of collected-element.ts with no page in them.
 
 import { describe, test, expect } from 'bun:test';
-import { batchSaid, momentSaid, sentSaid, heldUntil, hoursAfter, longerSaid, type Collected } from './collected-element';
+import { failureOf, batchSaid, momentSaid, sentSaid, heldUntil, hoursAfter, longerSaid, type Collected } from './collected-element';
 
 const at = (y: number, m: number, d: number, h: number, min: number) => new Date(y, m - 1, d, h, min);
 const now = at(2026, 11, 13, 13, 30);
@@ -10,6 +10,27 @@ const waits = (n: number, due: Date): Collected => ({
     to: 'Lamplighter', did: 'did:key:z6Mklamp', model: 'claude-fable-5-2', waits: '6h0m0s',
     due: due.toISOString(), held_until: '', delivered: '',
     waiting: Array.from({ length: n }, (_, i) => ({ from: 'Alder', says: `thing ${i}`, at: now.toISOString(), task: '', id: `s-${i}`, edited: false })),
+});
+
+describe('what could not be delivered', () => {
+    test('the batch says it was not delivered, and how many times', () => {
+        expect(batchSaid({ ...waits(3, now), failing_since: '2026-11-14T23:40:48Z', tries: 150, failure: 'attestation JSON exceeds maximum length' }, now))
+            .toBe('3 wait · not delivered, 150 tries');
+    });
+
+    test('it is one failure, why and since when, kept under one id while it keeps failing', () => {
+        const failing = { ...waits(1, now), failing_since: '2026-11-14T23:40:48Z', tries: 2, failure: 'attestation JSON exceeds maximum length' };
+        const once = failureOf(failing);
+        expect(once?.title).toBe('not delivered to Lamplighter');
+        expect(once?.why).toBe('attestation JSON exceeds maximum length');
+        expect(once?.trace).toEqual(['tried 2 times since 2026-11-14T23:40:48Z']);
+        expect(once?.context).toEqual({ surface: 'collected', region: 'Lamplighter' });
+        expect(failureOf({ ...failing, tries: 3 })?.id).toBe(once?.id);
+    });
+
+    test('what has not failed is no failure', () => {
+        expect(failureOf(waits(1, now))).toBeNull();
+    });
 });
 
 describe('what the batch says at rest', () => {

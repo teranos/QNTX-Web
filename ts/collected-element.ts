@@ -6,6 +6,7 @@
 import { overlayFrom, pressFrom, declareScroller, preventDrag, sizeText, AX, type OverlayHandle } from '@teranos/elements';
 import { apiJson } from './client';
 import { log, SEG } from './logger.ts';
+import { sacredEntry, type SacredError } from './components/sacred';
 
 /** One thing an agent said to another, as the node holds it (protocol.CollectedSaid). */
 export interface CollectedSaid {
@@ -29,6 +30,12 @@ export interface Collected {
     held_until: string;
     delivered: string;
     waiting: CollectedSaid[];
+    /** Since when delivering it has failed, RFC3339; absent or empty when it has not. */
+    failing_since?: string;
+    /** How many times in a row the node tried to deliver it and could not. */
+    tries?: number;
+    /** Why the last try failed, as the node was told. */
+    failure?: string;
 }
 
 /** The node's collection, as this asks it. */
@@ -85,10 +92,31 @@ export function sentSaid(due: string, now: Date = new Date()): string {
     return due ? momentSaid(new Date(due), now) : 'with what wakes next';
 }
 
-/** What the batch says at rest: how many wait, and when they are sent. */
+/** What the batch says at rest: how many wait, and when they are sent, or that they were not. */
 export function batchSaid(waits: Collected, now: Date = new Date()): string {
     const n = waits.waiting.length;
-    return `${n} ${n === 1 ? 'waits' : 'wait'} · ${sentSaid(waits.due, now)}`;
+    const how = waits.failing_since ? `not delivered, ${waits.tries ?? 0} tries` : sentSaid(waits.due, now);
+    return `${n} ${n === 1 ? 'waits' : 'wait'} · ${how}`;
+}
+
+/**
+ * "The failure is also quiet by construction."
+ *
+ * What the node could not deliver, as the one failure it is: why, and how many
+ * times since when. Null while it has not failed. One failure keeps one id for
+ * as long as it keeps failing, so it is drawn once and moved, not drawn again.
+ */
+export function failureOf(waits: Collected): SacredError | null {
+    if (!waits.failing_since) return null;
+    return {
+        id: `collected-failing-${waits.did}-${waits.failing_since}`,
+        severity: 'error',
+        context: { surface: 'collected', region: waits.to },
+        title: `not delivered to ${waits.to}`,
+        why: waits.failure ?? '',
+        trace: [`tried ${waits.tries ?? 0} times since ${waits.failing_since}`],
+        at: waits.failing_since,
+    };
 }
 
 /** The moment it is held until, hours longer than it is due: from when it is due, and from now where it is due at no time. */
@@ -166,11 +194,14 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
     list.style.flex = '1';
     list.style.minHeight = '0';
     list.style.overflowY = 'auto';
+    // What the node could not deliver, through the one render a failure has.
+    const failed = part('div', 'collected-failed-delivery');
+    let failedFor = '';
     const whole = part('div', 'collected');
     whole.style.display = 'flex';
     whole.style.flexDirection = 'column';
     whole.style.height = '100%';
-    whole.append(header, when, list);
+    whole.append(failed, header, when, list);
     // What is typed and pressed here is not a drag of the element.
     preventDrag(whole);
 
@@ -235,6 +266,14 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
         overlay.says(batchSaid(mine));
         const held = mine.held_until ? `, held by you until ${momentSaid(new Date(mine.held_until))}` : '';
         when.textContent = `For ${mine.to}. Sent ${sentSaid(mine.due)}${held}.`;
+        const failure = failureOf(mine);
+        if (!failure) {
+            failed.replaceChildren();
+            failedFor = '';
+        } else if (failure.id !== failedFor) {
+            failed.replaceChildren(sacredEntry(failure));
+            failedFor = failure.id;
+        }
 
         const seen = new Set<string>();
         for (const one of mine.waiting) {

@@ -230,6 +230,20 @@ export function generateASUID(prefix: string, subject: string, predicate: string
 }
 
 // ============================================================================
+// Signing
+// ============================================================================
+
+/**
+ * The bytes an attestation's signature is over (crates/ats-sign), from the
+ * proto JSON the browser holds. QNTX says what is signed; laye's key signs it.
+ * Throws when the attestation does not read.
+ */
+export async function canonicalAttestation(attestationJson: string): Promise<Uint8Array> {
+    await initialize();
+    return timed('ats', 'canonical_attestation', () => wasm.canonical_attestation(attestationJson));
+}
+
+// ============================================================================
 // Utilities
 // ============================================================================
 

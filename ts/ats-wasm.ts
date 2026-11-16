@@ -230,13 +230,13 @@ export function generateASUID(prefix: string, subject: string, predicate: string
 }
 
 // ============================================================================
-// Signing
+// 「[Opus 5.5] Signing」
 // ============================================================================
 
 /**
- * The bytes an attestation's signature is over (crates/ats-sign), from the
- * proto JSON the browser holds. QNTX says what is signed; laye's key signs it.
- * Throws when the attestation does not read.
+ * 「[Opus 5.5] The bytes an attestation's signature is over (crates/ats-sign), from the」
+ * 「[Opus 5.5] proto JSON the browser holds. QNTX says what is signed; laye's key signs it.」
+ * 「[Opus 5.5] Throws when the attestation does not read.」
  */
 export async function canonicalAttestation(attestationJson: string): Promise<Uint8Array> {
     await initialize();

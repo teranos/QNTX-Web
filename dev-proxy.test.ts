@@ -34,7 +34,7 @@ describe('resolveBackend', () => {
 });
 
 // 「[Opus 5.5] l's page at l.localhost:8830 named its node localhost:8780, another
-// site, and the passkey's SameSite=Lax cookie never came back: "no half-admission".」
+// 「[Opus 5.5] site, and the passkey's SameSite=Lax cookie never came back: "no half-admission".」」
 describe('pageBackendUrl', () => {
     test('a node on this machine is named on the page\'s own host', () => {
         const local = resolveBackend({}, 8780);

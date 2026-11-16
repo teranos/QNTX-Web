@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { resolveBackend, resolveCredential, resolveOrigin, resolveDevPluginDirs, backendHeaders, dropSetCookie, backendWsUrl, isBackendPath, prefixesOf } from './dev-proxy';
+import { resolveBackend, pageBackendUrl, resolveCredential, resolveOrigin, resolveDevPluginDirs, backendHeaders, dropSetCookie, backendWsUrl, isBackendPath, prefixesOf } from './dev-proxy';
 import { createPrivateKey, createPublicKey, verify } from "node:crypto";
 
 // The zero seed, whose did:key ground's tests name too.
@@ -30,6 +30,26 @@ describe('resolveBackend', () => {
 
     test('a trailing slash would double the one in the path', () => {
         expect(resolveBackend({ QNTX_BACKEND: 'https://q.sbvh.nl/' }, 8770).url).toBe('https://q.sbvh.nl');
+    });
+});
+
+// 「[Opus 5.5] l's page at l.localhost:8830 named its node localhost:8780, another
+// site, and the passkey's SameSite=Lax cookie never came back: "no half-admission".」
+describe('pageBackendUrl', () => {
+    test('a node on this machine is named on the page\'s own host', () => {
+        const local = resolveBackend({}, 8780);
+        expect(pageBackendUrl(local, new URL('http://l.localhost:8830/?homeward=1'))).toBe('http://l.localhost:8780');
+        expect(pageBackendUrl(local, new URL('http://localhost:8830/'))).toBe('http://localhost:8780');
+    });
+
+    test('a loopback address is a node on this machine too', () => {
+        const loopback = resolveBackend({ QNTX_BACKEND: 'http://127.0.0.1:9000' }, 8770);
+        expect(pageBackendUrl(loopback, new URL('http://l.localhost:8830/'))).toBe('http://l.localhost:9000');
+    });
+
+    test('a page reached by no localhost name keeps the node as named', () => {
+        const local = resolveBackend({}, 8780);
+        expect(pageBackendUrl(local, new URL('http://192.168.1.4:8830/'))).toBe('http://localhost:8780');
     });
 });
 

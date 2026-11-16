@@ -24,6 +24,28 @@ export function resolveBackend(env: Record<string, string | undefined>, backendP
     return { url, isRemote };
 }
 
+// 「[Opus 5.5] A name a browser reaches only on this machine.」
+function onThisMachine(hostname: string): boolean {
+    return hostname === 'localhost' || hostname.endsWith('.localhost') || hostname === '127.0.0.1';
+}
+
+/**
+ * 「[Opus 5.5] The node as the page names it to the browser. A node on this
+ * machine is named on the page's own host, so the node and the page are one
+ * site and the SameSite=Lax cookie a passkey ceremony stands on comes back.」
+ */
+export function pageBackendUrl(backend: Backend, page: URL): string {
+    if (backend.isRemote || !onThisMachine(page.hostname)) {
+        return backend.url;
+    }
+    const node = new URL(backend.url);
+    if (!onThisMachine(node.hostname)) {
+        return backend.url;
+    }
+    node.hostname = page.hostname;
+    return node.origin;
+}
+
 // What the relay presents as itself: the key this machine keeps, signing each
 // request for the node it goes to, or a borrowed session.
 //

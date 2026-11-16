@@ -7,7 +7,7 @@
 import { parse as parseToml } from "smol-toml";
 import { readFileSync, existsSync } from "fs";
 import { join, extname } from "path";
-import { resolveBackend, resolveCredential, resolveOrigin, resolveDevPluginDirs, backendHeaders, dropSetCookie, backendWsUrl, isBackendPath } from "./dev-proxy";
+import { resolveBackend, pageBackendUrl, resolveCredential, resolveOrigin, resolveDevPluginDirs, backendHeaders, dropSetCookie, backendWsUrl, isBackendPath } from "./dev-proxy";
 import { build, setupWatcher, findAvailablePort, reloadStream, RELOAD_PATH, RELOAD_SCRIPT, lightPink, pink, darkPink, reset, dim } from "./dev-build";
 
 // Read am.toml configuration
@@ -179,7 +179,7 @@ async function startServer() {
                 // falls back to this origin, so the credential stays on the hop.
                 const backendScript = BACKEND.isRemote
                     ? ""
-                    : `<script>window.__BACKEND_URL__ = "${BACKEND_URL}";</script>`;
+                    : `<script>window.__BACKEND_URL__ = "${pageBackendUrl(BACKEND, url)}";</script>`;
                 // The Go binary serves this same file without it, so nothing
                 // gated on this can reach a deployment.
                 const devScript = `<script>window.__DEV__ = true;</script>`;

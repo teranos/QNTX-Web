@@ -1,5 +1,5 @@
-// laye's, released by Ground-Institute/laye; package.json names the release.
-// Nothing here needs Rust.
+// 「[Opus 5.5] laye's, released by Ground-Institute/laye; package.json names the release.」
+// 「[Opus 5.5] Nothing here needs Rust.」
 import init, * as laye from 'laye-p2p';
 import { canonicalAttestation } from './ats-wasm';
 import { log, SEG } from './logger.ts';

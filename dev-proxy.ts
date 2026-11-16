@@ -31,8 +31,8 @@ function onThisMachine(hostname: string): boolean {
 
 /**
  * 「[Opus 5.5] The node as the page names it to the browser. A node on this
- * machine is named on the page's own host, so the node and the page are one
- * site and the SameSite=Lax cookie a passkey ceremony stands on comes back.」
+ * 「[Opus 5.5] machine is named on the page's own host, so the node and the page are one」
+ * 「[Opus 5.5] site and the SameSite=Lax cookie a passkey ceremony stands on comes back.」」
  */
 export function pageBackendUrl(backend: Backend, page: URL): string {
     if (backend.isRemote || !onThisMachine(page.hostname)) {

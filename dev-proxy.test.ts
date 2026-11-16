@@ -47,6 +47,11 @@ describe('pageBackendUrl', () => {
         expect(pageBackendUrl(loopback, new URL('http://l.localhost:8830/'))).toBe('http://l.localhost:9000');
     });
 
+    test('a node named under a path keeps its path', () => {
+        const under = resolveBackend({ QNTX_BACKEND: 'http://localhost:8780/qntx' }, 8770);
+        expect(pageBackendUrl(under, new URL('http://l.localhost:8830/'))).toBe('http://l.localhost:8780/qntx');
+    });
+
     test('a page reached by no localhost name keeps the node as named', () => {
         const local = resolveBackend({}, 8780);
         expect(pageBackendUrl(local, new URL('http://192.168.1.4:8830/'))).toBe('http://localhost:8780');

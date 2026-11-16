@@ -43,7 +43,8 @@ export function pageBackendUrl(backend: Backend, page: URL): string {
         return backend.url;
     }
     node.hostname = page.hostname;
-    return node.origin;
+    // 「[Opus 5.5] With its path, as the relay names it; URL adds a / that resolveBackend took off.」
+    return node.href.endsWith('/') ? node.href.slice(0, -1) : node.href;
 }
 
 // What the relay presents as itself: the key this machine keeps, signing each

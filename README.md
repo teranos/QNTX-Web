@@ -21,6 +21,14 @@ Ports come from a node's `am.toml`, named by `QNTX_AM_TOML` (or one in this dire
 - `[server].port` - Backend API port (default: 8770)
 - `[server].frontend_port` - Development server port (default: 8820)
 
+「[Opus 5.5] A node on this machine is named to the page on the page's own host:
+「[Opus 5.5] a page at `l.localhost:8830` reaches the node at `l.localhost:8780`, not」
+「[Opus 5.5] `localhost:8780`. The two are different sites to a browser, and the cookie a」
+「[Opus 5.5] passkey ceremony stands on is `SameSite=Lax`, which a browser withholds from a」
+「[Opus 5.5] fetch to another site. The node answered:」」
+
+"「[Opus 5.5] no half-admission」"
+
 ### The mock: no node, no ATS, no laye
 
 > A backend-less, ats-less laye-less, mock web ui.

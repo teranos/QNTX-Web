@@ -1,6 +1,7 @@
-// Built by QNTX's release from crates/laye-p2p and attached to it; package.json
-// names the release. Nothing here needs Rust.
+// 「[Opus 5.5] laye's, released by Ground-Institute/laye; package.json names the release.」
+// 「[Opus 5.5] Nothing here needs Rust.」
 import init, * as laye from 'laye-p2p';
+import { canonicalAttestation } from './ats-wasm';
 import { log, SEG } from './logger.ts';
 import { apiFetch } from './client';
 import { timed, timedAsync } from './wasm-metrics';
@@ -205,8 +206,8 @@ export async function signAttestation(attestation: { id: string }): Promise<{ si
     if (!await whenReady()) {
         throw new Error(`laye did not start, so ${attestation.id} has no key to be signed with`);
     }
-    const attestationJson = JSON.stringify(attestation);
-    const signature = timed('laye', 'sign_attestation', () => laye.sign_attestation(attestationJson));
+    const bytes = await canonicalAttestation(JSON.stringify(attestation));
+    const signature = timed('laye', 'sign', () => laye.sign(bytes));
     if (signature.length !== ED25519_SIGNATURE_BYTES) {
         throw new Error(`laye did not sign ${attestation.id}: ${laye.errors()}`);
     }

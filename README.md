@@ -109,8 +109,10 @@ bun install              # Install dependencies, the WASM packages among them
 bun run build            # Build bundle to dist/
 ```
 
-`ats-wasm` and `laye-p2p` in `package.json` point at the tarballs QNTX's release
-attached. Moving to a newer QNTX is changing that tag and running `bun install`.
+「[Opus 5.5] `ats-wasm` in `package.json` points at the tarball QNTX's release attached, and」
+「[Opus 5.5] `laye-p2p` at the one laye's release attached」
+「[Opus 5.5] ([Ground-Institute/laye](https://github.com/Ground-Institute/laye)). Moving to a」
+「[Opus 5.5] newer one is changing that tag and running `bun install`.」
 
 ### Understanding Dependencies
 

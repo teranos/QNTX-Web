@@ -207,10 +207,12 @@ describe('Canvas → Window Morph', () => {
         expect(titleBar).not.toBeNull();
         expect(titleBar!.querySelector('span')!.textContent).toBe('My Result');
 
-        // Has minimize button
+        // Has minimize button: "I don't like how constantly meaning is conveyed with words while visually you could use
+        // standard stuff": a mark, drawn, named for a reader (@teranos/elements forms/title-bar-controls.ts).
         const buttons = titleBar!.querySelectorAll('button');
         expect(buttons.length).toBeGreaterThanOrEqual(1);
-        expect(buttons[0].textContent).toBe('−');
+        expect(buttons[0].getAttribute('aria-label')).toBe('Minimize');
+        expect(buttons[0].querySelector('svg')).not.toBeNull();
     });
 
     test('maximize: double-call is a no-op', async () => {
@@ -526,7 +528,7 @@ describe('Canvas → Window Morph', () => {
         const buttons = item.querySelectorAll('.title-bar button');
         expect(buttons.length).toBe(2);
         const closeBtn = buttons[1] as HTMLElement;
-        expect(closeBtn.textContent).toBe('×');
+        expect(closeBtn.getAttribute('aria-label')).toBe('Close');
         closeBtn.click();
 
         expect(closeCalled).toBe(true);

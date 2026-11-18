@@ -111,7 +111,11 @@ describe('Spike: shut, and refused', () => {
         document.body.appendChild(body);
         await load();
         expect(button(body, 'YES').disabled).toBe(true);
-        expect(note(button(body, 'YES'))).toBe('checks running');
+        // "I don't like how constantly meaning is conveyed with words while visually you could use standard stuff":
+        // the checks running are drawn as a spinner in the press, and said only to a reader and a pointer.
+        expect(note(button(body, 'YES'))).toBe('');
+        expect(button(body, 'YES').title).toBe('checks running');
+        expect(button(body, 'YES').querySelector('[data-status]')!.textContent).toBe('checks running');
         listed = { approvals: [pr29()] };
         await load();
         expect(button(body, 'YES').disabled).toBe(false);

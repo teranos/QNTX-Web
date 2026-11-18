@@ -3,7 +3,8 @@
 // "in terms of ui, this will be the Claude Element"
 // What it is and why is ADR-048's; this draws what the claude signum answers.
 
-import { declareSay, preventDrag } from '@teranos/elements';
+import { declareSay, choicesFrom, preventDrag, type Choice } from '@teranos/elements';
+import { Pulse } from './sym';
 import { apiJson } from './client';
 import { log, SEG } from './logger.ts';
 import { apiError, sacredEntry } from './components/sacred';
@@ -12,8 +13,8 @@ import { spark } from './claude-spark';
 import { uploadFile } from './api/files';
 import { backendPath } from './client/url';
 import { bearing } from './client/session';
-import { watchCollected, theCollection, type Collection } from './collected-element';
-import { watchOutbox } from './outbox-element';
+import { collectedFrom, theCollection, type Collection } from './collected-element';
+import { outboxFrom } from './outbox-element';
 
 // Who the Node Agent is and how the node runs it (claude am).
 export interface ClaudeAm {
@@ -199,18 +200,42 @@ function pictureFile(picture: Blob): File {
 // How often a turn that is going is read again.
 const FOLLOW_MS = 2000;
 
+// Each chat drawn, numbered: its pill is an element, with an id of its own.
+let drawn = 0;
+
 function part<K extends keyof HTMLElementTagNameMap>(tag: K, className: string): HTMLElementTagNameMap[K] {
     const el = document.createElement(tag);
     el.className = className;
     return el;
 }
 
-function choice(value: string, label: string): HTMLOptionElement {
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = label;
-    return option;
+// The field's presses are drawn, as every chat app's are: a character is text, and text is the package's size.
+const ICONS: Record<string, string> = {
+    // "Replace + with a small paperclip like telegram does"
+    paperclip: '<path transform="translate(12 12) scale(0.72) translate(-12 -12)" stroke-width="2.4" d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>',
+    '■': '<rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor" stroke="none"/>',
+};
+
+// "the send button should be the pulse symbol, not an up arrow": ꩜ drawn as its spiral, two and a half turns out from
+// the middle, so it is as sharp as the paperclip whatever font the device has.
+function spiral(): string {
+    const at: string[] = [];
+    for (let i = 0; i <= 60; i++) {
+        const t = i / 60;
+        const turn = t * 2.5 * 2 * Math.PI;
+        const r = 0.6 + 7.9 * t;
+        at.push(`${(12 + r * Math.cos(turn)).toFixed(2)} ${(12 + r * Math.sin(turn)).toFixed(2)}`);
+    }
+    return `<path d="M${at.join(' L')}"/>`;
 }
+ICONS[Pulse] = spiral();
+
+function drawIcon(button: HTMLElement, glyph: string): void {
+    button.innerHTML = `<svg data-glyph="${glyph}" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[glyph]}</svg>`;
+}
+
+// What stands for the node's own mode among the modes: none is sent, and what is said runs in the node's.
+const NODES_OWN = 'permission mode';
 
 function wordsOf(err: unknown): string {
     return err instanceof Error ? err.message : String(err);
@@ -239,18 +264,20 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     const denied = part('div', 'claude-denied');
     const failed = part('div', 'claude-failed');
 
-    const mode = part('select', 'claude-mode');
-    // "would like ability to pick model as well"
-    const model = part('select', 'claude-model');
-    model.hidden = true;
+    // "would like ability to pick model as well": the model and the mode it is said with, chosen in one pill
+    // above the field once the node said what it offers. "Why not do it like anthropic does, where its a combined model+effort pill"
+    let modeChosen = '';
+    let modelChosen = '';
     const says = part('textarea', 'claude-says');
-    says.rows = 2;
+    says.rows = 1;
     says.placeholder = 'Say something to the Node Agent';
-    const send = part('button', 'qntx-btn qntx-btn-small claude-send');
+    says.setAttribute('aria-label', 'Say something to the Node Agent');
+    const send = part('button', 'claude-send');
+    send.type = 'button';
     // "I dont want to diverge from what industry is doing": a chat's buttons
     // are glyphs, as the Claude app's are and as the room's send is. The words
     // stay, for a reader and a hover.
-    send.textContent = '→';
+    drawIcon(send, Pulse);
     send.setAttribute('aria-label', 'Say');
     send.title = 'Say';
     // > being able to attach an imagine whne in a mobile chat
@@ -258,18 +285,21 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     pick.type = 'file';
     pick.accept = 'image/*';
     pick.hidden = true;
-    const attach = part('button', 'qntx-btn qntx-btn-small claude-attach');
-    attach.textContent = '+';
+    const attach = part('button', 'claude-attach');
+    attach.type = 'button';
+    drawIcon(attach, 'paperclip');
     attach.setAttribute('aria-label', 'Picture');
     attach.title = 'Picture';
     const attached = part('div', 'claude-attached');
     const form = part('div', 'claude-say');
-    form.append(mode, model, attach, pick, send, attached, says);
-    // "the inputfield take up the entire bottom of the screen for chat elements like claude or pi"
-    declareSay(says);
+    form.append(pick, attached, attach, says, send);
     // What is typed and pressed here is not a drag of the element.
     preventDrag(form);
     preventDrag(session);
+    // "the inputfield take up the entire bottom of the screen for chat elements like claude or pi"
+    // "Inputfield an element yes, new form, inputfield": the package's input field, the picture at its start and
+    // the say at its end, its pills above it. Declared once the node said what there is to choose.
+    const declare = (pills: HTMLElement[], waiting: HTMLElement[] = []) => declareSay(says, { start: attach, end: send, pills, waiting });
 
     body.replaceChildren(who, scroller, status, denied, failed, form);
 
@@ -278,7 +308,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     let following: ReturnType<typeof setInterval> | null = null;
     let picture: Blob | null = null;
     let listening: (() => void) | null = null;
-    // What agents said to it and waits, drawn over this chat while it is open.
+    // What agents said to it and waits, and what it said that waits, pills in its field while it is open.
     let stopCollected: (() => void) | null = null;
     let stopOutbox: (() => void) | null = null;
     // The chat was left: what the node answers after that starts nothing over whatever is drawn here next.
@@ -303,7 +333,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     const stops = (): boolean => answeringNow && !!node.stop && !says.value.trim() && !picture;
     const showSend = () => {
         const stopping = stops();
-        send.textContent = stopping ? '■' : '→';
+        drawIcon(send, stopping ? '■' : Pulse);
         send.setAttribute('aria-label', stopping ? 'Stop' : 'Say');
         send.title = stopping ? 'Stop' : 'Say';
         send.classList.toggle('claude-stop', stopping);
@@ -554,7 +584,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     const typedIn = (): Said | null => {
         const words = says.value.trim() || (picture ? LOOK : '');
         if (!words) return null;
-        const it: Said = { words, typed: says.value.trim(), picture, mode: mode.value, model: model.hidden ? '' : model.value };
+        const it: Said = { words, typed: says.value.trim(), picture, mode: modeChosen, model: modelChosen };
         // "kinda buggy still is, the text linger even after i sent it": said is out of the box.
         says.value = '';
         carry(null);
@@ -580,38 +610,50 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             who.textContent = [is.model, is.effort, is.not_ready].filter(Boolean).join('  ');
             // The titlebar is the element's one head: who answers is said here only when it could not be asked.
             who.hidden = !is.not_ready;
-            // A harness with no permission modes, Pi, has nothing to choose here.
-            mode.hidden = is.permission_modes.length === 0;
+            // A harness with no permission modes, Pi, has no mode to choose here.
             // "claude element 'dontask' doesnt make sense there"
             const offered = is.permission_modes.filter(name => name !== 'dontAsk');
             // am.toml that gives no mode, or one not offered here (dontAsk), leaves the choice here,
             // and none is made for the speaker: what is said runs in the node's own. Without this
             // the choice showed nothing at all.
             const ownMode = offered.includes(is.permission_mode) ? is.permission_mode : '';
-            if (!ownMode && !mode.hidden) mode.appendChild(choice('', 'permission mode'));
-            for (const name of offered) mode.appendChild(choice(name, name));
-            mode.value = ownMode;
+            modeChosen = ownMode;
             const models = is.models ?? [];
-            model.hidden = models.length === 0;
-            for (const name of models) model.appendChild(choice(name, name));
-            model.value = models.includes(is.model) ? is.model : (models[0] ?? '');
+            modelChosen = models.includes(is.model) ? is.model : (models[0] ?? '');
+            const offers: Choice[] = [];
+            if (models.length) offers.push({ name: 'Model', options: models, value: modelChosen });
+            if (offered.length) offers.push({ name: 'Permission mode', options: ownMode ? offered : [NODES_OWN, ...offered], value: ownMode || NODES_OWN });
+            // "IF THERE ARE MESSAGES PENDING TO BE SENT, AS A COLLECTED BATCH, I SEE IT": what waits, pills
+            // before the others in the field, seen whether or not anything is being said.
+            const collected = node.collected;
+            const inbox = collected ? collectedFrom(() => { hold(true); follow(); }, collected) : null;
+            const outbox = collected ? outboxFrom(collected) : null;
+            declare(offers.length ? [choicesFrom({
+                id: `claude-choices-${++drawn}`,
+                label: 'Model and permission mode',
+                choices: offers,
+                onChoose: (name, value) => {
+                    if (name === 'Model') modelChosen = value;
+                    else modeChosen = value === NODES_OWN ? '' : value;
+                },
+            })] : [], inbox && outbox ? [inbox.element, outbox.element] : []);
+            // Released, it is a turn of the agent's: the chat follows it as it does any.
+            if (collected && inbox && outbox) {
+                const whose = node.collectedFor ? node.collectedFor().catch(() => is.did) : Promise.resolve(is.did);
+                void whose.then(did => {
+                    if (did && !left) stopCollected = inbox.watch(did);
+                    // What it said to other agents and is collected for them, in the same field.
+                    if (did && !left) stopOutbox = outbox.watch(did);
+                });
+            }
             reading = is.session;
             if (reading) void read();
             else session.textContent = 'Nothing has been said to it yet.';
             if (is.answering) { hold(true); follow(); }
-            // Released, it is a turn of the agent's: the chat follows it as it does any.
-            const collected = node.collected;
-            if (collected) {
-                const whose = node.collectedFor ? node.collectedFor().catch(() => is.did) : Promise.resolve(is.did);
-                void whose.then(did => {
-                    if (did && !left) stopCollected = watchCollected(body, did, form, () => { hold(true); follow(); }, collected);
-                    // What it said to other agents and is collected for them, over the same chat.
-                    if (did && !left) stopOutbox = watchOutbox(body, did, form, collected);
-                });
-            }
         })
         .catch((err: unknown) => {
             who.textContent = wordsOf(err);
+            declare([]);
             send.disabled = true;
             log.warn(SEG.ELEMENT, `[Claude] the node did not say who answers: ${wordsOf(err)}`);
         });

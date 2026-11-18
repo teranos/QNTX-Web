@@ -468,9 +468,6 @@
 .room-says:focus-visible { outline: 1px solid var(--accent-on-dark); outline-offset: 4px; }
 .room-send { flex: none; border-radius: 50%; font-size: var(--font-size-field); }
 .room-agent.room-agent-on { color: var(--accent-on-dark); border-color: var(--accent-on-dark); background: var(--bg-dark-hover); }
-.chat .claude-say { flex-wrap: wrap; }
-.chat .claude-say select { flex: 0 1 auto; min-width: 0; max-width: 46%; font-size: var(--font-size-xs); }
-.chat .claude-says { flex-basis: 100%; }
 
 /* "you made it unusable on mobile": on a phone the chat is the screen, the composer within thumb's reach. */
 @media (max-width: 768px) {
@@ -479,6 +476,5 @@
        panel gives it), and nothing of the chat's own is left under it. */
     .content-area.chat, .chat .claude-say { padding-bottom: 0; }
     .chat-you { max-width: 92%; }
-    .chat .claude-say select { flex: 1 1 40%; max-width: none; }
     .claude-says { font-size: var(--font-size-field); }
 }

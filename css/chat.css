@@ -1,6 +1,17 @@
-/* What waits in a chat's field, as @teranos/elements' examples draw them (examples/index.html): their shape and sizes
+/* A chat's field and its pills, as @teranos/elements' examples draw them (examples/index.html): their shape and sizes
    are the package's (declareSay, Pill Form), their look is ours. "I intend on future sessions to look at the elements
    work and accept it as exemplary. Like a pattern to copy and use." */
+.claude-say [data-say-box] { border: 1px solid #fff; background: #000; }
+.claude-say [data-say] { color: #fff; outline: none; }
+.claude-say [data-say]::placeholder { color: #b0b0b0; }
+.claude-say [data-say-press] { border: 1px solid #fff; background: #000; color: #fff; }
+.claude-say .claude-stop { background: #fff; color: #000; }
+
+/* The choices: what it is said with, at rest and open. */
+.claude-say [data-choices] { border: 1px solid #fff; background: #000; color: #fff; }
+.claude-say [data-choices] button { border: 1px solid #fff; background: #000; color: #fff; font: inherit; }
+.claude-say [data-choices] button[aria-pressed="true"] { background: #fff; color: #000; }
+
 /* What waits: what agents said to this agent, and what it said to others. A row pressed is chosen. */
 .claude-say [data-collected], .claude-say [data-outbox] { border: 1px solid #fff; background: #000; color: #fff; }
 .collected-who, .outbox-who { display: block; width: 100%; text-align: left; padding: 6px 8px; border: 1px solid #fff; border-radius: 12px; background: #000; color: #fff; font: inherit; }

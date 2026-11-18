@@ -18,6 +18,7 @@ mock.module('./api/files', () => ({ ...realFiles, uploadFile: (file: File) => (s
 
 import { drawClaude, type ClaudeAm, type ClaudeSaid, type LiveEvent, type NodeAgent } from './claude-element';
 import type { SessionRead } from './chat';
+import { renderContent, type Element } from '@teranos/elements';
 
 const USE_JSDOM = process.env.USE_JSDOM === '1';
 
@@ -84,6 +85,30 @@ async function settled(): Promise<void> {
     for (let i = 0; i < 5; i++) await new Promise(resolve => setTimeout(resolve, 0));
 }
 
+// The chat drawn in an element, as a panel holds it: its field is the package's input field there (declareSay).
+let elements = 0;
+function inElement(): HTMLElement {
+    const element = document.createElement('div');
+    const body = document.createElement('div');
+    const item = { id: `claude-test-${++elements}`, title: 'Node Agent', renderContent: () => body } as unknown as Element;
+    document.body.appendChild(element);
+    renderContent(element, item, 'test');
+    return body;
+}
+
+// "Why not do it like anthropic does, where its a combined model+effort pill": the model and the mode, one pill above the field.
+const choices = (body: HTMLElement) => body.querySelector<HTMLElement>('[data-choices]');
+async function choose(body: HTMLElement, value: string): Promise<void> {
+    choices(body)!.click();
+    await settled();
+    const option = Array.from(choices(body)!.querySelectorAll<HTMLButtonElement>('button')).find(b => b.textContent === value);
+    if (!option) throw new Error(`no option ${value} in ${choices(body)!.textContent}`);
+    option.click();
+    await settled();
+}
+const offered = (body: HTMLElement, name: string): string[] =>
+    Array.from(choices(body)!.querySelectorAll<HTMLButtonElement>(`button[data-choice="${name}"]`)).map(b => b.textContent ?? '');
+
 function say(body: HTMLElement, words: string): void {
     body.querySelector<HTMLTextAreaElement>('.claude-says')!.value = words;
     body.querySelector<HTMLButtonElement>('.claude-send')!.click();
@@ -109,29 +134,63 @@ describe('Claude - Tim', () => {
     });
 
     // "would like ability to pick model as well"
-    test('the models the node offers are picked from, its own chosen, and the one picked is what is said with', async () => {
-        const body = document.createElement('div');
+    // "Why not do it like anthropic does, where its a combined model+effort pill"
+    test('the models the node offers are picked from in the pill, its own chosen, and the one picked is what is said with', async () => {
+        const body = inElement();
         const models: string[] = [];
         const stop = drawClaude(body, node({
             say: (_says, _mode, _carried, model) => { models.push(model ?? ''); return Promise.resolve(answered); },
         }, { ...am, models: ['claude-opus-5-5', 'claude-sonnet-5-5'] }));
         await settled();
-        const pick = body.querySelector<HTMLSelectElement>('.claude-model')!;
-        expect(pick.hidden).toBe(false);
-        expect(Array.from(pick.options).map(o => o.value)).toEqual(['claude-opus-5-5', 'claude-sonnet-5-5']);
-        expect(pick.value).toBe('claude-opus-5-5');
-        pick.value = 'claude-sonnet-5-5';
+        expect(choices(body)!.dataset.form).toBe('pill');
+        expect(choices(body)!.textContent).toBe('claude-opus-5-5 · permission mode');
+        await choose(body, 'claude-sonnet-5-5');
+        expect(choices(body)!.textContent).toBe('claude-sonnet-5-5 · permission mode');
         say(body, 'how long has the box been up?');
         await settled();
         expect(models).toEqual(['claude-sonnet-5-5']);
         stop();
     });
 
-    test('a node that offers no models shows no model to pick', async () => {
+    test('a node that offers no models has no model in the pill', async () => {
+        const body = inElement();
+        const stop = drawClaude(body, node());
+        await settled();
+        choices(body)!.click();
+        await settled();
+        expect(offered(body, 'Model')).toEqual([]);
+        expect(offered(body, 'Permission mode').length).toBeGreaterThan(0);
+        stop();
+    });
+
+    // "Inputfield an element yes, new form, inputfield": what is typed, its presses at its ends, its pills above it.
+    test('the field is the package\'s input field: the picture at its start, the say at its end, the pill above it', async () => {
+        const body = inElement();
+        const stop = drawClaude(body, node());
+        await settled();
+        const box = body.querySelector<HTMLElement>('[data-say-box]')!;
+        expect(box.dataset.form).toBe('inputfield');
+        const inside = Array.from(box.children);
+        expect(inside[0]!.getAttribute('aria-label')).toBe('Picture');
+        expect(inside[1]!.classList.contains('claude-says')).toBe(true);
+        expect(inside[2]!.getAttribute('aria-label')).toBe('Say');
+        const strip = box.previousElementSibling as HTMLElement;
+        expect(strip.dataset.sayPills).toBe('');
+        expect(strip.contains(choices(body))).toBe(true);
+        stop();
+    });
+
+    // "Replace + with a small paperclip like telegram does"
+    // "the send button should be the pulse symbol, not an up arrow"
+    test('the picture is a paperclip and the say is ꩜, drawn', async () => {
         const body = document.createElement('div');
         const stop = drawClaude(body, node());
         await settled();
-        expect(body.querySelector<HTMLSelectElement>('.claude-model')!.hidden).toBe(true);
+        const attach = body.querySelector<HTMLButtonElement>('.claude-attach')!;
+        const send = body.querySelector<HTMLButtonElement>('.claude-send')!;
+        expect(attach.querySelector('svg')!.dataset.glyph).toBe('paperclip');
+        expect(send.querySelector('svg')!.dataset.glyph).toBe('꩜');
+        expect(attach.textContent).toBe('');
         stop();
     });
 
@@ -148,22 +207,23 @@ describe('Claude - Tim', () => {
     // "make sure --permission-mode is configurable in the Claude Element"
     // "claude element 'dontask' doesnt make sense there"
     test('every permission mode but dontAsk is offered', async () => {
-        const body = document.createElement('div');
+        const body = inElement();
         const stop = drawClaude(body, node());
         await settled();
-        const mode = body.querySelector<HTMLSelectElement>('.claude-mode')!;
-        // The modes, not the "permission mode" that stands for the node's own (Spike).
-        expect([...mode.options].map(o => o.value).filter(Boolean)).toEqual(MODES.filter(m => m !== 'dontAsk'));
+        choices(body)!.click();
+        await settled();
+        // The modes, and the "permission mode" that stands for the node's own (Spike).
+        expect(offered(body, 'Permission mode')).toEqual(['permission mode', ...MODES.filter(m => m !== 'dontAsk')]);
         stop();
     });
 
     // Tim: what he says is sent in the mode he chose, and the session is drawn when it answers.
     test('what is said is sent in the mode chosen, and its session is read', async () => {
-        const body = document.createElement('div');
+        const body = inElement();
         const asked = node();
         const stop = drawClaude(body, asked);
         await settled();
-        body.querySelector<HTMLSelectElement>('.claude-mode')!.value = 'plan';
+        await choose(body, 'plan');
         say(body, 'how long has the box been up?');
         await settled();
 
@@ -193,16 +253,24 @@ describe('Claude - Spike', () => {
     // "The two red X indicates inefficient use of space": the node runs dontAsk, which is not
     // offered, and the choice showed nothing at all.
     test('a node running in a mode not offered: the choice says what it is, and sends none', async () => {
-        const body = document.createElement('div');
+        const body = inElement();
         const asked = node();
         const stop = drawClaude(body, asked);
         await settled();
-        const mode = body.querySelector<HTMLSelectElement>('.claude-mode')!;
-        expect(mode.selectedIndex).toBeGreaterThanOrEqual(0);
-        expect(mode.options[mode.selectedIndex].textContent).toBe('permission mode');
+        expect(choices(body)!.textContent).toBe('permission mode');
         say(body, 'how long has the box been up?');
         await settled();
         expect(asked.sent).toEqual([['how long has the box been up?', '']]);
+        stop();
+    });
+
+    // Pi: no mode and no model to choose, so no pill.
+    test('a harness with nothing to choose has no pill', async () => {
+        const body = inElement();
+        const stop = drawClaude(body, node({}, { ...am, permission_modes: [] }));
+        await settled();
+        expect(choices(body)).toBeNull();
+        expect(body.querySelector('[data-say-box]')).not.toBeNull();
         stop();
     });
 
@@ -318,18 +386,17 @@ describe('Claude - Jenny', () => {
         }), 1);
         await settled();
         const button = () => body.querySelector<HTMLButtonElement>('.claude-send')!;
-        expect(button().textContent).toBe('→');
+        expect(button().getAttribute('aria-label')).toBe('Say');
 
         say(body, 'count to a million');
         await settled();
-        expect(button().textContent).toBe('■');
-        expect(button().getAttribute('aria-label')).toBe('Stop');
+                expect(button().getAttribute('aria-label')).toBe('Stop');
 
         // Words typed while it answers: the button says them.
         const box = body.querySelector<HTMLTextAreaElement>('.claude-says')!;
         box.value = 'and then?';
         box.dispatchEvent(new Event('input'));
-        expect(button().textContent).toBe('→');
+        expect(button().getAttribute('aria-label')).toBe('Say');
         box.value = '';
         box.dispatchEvent(new Event('input'));
 
@@ -385,7 +452,7 @@ describe('Claude - Jenny', () => {
         await settled();
         say(body, 'count to a million');
         await settled();
-        expect(body.querySelector<HTMLButtonElement>('.claude-send')!.textContent).toBe('→');
+        expect(body.querySelector<HTMLButtonElement>('.claude-send')!.getAttribute('aria-label')).toBe('Say');
         stop();
     });
 

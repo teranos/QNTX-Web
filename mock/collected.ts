@@ -4,6 +4,8 @@
 
 export interface CollectedSaid {
     from: string;
+    /** Who said it, by DID: what a chat's outbox finds its agent's words by. */
+    from_did?: string;
     says: string;
     at: string;
     task: string;
@@ -41,9 +43,12 @@ export class TheCollected {
 
     constructor(private called: string, private did: string, private model: string, private say: (says: string) => void) {}
 
+    /** Who it is collected for. */
+    get to(): string { return this.called; }
+
     /** An agent says something to the agent: it waits. */
-    said(from: string, says: string): void {
-        this.waiting.push({ from, says, at: new Date().toISOString(), task: '', id: `mock-said-${++this.n}`, edited: false });
+    said(from: string, says: string, from_did?: string): void {
+        this.waiting.push({ from, ...(from_did ? { from_did } : {}), says, at: new Date().toISOString(), task: '', id: `mock-said-${this.called}-${++this.n}`, edited: false });
     }
 
     /** Nothing waits and nothing was done: as the mock started. */
@@ -63,7 +68,7 @@ export class TheCollected {
         return due;
     }
 
-    private all(): { collected: Collected[] } {
+    all(): { collected: Collected[] } {
         if (this.waiting.length === 0 && !this.heldUntil) return { collected: [] };
         const stamp = (ms: number) => (ms ? new Date(ms).toISOString() : '');
         return {
@@ -87,7 +92,11 @@ export class TheCollected {
         if (path !== '/api/collected' && !path.startsWith('/api/collected/')) return null;
         if (path === '/api/collected' && method === 'GET') return json(this.all());
         if (method !== 'POST') return null;
-        const sent = (await req.json()) as Record<string, string>;
+        return this.done(path, (await req.json()) as Record<string, string>);
+    }
+
+    /** What a person did with what waits for this agent, answered. */
+    done(path: string, sent: Record<string, string>): Response | null {
         if ((sent.to ?? '').toLowerCase() !== this.called.toLowerCase() || (this.waiting.length === 0 && !this.heldUntil)) {
             return json({ error: `nothing is collected for ${sent.to}` }, 404);
         }
@@ -131,5 +140,24 @@ export class TheCollected {
             }
         }
         return null;
+    }
+}
+
+/**
+ * What waits for each agent the mock collects for, asked as one: the node's own answer lists every agent
+ * something waits for, and what is done with it names the agent it is for.
+ */
+export class Collections {
+    constructor(private each: TheCollected[]) {}
+
+    async answer(method: string, path: string, req: Request): Promise<Response | null> {
+        if (path !== '/api/collected' && !path.startsWith('/api/collected/')) return null;
+        if (path === '/api/collected' && method === 'GET') return json({ collected: this.each.flatMap(one => one.all().collected) });
+        if (method !== 'POST') return null;
+        const sent = (await req.json()) as Record<string, string>;
+        const one = this.each.find(it => it.to.toLowerCase() === (sent.to ?? '').toLowerCase()) ?? this.each[0]!;
+        const answered = one.done(path, sent);
+        if (!answered || !answered.ok) return answered;
+        return json({ collected: this.each.flatMap(it => it.all().collected) });
     }
 }

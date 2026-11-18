@@ -1,9 +1,10 @@
-// What a chat's agent said to other agents and is collected for them, drawn over that chat: one batch per agent addressed.
+// What a chat's agent said to other agents and is collected for them, a pill in that chat's field: one batch per agent addressed.
 // "similar to how we see what's waiting to wake up this chat with an overlaid element (inbox), I would like to have the same thing for known outbox message collection per addressed session"
+// "THE OLD PATTERN IS BAD" "I want you to use the pills for it instead": @teranos/elements' outbox (examples/outbox.ts) is the pattern.
 // What is collected and when it goes is the node's (the collected signum); collected-element.ts draws what waits for this chat's agent, this what it said.
 
-import { overlayFrom, pressFrom, declareScroller, preventDrag, type OverlayHandle } from '@teranos/elements';
-import { theCollection, momentSaid, sentSaid, type Collection, type Collected, type CollectedSaid } from './collected-element';
+import { pressFrom, preventDrag } from '@teranos/elements';
+import { theCollection, momentSaid, sentSaid, pin, waitingPill, waitingRow, actionsLine, waitingList, away, type Collection, type Collected, type CollectedSaid } from './collected-element';
 import { log, SEG } from './logger.ts';
 
 /** What one agent addressed waits on that this chat's agent said, and what others said with it. */
@@ -34,6 +35,16 @@ export function outgoingSaid(going: Outgoing, now: Date = new Date()): string {
     return `→ ${going.to} · ${going.mine.length} · ${sentSaid(going.due, now)}`;
 }
 
+/**
+ * What the outbox says at rest: the batch that goes soonest, and, more agents addressed, how many more.
+ * "Many chosen: two said, more the first and how many more" (@teranos/elements content/choices.ts).
+ */
+export function outboxSaid(going: Outgoing[], now: Date = new Date()): string {
+    if (going.length === 0) return '';
+    const first = outgoingSaid(going[0]!, now);
+    return going.length > 1 ? `${first} +${going.length - 1}` : first;
+}
+
 function part<K extends keyof HTMLElementTagNameMap>(tag: K, className: string): HTMLElementTagNameMap[K] {
     const el = document.createElement(tag);
     el.className = className;
@@ -42,22 +53,39 @@ function part<K extends keyof HTMLElementTagNameMap>(tag: K, className: string):
 
 const wordsOf = (err: unknown): string => (err instanceof Error ? err.message : String(err));
 
-// How often what goes out is asked again, and how far above the chat's field each batch rests over the one below it, in px.
+// How often what goes out is asked again.
 const LOOK_MS = 5000;
-const STACK_PX = 56;
+
+// Each chat's outbox, numbered: an element, with an id of its own for its whole life.
+let outboxes = 0;
+
+/** What a chat's agent said that waits, as a pill in its field: what watch gives back stops asking. */
+export interface OutboxPill {
+    element: HTMLElement;
+    watch(did: string): () => void;
+}
 
 /**
- * What the agent whose DID this is said and is collected for others, drawn over
- * the chat it is talked to in: one batch per agent addressed, resting above the
- * inbox (collected-element.ts). What it gives back stops asking.
+ * What the agent whose DID it is told said and is collected for others: one pill in the chat's field, out of
+ * sight while nothing waits. Pressed, each agent addressed has its batch: when it goes, what is done with it,
+ * and what was said.
  */
-export function watchOutbox(chat: HTMLElement, did: string, above: HTMLElement | null, node: Collection = theCollection, every: number = LOOK_MS): () => void {
-    let stopped = false;
+export function outboxFrom(node: Collection = theCollection, every: number = LOOK_MS): OutboxPill {
+    let did = '';
+    let stopped = true;
     let asked = 0;
     let drawnAt = 0;
-    interface Batch { overlay: OverlayHandle; when: HTMLElement; list: HTMLElement; rows: Map<string, { row: HTMLElement; says: HTMLTextAreaElement; who: HTMLElement; held: string }>; going: Outgoing }
+    interface Batch { section: HTMLElement; when: HTMLElement; list: HTMLElement; rows: Map<string, { row: HTMLElement; says: HTMLTextAreaElement; who: HTMLButtonElement; held: string }>; going: Outgoing }
     const batches = new Map<string, Batch>();
     const fails = (what: string, err: unknown) => log.error(SEG.ELEMENT, `[Outbox] ${what}: ${wordsOf(err)}`);
+    const n = ++outboxes;
+
+    const whole = part('div', 'outbox');
+    pin(whole, { display: 'flex', 'flex-direction': 'column', gap: '16px', width: '100%' });
+    preventDrag(whole);
+    const shown = waitingPill(`outbox-${n}`, '', whole);
+    shown.pill.element.title = 'What this agent said that waits to be said';
+    shown.pill.element.dataset.outbox = '';
 
     const ask = async (answer: () => Promise<Collected[]>): Promise<void> => {
         const mine = ++asked;
@@ -68,45 +96,27 @@ export function watchOutbox(chat: HTMLElement, did: string, above: HTMLElement |
     };
 
     /** One batch going out, drawn the first time it is seen. */
-    const open = (going: Outgoing, place: number): Batch | null => {
-        const over = chat.closest<HTMLElement>('[data-element-id]');
-        if (!over) return null;
-        const held = over.getBoundingClientRect();
-        const field = above?.getBoundingClientRect();
-        const base = field && field.height > 0 ? Math.max(8, Math.round(held.bottom - field.top) + 8) : 8;
+    const open = (going: Outgoing): Batch => {
         const when = part('div', 'outbox-when');
-        when.style.paddingBottom = '8px';
-        const list = part('div', 'outbox-said');
-        list.style.flex = '1';
-        list.style.minHeight = '0';
-        list.style.overflowY = 'auto';
-        const header = part('div', 'outbox-header');
-        header.style.display = 'flex';
-        header.style.flexWrap = 'wrap';
-        header.style.gap = '8px';
-        header.style.paddingBottom = '8px';
-        const whole = part('div', 'outbox');
-        whole.style.display = 'flex';
-        whole.style.flexDirection = 'column';
-        whole.style.height = '100%';
-        whole.append(header, when, list);
-        preventDrag(whole);
-        declareScroller(list);
+        const actions = actionsLine('outbox');
+        const list = waitingList('outbox', `What waits for ${going.to}`);
+        const section = part('div', 'outbox-batch');
+        pin(section, { display: 'flex', 'flex-direction': 'column', gap: '8px' });
+        section.append(when, actions, list);
+        const batch: Batch = { section, when, list, rows: new Map(), going };
         const to = going.to;
-        const batch: Batch = {
-            overlay: overlayFrom({ id: `outbox:${did}:${going.did}`, title: outgoingSaid(going), color: '#000', renderContent: () => whole },
-                { over, className: 'outbox-batch', at: { bottom: base + STACK_PX * (place + 1) } }),
-            when, list, rows: new Map(), going,
-        };
         // What goes is what the person saw: the batch's own, what others said in it included, as the inbox sends it.
-        const now = pressFrom({ id: `outbox-now-${going.did}`, title: 'Send now', again: 'it is sent', does: () => ask(() => node.release(to, [])) });
-        const later = pressFrom({ id: `outbox-later-${going.did}`, title: 'Later', does: () => ask(() => node.later(to)) });
-        // What is canceled is what this chat's agent said, each by its id: what others said waits on.
+        const now = pressFrom({ id: `outbox-now-${n}-${going.did}`, title: 'Send now', again: 'it is sent', does: () => ask(() => node.release(to, [])) });
+        const later = pressFrom({ id: `outbox-later-${n}-${going.did}`, title: 'Later', does: () => ask(() => node.later(to)) });
+        // What is chosen, or, nothing chosen, all this chat's agent said, each by its id: what others said waits on.
         const cancel = pressFrom({
-            id: `outbox-cancel-${going.did}`, title: 'Cancel', again: 'never sent', irrevocable: true,
-            does: async () => { for (const id of Array.from(batch.rows.keys())) await ask(() => node.cancel(to, id)); },
+            id: `outbox-cancel-${n}-${going.did}`, title: 'Cancel', again: 'never sent', irrevocable: true,
+            does: async () => {
+                const chosen = Array.from(batch.rows).filter(([, drawn]) => drawn.who.getAttribute('aria-pressed') === 'true').map(([id]) => id);
+                for (const id of chosen.length ? chosen : Array.from(batch.rows.keys())) await ask(() => node.cancel(to, id));
+            },
         });
-        header.append(now.element, later.element, cancel.element);
+        actions.append(now.element, later.element, cancel.element);
         return batch;
     };
 
@@ -114,16 +124,16 @@ export function watchOutbox(chat: HTMLElement, did: string, above: HTMLElement |
         if (stopped) return;
         const going = outboxOf(all, did);
         const seen = new Set<string>();
-        going.forEach((one, place) => {
+        for (const one of going) {
             seen.add(one.did);
-            let batch = batches.get(one.did) ?? null;
+            let batch = batches.get(one.did);
             if (!batch) {
-                batch = open(one, place);
-                if (!batch) return;
+                batch = open(one);
                 batches.set(one.did, batch);
             }
+            // Soonest first, as at rest.
+            whole.appendChild(batch.section);
             batch.going = one;
-            batch.overlay.says(outgoingSaid(one));
             const others = one.others > 0 ? ` With ${one.others} from others.` : '';
             const held = one.held_until ? `, held until ${momentSaid(new Date(one.held_until))}` : '';
             batch.when.textContent = `To ${one.to}. Sent ${sentSaid(one.due)}${held}.${others}`;
@@ -132,24 +142,17 @@ export function watchOutbox(chat: HTMLElement, did: string, above: HTMLElement |
                 ids.add(said.id);
                 let drawn = batch.rows.get(said.id);
                 if (!drawn) {
-                    const row = part('div', 'outbox-one');
-                    row.style.paddingBottom = '12px';
-                    const who = part('div', 'outbox-at');
-                    const says = part('textarea', 'outbox-says');
-                    says.rows = 3;
-                    says.style.width = '100%';
-                    says.style.boxSizing = 'border-box';
-                    says.setAttribute('aria-label', `What was said to ${one.to}`);
+                    const { row, who, says } = waitingRow('outbox', `What was said to ${one.to}`);
                     says.value = said.says;
                     const to = one.to;
                     const id = said.id;
+                    const kept = batch;
                     // What the person wrote is the node's once they leave the field.
                     says.addEventListener('change', () => {
                         const wrote = says.value;
-                        ask(() => node.edit(to, id, wrote)).then(() => { const kept = batch?.rows.get(id); if (kept) kept.held = wrote; })
+                        ask(() => node.edit(to, id, wrote)).then(() => { const now = kept.rows.get(id); if (now) now.held = wrote; })
                             .catch((err: unknown) => fails('edit', err));
                     });
-                    row.append(who, says);
                     batch.list.appendChild(row);
                     drawn = { row, says, who, held: said.says };
                     batch.rows.set(said.id, drawn);
@@ -162,20 +165,29 @@ export function watchOutbox(chat: HTMLElement, did: string, above: HTMLElement |
             for (const [id, drawn] of batch.rows) {
                 if (!ids.has(id)) { drawn.row.remove(); batch.rows.delete(id); }
             }
-        });
-        for (const [to, batch] of batches) {
-            if (!seen.has(to)) { batch.overlay.away(); batches.delete(to); }
         }
+        for (const [to, batch] of batches) {
+            if (!seen.has(to)) { batch.section.remove(); batches.delete(to); }
+        }
+        if (going.length) shown.pill.retitle(outboxSaid(going));
+        shown.said(going.length > 0);
     };
 
-    const look = () => { ask(() => node.list()).catch((err: unknown) => fails('list', err)); };
-    look();
-    const looking = setInterval(look, every);
-
-    return () => {
-        stopped = true;
-        clearInterval(looking);
-        for (const batch of batches.values()) batch.overlay.away();
-        batches.clear();
+    return {
+        element: shown.pill.element,
+        watch(whose: string): () => void {
+            did = whose;
+            stopped = false;
+            const look = () => { ask(() => node.list()).catch((err: unknown) => fails('list', err)); };
+            look();
+            const looking = setInterval(look, every);
+            return () => {
+                stopped = true;
+                clearInterval(looking);
+                away(shown.pill);
+                for (const batch of batches.values()) batch.section.remove();
+                batches.clear();
+            };
+        },
     };
 }

@@ -1,0 +1,8 @@
+/* What waits in a chat's field, as @teranos/elements' examples draw them (examples/index.html): their shape and sizes
+   are the package's (declareSay, Pill Form), their look is ours. "I intend on future sessions to look at the elements
+   work and accept it as exemplary. Like a pattern to copy and use." */
+/* What waits: what agents said to this agent. A row pressed is chosen. */
+.claude-say [data-collected] { border: 1px solid #fff; background: #000; color: #fff; }
+.collected-who { display: block; width: 100%; text-align: left; padding: 6px 8px; border: 1px solid #fff; border-radius: 12px; background: #000; color: #fff; font: inherit; }
+.collected-who[aria-pressed="true"] { background: #fff; color: #000; }
+.collected-says { border: 1px solid #fff; border-radius: 12px; background: #000; color: #fff; padding: 6px 8px; font: inherit; resize: vertical; }

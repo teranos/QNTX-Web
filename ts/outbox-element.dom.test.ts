@@ -178,4 +178,27 @@ describe('What the agent said that waits - the outbox', () => {
         stop();
     });
 
+
+    // Hazel's batch goes sooner now: it is moved first, and what is being written in it keeps the focus and the caret.
+    test('Jenny: a batch moved to its new place keeps the focus and the caret of what is being written', async () => {
+        const node = collection(two());
+        const outbox = outboxFrom(node, 5);
+        field([outbox.element]);
+        const stop = outbox.watch(MINE);
+        await settled();
+        outbox.element.click();
+        await settled();
+        const hazel = outbox.element.querySelectorAll<HTMLElement>('.outbox-batch')[1]!;
+        const says = hazel.querySelector<HTMLTextAreaElement>('.outbox-says')!;
+        says.focus();
+        says.setSelectionRange(2, 4);
+        node.all = node.all.map(one => (one.to === 'Hazel' ? { ...one, due: new Date(Date.now() + 3_600_000).toISOString() } : one));
+        await new Promise(resolve => setTimeout(resolve, 30));
+        await settled();
+        expect(outbox.element.querySelectorAll('.outbox-batch')[0]).toBe(hazel);
+        expect(says.ownerDocument.activeElement).toBe(says);
+        expect([says.selectionStart, says.selectionEnd]).toEqual([2, 4]);
+        stop();
+    });
+
 });

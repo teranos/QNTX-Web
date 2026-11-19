@@ -53,6 +53,17 @@ function part<K extends keyof HTMLElementTagNameMap>(tag: K, className: string):
 
 const wordsOf = (err: unknown): string => (err instanceof Error ? err.message : String(err));
 
+/** Moves what holds node, the focus and the caret staying where they were in it: moved, a field loses the focus. */
+function moveKeeping(node: HTMLElement, move: () => void): void {
+    const active = node.ownerDocument.activeElement as HTMLTextAreaElement | null;
+    const inside = active !== null && node.contains(active);
+    const caret = inside && typeof active.selectionStart === 'number' ? [active.selectionStart, active.selectionEnd, active.selectionDirection] as const : null;
+    move();
+    if (!inside || node.ownerDocument.activeElement === active) return;
+    active.focus({ preventScroll: true });
+    if (caret) active.setSelectionRange(caret[0], caret[1], caret[2] ?? undefined);
+}
+
 // How often what goes out is asked again.
 const LOOK_MS = 5000;
 
@@ -136,7 +147,7 @@ export function outboxFrom(node: Collection = theCollection, every: number = LOO
             }
             // Soonest first, as at rest. Moved only when it stands elsewhere: a move takes the focus from what is being written.
             const there = whole.children[place] ?? null;
-            if (there !== batch.section) whole.insertBefore(batch.section, there);
+            if (there !== batch.section) moveKeeping(batch.section, () => whole.insertBefore(batch.section, there));
             batch.going = one;
             const others = one.others > 0 ? ` With ${one.others} from others.` : '';
             const held = one.held_until ? `, held until ${momentSaid(new Date(one.held_until))}` : '';

@@ -299,7 +299,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     // "the inputfield take up the entire bottom of the screen for chat elements like claude or pi"
     // "Inputfield an element yes, new form, inputfield": the package's input field, the picture at its start and
     // the say at its end, its pills above it. Declared once the node said what there is to choose.
-    const declare = (pills: HTMLElement[], waiting: HTMLElement[] = []) => declareSay(says, { start: attach, end: send, pills, waiting });
+    const declareField = (choosing: HTMLElement[], waits: HTMLElement[]): void => declareSay(says, { start: attach, end: send, pills: choosing, waiting: waits });
 
     body.replaceChildren(who, scroller, status, denied, failed, form);
 
@@ -628,15 +628,13 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             const collected = node.collected;
             const inbox = collected ? collectedFrom(() => { hold(true); follow(); }, collected) : null;
             const outbox = collected ? outboxFrom(collected) : null;
-            declare(offers.length ? [choicesFrom({
-                id: `claude-choices-${++drawn}`,
-                label: 'Model and permission mode',
-                choices: offers,
-                onChoose: (name, value) => {
-                    if (name === 'Model') modelChosen = value;
-                    else modeChosen = value === NODES_OWN ? '' : value;
-                },
-            })] : [], inbox && outbox ? [inbox.element, outbox.element] : []);
+            const chosen = (name: string, value: string): void => {
+                if (name === 'Model') modelChosen = value;
+                else modeChosen = value === NODES_OWN ? '' : value;
+            };
+            const pills: HTMLElement[] = [];
+            if (offers.length) pills.push(choicesFrom({ id: `claude-choices-${++drawn}`, label: 'Model and permission mode', choices: offers, onChoose: chosen }));
+            declareField(pills, inbox && outbox ? [inbox.element, outbox.element] : []);
             // Released, it is a turn of the agent's: the chat follows it as it does any.
             if (collected && inbox && outbox) {
                 const whose = node.collectedFor ? node.collectedFor().catch(() => is.did) : Promise.resolve(is.did);
@@ -653,7 +651,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         })
         .catch((err: unknown) => {
             who.textContent = wordsOf(err);
-            declare([]);
+            declareField([], []);
             send.disabled = true;
             log.warn(SEG.ELEMENT, `[Claude] the node did not say who answers: ${wordsOf(err)}`);
         });

@@ -124,15 +124,16 @@ export function outboxFrom(node: Collection = theCollection, every: number = LOO
         if (stopped) return;
         const going = outboxOf(all, did);
         const seen = new Set<string>();
-        for (const one of going) {
+        going.forEach((one, place) => {
             seen.add(one.did);
             let batch = batches.get(one.did);
             if (!batch) {
                 batch = open(one);
                 batches.set(one.did, batch);
             }
-            // Soonest first, as at rest.
-            whole.appendChild(batch.section);
+            // Soonest first, as at rest. Moved only when it stands elsewhere: a move takes the focus from what is being written.
+            const there = whole.children[place] ?? null;
+            if (there !== batch.section) whole.insertBefore(batch.section, there);
             batch.going = one;
             const others = one.others > 0 ? ` With ${one.others} from others.` : '';
             const held = one.held_until ? `, held until ${momentSaid(new Date(one.held_until))}` : '';
@@ -165,7 +166,7 @@ export function outboxFrom(node: Collection = theCollection, every: number = LOO
             for (const [id, drawn] of batch.rows) {
                 if (!ids.has(id)) { drawn.row.remove(); batch.rows.delete(id); }
             }
-        }
+        });
         for (const [to, batch] of batches) {
             if (!seen.has(to)) { batch.section.remove(); batches.delete(to); }
         }

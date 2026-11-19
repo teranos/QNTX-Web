@@ -137,4 +137,24 @@ describe('What the agent said that waits - the outbox', () => {
         expect(outbox.element.hidden).toBe(true);
         stop();
     });
+
+    // What is written into a batch is not lost while the next look draws it again.
+    test('Jenny: a batch is drawn again where it stands, and the focus stays in what is being written', async () => {
+        const outbox = outboxFrom(collection(two()), 5);
+        field([outbox.element]);
+        const stop = outbox.watch(MINE);
+        await settled();
+        outbox.element.click();
+        await settled();
+        const says = outbox.element.querySelector<HTMLTextAreaElement>('.outbox-says')!;
+        says.focus();
+        expect(says.ownerDocument.activeElement).toBe(says);
+        const sections = Array.from(outbox.element.querySelectorAll('.outbox-batch'));
+        await new Promise(resolve => setTimeout(resolve, 30));
+        await settled();
+        expect(Array.from(outbox.element.querySelectorAll('.outbox-batch'))).toEqual(sections);
+        expect(says.ownerDocument.activeElement).toBe(says);
+        stop();
+    });
+
 });

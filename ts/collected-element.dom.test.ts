@@ -194,4 +194,49 @@ describe('What waits for the agent - Jenny', () => {
         expect(followed).toBe(1);
         stop();
     });
+
+    // "EDIT THE TEXT": a press on what was said reaches it, though the pill keeps every other press from taking the focus.
+    test('pressed open, what was said takes the press, and the focus, to be written over', async () => {
+        const inbox = collectedFrom(() => {}, collection(waiting()), 60_000);
+        field([inbox.element]);
+        const stop = inbox.watch(DID);
+        await settled();
+        inbox.element.click();
+        await settled();
+        const says = inbox.element.querySelector<HTMLTextAreaElement>('.collected-says')!;
+        const view = says.ownerDocument.defaultView!;
+        for (const kind of ['pointerdown', 'mousedown']) {
+            const press = new view.MouseEvent(kind, { bubbles: true, cancelable: true });
+            says.dispatchEvent(press);
+            expect(press.defaultPrevented).toBe(false);
+        }
+        // What is not written in is still kept from taking the focus.
+        const press = new view.MouseEvent('pointerdown', { bubbles: true, cancelable: true });
+        inbox.element.querySelector<HTMLElement>('.collected-when')!.dispatchEvent(press);
+        expect(press.defaultPrevented).toBe(true);
+        stop();
+    });
+
+    // Opened for a notification about one batch, not for the batch that took its place before the open came.
+    test('asked for one batch, it does not open for another drawn before the open came', async () => {
+        const node = collection(waiting());
+        const inbox = collectedFrom(() => {}, node, 60_000);
+        field([inbox.element]);
+        openWhenShown(DID, DUE);
+        const first = inbox.watch(DID);
+        // Drawn for that batch, before any timer runs: it says when that batch goes.
+        for (let i = 0; i < 50 && inbox.element.hidden; i++) await Promise.resolve();
+        expect(inbox.element.hidden).toBe(false);
+        // Before the open runs, the node says the batch is due an hour later, and that is drawn.
+        const later = new Date(Date.parse(DUE) + 3_600_000).toISOString();
+        node.all = [{ ...node.all[0]!, due: later }];
+        const second = inbox.watch(DID);
+        const sayLater = `3 wait · ${local(later)}`;
+        for (let i = 0; i < 50 && inbox.element.textContent !== sayLater; i++) await Promise.resolve();
+        expect(inbox.element.textContent).toBe(sayLater);
+        await settled();
+        expect(inbox.element.dataset.form).toBe('pill');
+        first();
+        second();
+    });
 });

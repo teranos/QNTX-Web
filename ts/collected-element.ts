@@ -194,6 +194,9 @@ export function waitingRow(kind: string, said: string): { row: HTMLElement; who:
     says.style.width = '100%';
     says.style.boxSizing = 'border-box';
     says.setAttribute('aria-label', said);
+    // "EDIT THE TEXT": the pill keeps a press on what it holds from taking the focus from the chat's field
+    // (@teranos/elements forms/pill.ts); a press here is for writing, and takes it.
+    for (const kind of ['pointerdown', 'mousedown']) says.addEventListener(kind, e => e.stopPropagation());
     row.append(who, says);
     return { row, who, says };
 }
@@ -320,7 +323,7 @@ export function collectedFrom(sent: () => void, node: Collection = theCollection
         if (wanted !== undefined) {
             wantedOpen.delete(did);
             if (wanted === mine.due) {
-                setTimeout(() => { if (drawnFor.get(did) === pill && pill.element.dataset.form === 'pill' && pill.element.isConnected) pill.element.click(); }, 0);
+                setTimeout(() => { if (drawnFor.get(did) === pill && dueDrawn.get(did) === wanted && pill.element.dataset.form === 'pill' && pill.element.isConnected) pill.element.click(); }, 0);
             }
         }
         const held = mine.held_until ? `, held by you until ${momentSaid(new Date(mine.held_until))}` : '';

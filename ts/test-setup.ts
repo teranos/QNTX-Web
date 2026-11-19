@@ -80,6 +80,9 @@ if (USE_JSDOM) {
     globalThis.getComputedStyle = window.getComputedStyle;
     // @ts-ignore
     globalThis.MutationObserver = window.MutationObserver;
+    // A browser's, read bare by result-element.ts's canvas when it is fitted, even after its test.
+    // @ts-ignore
+    globalThis.devicePixelRatio = window.devicePixelRatio;
     // @ts-ignore
     globalThis.AbortController = window.AbortController;
     // @ts-ignore

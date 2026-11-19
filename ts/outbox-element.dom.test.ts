@@ -157,4 +157,25 @@ describe('What the agent said that waits - the outbox', () => {
         stop();
     });
 
+
+    // The batch that went soonest is gone: the one after it is not moved past it on the way, and keeps the focus.
+    test('Spike: a batch that went is taken away before the rest are put in order', async () => {
+        const node = collection(two());
+        const outbox = outboxFrom(node, 5);
+        field([outbox.element]);
+        const stop = outbox.watch(MINE);
+        await settled();
+        outbox.element.click();
+        await settled();
+        const hazel = outbox.element.querySelectorAll<HTMLElement>('.outbox-batch')[1]!;
+        const says = hazel.querySelector<HTMLTextAreaElement>('.outbox-says')!;
+        says.focus();
+        node.all = node.all.filter(one => one.to !== 'Alder');
+        await new Promise(resolve => setTimeout(resolve, 30));
+        await settled();
+        expect(Array.from(outbox.element.querySelectorAll('.outbox-batch'))).toEqual([hazel]);
+        expect(says.ownerDocument.activeElement).toBe(says);
+        stop();
+    });
+
 });

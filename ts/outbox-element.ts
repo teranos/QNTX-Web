@@ -123,9 +123,12 @@ export function outboxFrom(node: Collection = theCollection, every: number = LOO
     const draw = (all: Collected[]) => {
         if (stopped) return;
         const going = outboxOf(all, did);
-        const seen = new Set<string>();
+        // What went is taken away first: put in order after, what stays is moved only past what stays.
+        const seen = new Set(going.map(one => one.did));
+        for (const [to, batch] of batches) {
+            if (!seen.has(to)) { batch.section.remove(); batches.delete(to); }
+        }
         going.forEach((one, place) => {
-            seen.add(one.did);
             let batch = batches.get(one.did);
             if (!batch) {
                 batch = open(one);
@@ -167,9 +170,6 @@ export function outboxFrom(node: Collection = theCollection, every: number = LOO
                 if (!ids.has(id)) { drawn.row.remove(); batch.rows.delete(id); }
             }
         });
-        for (const [to, batch] of batches) {
-            if (!seen.has(to)) { batch.section.remove(); batches.delete(to); }
-        }
         if (going.length) shown.pill.retitle(outboxSaid(going));
         shown.said(going.length > 0);
     };

@@ -11,7 +11,7 @@
  * Personas: Tim (happy path), Spike (edge cases), Jenny (complex scenarios).
  */
 
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, afterEach } from 'bun:test';
 import { renderContent, declareSay, type Element } from '@teranos/elements';
 import { collectedFrom, openWhenShown, momentSaid, type Collected, type Collection } from './collected-element';
 
@@ -24,11 +24,6 @@ const AT = new Date(Date.now() - 3_600_000).toISOString();
 const SOON = new Date(Date.now() + 2 * 3_600_000).toISOString();
 const LATER = new Date(Date.now() + 4 * 3_600_000).toISOString();
 
-// What a browser measures and jsdom does not: the width of a button's words (@teranos/elements fit.ts).
-const range = Object.getPrototypeOf(document.createRange()) as Range;
-if (typeof range.getBoundingClientRect !== 'function') {
-    range.getBoundingClientRect = () => ({ x: 0, y: 0, width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0, toJSON: () => ({}) }) as DOMRect;
-}
 
 const said = (from: string, says: string, id: string, from_did = 'did:key:other') => ({ from, from_did, says, at: AT, task: '', id, edited: false });
 
@@ -58,9 +53,13 @@ const waiting = (): Collected[] => [{
 }];
 
 let elements = 0;
+// What a test put on the page leaves it with the test: the package keeps watching what is on the page.
+const placed: HTMLElement[] = [];
+afterEach(() => { for (const element of placed.splice(0)) element.remove(); });
 /** A chat's field in an element, as a panel holds it, with what waits in its pills. */
 function field(pills: HTMLElement[]): HTMLTextAreaElement {
     const element = document.createElement('div');
+    placed.push(element);
     const body = document.createElement('div');
     const says = document.createElement('textarea');
     body.appendChild(says);

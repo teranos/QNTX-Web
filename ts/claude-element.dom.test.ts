@@ -6,7 +6,7 @@
  * Personas: Tim (happy path), Spike (edge cases), Jenny (complex scenarios).
  */
 
-import { describe, test, expect, mock } from 'bun:test';
+import { describe, test, expect, mock, afterEach } from 'bun:test';
 import * as realFiles from './api/files';
 
 // The picture a say carries is sent up through uploadFile, and apiJson answers {} in every test
@@ -87,8 +87,12 @@ async function settled(): Promise<void> {
 
 // The chat drawn in an element, as a panel holds it: its field is the package's input field there (declareSay).
 let elements = 0;
+// What a test put on the page leaves it with the test: the package keeps watching what is on the page.
+const placed: HTMLElement[] = [];
+afterEach(() => { for (const element of placed.splice(0)) element.remove(); });
 function inElement(): HTMLElement {
     const element = document.createElement('div');
+    placed.push(element);
     const body = document.createElement('div');
     const item = { id: `claude-test-${++elements}`, title: 'Node Agent', renderContent: () => body } as unknown as Element;
     document.body.appendChild(element);
@@ -98,13 +102,34 @@ function inElement(): HTMLElement {
 
 // "Why not do it like anthropic does, where its a combined model+effort pill": the model and the mode, one pill above the field.
 const choices = (body: HTMLElement) => body.querySelector<HTMLElement>('[data-choices]');
-async function choose(body: HTMLElement, value: string): Promise<void> {
-    choices(body)!.click();
+/** Until the pill is where it was going, open or at rest: nothing of its road is left running into the next test. */
+async function still(pill: HTMLElement): Promise<void> {
+    for (let i = 0; i < 200 && pill.dataset.pillMoving !== undefined; i++) await new Promise(resolve => setTimeout(resolve, 5));
+    if (pill.dataset.pillMoving !== undefined) throw new Error(`${pill.dataset.elementId} is still moving`);
+}
+/** The pill pressed open, and still. */
+async function opened(body: HTMLElement): Promise<HTMLElement> {
+    const pill = choices(body)!;
+    pill.click();
     await settled();
-    const option = Array.from(choices(body)!.querySelectorAll<HTMLButtonElement>('button')).find(b => b.textContent === value);
-    if (!option) throw new Error(`no option ${value} in ${choices(body)!.textContent}`);
+    await still(pill);
+    return pill;
+}
+/** Let go with Escape, as a person lets it go, and still at rest. */
+async function rested(pill: HTMLElement): Promise<void> {
+    const view = pill.ownerDocument.defaultView!;
+    pill.ownerDocument.dispatchEvent(new view.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await settled();
+    await still(pill);
+    if (pill.dataset.form !== 'pill') throw new Error(`${pill.dataset.elementId} did not rest: ${pill.dataset.form}`);
+}
+async function choose(body: HTMLElement, value: string): Promise<void> {
+    const pill = await opened(body);
+    const option = Array.from(pill.querySelectorAll<HTMLButtonElement>('button')).find(b => b.textContent === value);
+    if (!option) throw new Error(`no option ${value} in ${pill.textContent}`);
     option.click();
     await settled();
+    await still(pill);
 }
 const offered = (body: HTMLElement, name: string): string[] =>
     Array.from(choices(body)!.querySelectorAll<HTMLButtonElement>(`button[data-choice="${name}"]`)).map(b => b.textContent ?? '');
@@ -156,10 +181,10 @@ describe('Claude - Tim', () => {
         const body = inElement();
         const stop = drawClaude(body, node());
         await settled();
-        choices(body)!.click();
-        await settled();
+        const pill = await opened(body);
         expect(offered(body, 'Model')).toEqual([]);
         expect(offered(body, 'Permission mode').length).toBeGreaterThan(0);
+        await rested(pill);
         stop();
     });
 
@@ -210,10 +235,10 @@ describe('Claude - Tim', () => {
         const body = inElement();
         const stop = drawClaude(body, node());
         await settled();
-        choices(body)!.click();
-        await settled();
+        const pill = await opened(body);
         // The modes, and the "permission mode" that stands for the node's own (Spike).
         expect(offered(body, 'Permission mode')).toEqual(['permission mode', ...MODES.filter(m => m !== 'dontAsk')]);
+        await rested(pill);
         stop();
     });
 

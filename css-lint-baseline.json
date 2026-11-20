@@ -8,7 +8,7 @@
   "css/canvas.css": {
     "scale-unlimited/declaration-strict-value": 47,
     "declaration-no-important": 4,
-    "declaration-property-value-disallowed-list": 13,
+    "declaration-property-value-disallowed-list": 12,
     "no-descending-specificity": 2
   },
   "css/codemirror.css": {

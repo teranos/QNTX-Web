@@ -15,7 +15,7 @@ import { Agent, Files, type Transcript } from "./agents";
 import { AgyAgents } from "./agy";
 import { CodexAgents } from "./codex";
 import { Rooms } from "./rooms";
-import { TheCollected } from "./collected";
+import { TheCollected, Collections } from "./collected";
 
 const here = import.meta.dir;
 const web = join(here, "..");
@@ -170,6 +170,9 @@ function elementAgent(element: string): Agent {
 }
 // What agents said to the Node Agent, collected: released, it is said to the Node Agent as a person's is.
 const collected = new TheCollected("Lamplighter", theNodeAgent.did, theNodeAgent.model, says => { void theNodeAgent.say(says, "", "", ""); });
+// What the Node Agent said to another agent, collected for that one: what its chat's outbox shows.
+const toHazel = new TheCollected("Hazel", "did:key:mock-hazel", "claude-sonnet-5-5", () => {});
+const collections = new Collections([collected, toHazel]);
 const files = new Files();
 const codexAgents = new CodexAgents();
 const agyAgents = new AgyAgents();
@@ -429,7 +432,7 @@ async function answer(req: Request, url: URL): Promise<Response> {
         ?? await agyAgents.answer(req)
         ?? await agentAnswer(level, method, path, url, req)
         ?? await rooms.answer(level, method, path, req)
-        ?? await collected.answer(method, path, req)
+        ?? await collections.answer(method, path, req)
         ?? await filesAnswer(method, path, req)
         ?? await keysAnswer(level, method, path, req)
         ?? await anthropicAnswer(method, path, req);
@@ -490,9 +493,11 @@ Bun.serve({
         if (path === "/__mock__/") return json({ as: whoIs(req) ?? "nobody", levels: LEVELS });
         // The mock has no agents that speak: a story has them say what waits, and asks what became of it.
         if (path === "/__mock__/collected" && req.method === "POST") {
-            const sent = (await req.json()) as { forget?: boolean; said?: { from: string; says: string }[] };
-            if (sent.forget) collected.forget();
+            const sent = (await req.json()) as { forget?: boolean; said?: { from: string; says: string }[]; toHazel?: { from: string; says: string; mine?: boolean }[] };
+            if (sent.forget) { collected.forget(); toHazel.forget(); }
             for (const one of sent.said ?? []) collected.said(one.from, one.says);
+            // What the Node Agent said to Hazel (mine), and what others said to Hazel with it.
+            for (const one of sent.toHazel ?? []) toHazel.said(one.from, one.says, one.mine ? theNodeAgent.did : undefined);
             return json({ sent: collected.sent, canceled: collected.canceled });
         }
         if (path === "/__mock__/collected") return json({ sent: collected.sent, canceled: collected.canceled });

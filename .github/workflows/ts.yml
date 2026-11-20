@@ -45,6 +45,7 @@
         },
         {
           "env": {
+            "BUN_JSC_useFTLJIT": 0,
             "QNTX_SRC": "${{ github.workspace }}/qntx",
             "USE_JSDOM": 1
           },

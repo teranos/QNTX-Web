@@ -51,6 +51,12 @@ if (USE_JSDOM) {
     });
     const { window } = dom;
 
+    // What a browser measures and jsdom does not: the width of a range's words. @teranos/elements measures a
+    // button's words with it (fit.ts); thrown in an observer, Bun 1.3.9 runs nothing queued behind it.
+    if (typeof window.Range.prototype.getBoundingClientRect !== 'function') {
+        window.Range.prototype.getBoundingClientRect = () => window.document.body.getBoundingClientRect();
+    }
+
     // Core globals
     // @ts-ignore
     globalThis.window = window;
@@ -74,6 +80,9 @@ if (USE_JSDOM) {
     globalThis.getComputedStyle = window.getComputedStyle;
     // @ts-ignore
     globalThis.MutationObserver = window.MutationObserver;
+    // A browser's, read bare by result-element.ts's canvas when it is fitted, even after its test.
+    // @ts-ignore
+    globalThis.devicePixelRatio = window.devicePixelRatio;
     // @ts-ignore
     globalThis.AbortController = window.AbortController;
     // @ts-ignore

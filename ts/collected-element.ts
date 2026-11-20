@@ -1,9 +1,12 @@
-// What agents said to an agent, collected, drawn over the chat with that agent.
+// What agents said to an agent, collected, a pill in the field of the chat with that agent.
 // stories/37-root-authors-what-agents-say-to-an-agent.feature is what it does.
 // "i dont want a separate screen, a separate ui to have to go to"
+// "About it taking over everything for no good reason?" "THE OLD PATTERN IS BAD" "I want you to use the pills for it instead":
+// @teranos/elements' outbox (examples/outbox.ts) is the pattern: at rest it says how many wait and when they go; pressed, it is
+// across its row, the field and the keyboard where they were, what is done with them said once, on one line.
 // What is collected and when it goes is the node's (the collected signum); this draws it and says what a person does with it.
 
-import { overlayFrom, pressFrom, declareScroller, preventDrag, sizeText, AX, type OverlayHandle } from '@teranos/elements';
+import { pillFrom, PILL_RESTED, pressFrom, declareScroller, preventDrag, sizeText, AX, type PillHandle } from '@teranos/elements';
 import { apiJson } from './client';
 import { log, SEG } from './logger.ts';
 import { sacredEntry, type SacredError } from './components/sacred';
@@ -143,8 +146,80 @@ function part<K extends keyof HTMLElementTagNameMap>(tag: K, className: string):
 
 const wordsOf = (err: unknown): string => (err instanceof Error ? err.message : String(err));
 
+
+/** Pins each style on node. */
+export function pin(node: HTMLElement, styles: Record<string, string>): void {
+    for (const [name, value] of Object.entries(styles)) node.style.setProperty(name, value);
+}
+
+/**
+ * The pill gone: let go, and out of sight once it is at rest. "Nothing left, it rests and is gone"
+ * (@teranos/elements examples/outbox.ts).
+ */
+export function away(pill: PillHandle): void {
+    pill.rest();
+    if (pill.element.dataset.form === 'pill' && pill.element.dataset.pillMoving === undefined) pill.element.hidden = true;
+}
+
+/** A pill that is shown only while something waits in it: rested with nothing left, it is out of sight. */
+export function waitingPill(id: string, title: string, whole: HTMLElement): { pill: PillHandle; waits: () => boolean; said: (waits: boolean) => void } {
+    let waiting = false;
+    const pill = pillFrom({ id, title, renderContent: () => whole });
+    pill.element.hidden = true;
+    pill.element.addEventListener(PILL_RESTED, () => { pill.element.hidden = !waiting; });
+    return {
+        pill,
+        waits: () => waiting,
+        said: (waits: boolean) => {
+            waiting = waits;
+            if (waits) pill.element.hidden = false;
+            else away(pill);
+        },
+    };
+}
+
+/**
+ * A row of what waits: who said it and when, pressed to choose it, and what was said, written over by the person.
+ * "A row pressed is chosen; Cancel takes what is chosen, or, nothing chosen, all of it" (@teranos/elements examples/outbox.ts).
+ */
+export function waitingRow(kind: string, said: string): { row: HTMLElement; who: HTMLButtonElement; says: HTMLTextAreaElement } {
+    const row = part('div', `${kind}-one`);
+    pin(row, { display: 'flex', 'flex-direction': 'column', gap: '4px' });
+    const who = part('button', `${kind}-who`);
+    who.type = 'button';
+    who.setAttribute('aria-pressed', 'false');
+    who.addEventListener('click', () => who.setAttribute('aria-pressed', String(who.getAttribute('aria-pressed') !== 'true')));
+    const says = part('textarea', `${kind}-says`);
+    says.rows = 2;
+    says.style.width = '100%';
+    says.style.boxSizing = 'border-box';
+    says.setAttribute('aria-label', said);
+    // "EDIT THE TEXT": the pill keeps a press on what it holds from taking the focus from the chat's field
+    // (@teranos/elements forms/pill.ts); a press here is for writing, and takes it.
+    for (const kind of ['pointerdown', 'mousedown']) says.addEventListener(kind, e => e.stopPropagation());
+    row.append(who, says);
+    return { row, who, says };
+}
+
+/** What is done with what waits, said once, on one line. */
+export function actionsLine(kind: string): HTMLElement {
+    const line = part('div', `${kind}-actions`);
+    pin(line, { display: 'flex', 'flex-wrap': 'wrap', gap: '8px', 'align-items': 'flex-start' });
+    return line;
+}
+
+/** What waits, each saying what it says: a short list, scrolled in itself. */
+export function waitingList(kind: string, label: string): HTMLElement {
+    const list = part('div', `${kind}-said`);
+    list.setAttribute('role', 'group');
+    list.setAttribute('aria-label', label);
+    pin(list, { display: 'flex', 'flex-direction': 'column', gap: '8px', 'max-height': '30vh', 'overflow-y': 'auto' });
+    declareScroller(list);
+    return list;
+}
+
 // What waits that is drawn now, by the agent it waits for, and what is to be opened as soon as it is drawn.
-const drawnFor = new Map<string, OverlayHandle>();
+const drawnFor = new Map<string, PillHandle>();
 // By the agent it waits for, the time what is to be opened is due: asked for one batch, another is not opened in its place.
 const wantedOpen = new Map<string, string>();
 const dueDrawn = new Map<string, string>();
@@ -157,23 +232,31 @@ const dueDrawn = new Map<string, string>();
  */
 export function openWhenShown(did: string, due: string): void {
     const drawn = drawnFor.get(did);
-    if (drawn && dueDrawn.get(did) === due) drawn.element.click();
+    if (drawn && dueDrawn.get(did) === due && !drawn.element.hidden) drawn.element.click();
     else wantedOpen.set(did, due);
 }
 
+// Each chat's pill, numbered: an element, with an id of its own for its whole life.
+let pills = 0;
+
+/** What waits for a chat's agent, as a pill in its field: what watch gives back stops asking. */
+export interface CollectedPill {
+    element: HTMLElement;
+    /** Asks what waits for the agent whose DID this is, and draws it, until what it gives back is called. */
+    watch(did: string): () => void;
+}
+
 /**
- * What waits for the agent whose DID this is, drawn over the chat it is talked
- * to in: nothing while nothing waits. above is what it first rests above, the
- * chat's field. sent is told when it was released, so the chat follows the
- * turn it starts. What it gives back stops asking.
+ * What waits for a chat's agent: a pill in the chat's field (declareSay's waiting), out of sight while nothing
+ * waits. sent is told when it was released, so the chat follows the turn it starts.
  */
-export function watchCollected(chat: HTMLElement, did: string, above: HTMLElement | null, sent: () => void, node: Collection = theCollection, every: number = LOOK_MS): () => void {
-    let overlay: OverlayHandle | null = null;
+export function collectedFrom(sent: () => void, node: Collection = theCollection, every: number = LOOK_MS): CollectedPill {
     let waits: Collected | null = null;
-    let stopped = false;
+    let did = '';
+    let stopped = true;
     // What each thing said is drawn as, by its id: its field, what the node held when the node last
     // wrote the field, and the edits of it being kept, one after another.
-    interface Row { row: HTMLElement; says: HTMLTextAreaElement; who: HTMLElement; failed: HTMLElement; held: string; keeping: Promise<void> }
+    interface Row { row: HTMLElement; says: HTMLTextAreaElement; who: HTMLButtonElement; failed: HTMLElement; held: string; keeping: Promise<void> }
     const rows = new Map<string, Row>();
     // Each answer of the node's in the order it was asked for, and the latest drawn: one asked before it is not drawn over it.
     let asked = 0;
@@ -182,28 +265,22 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
     let had = false;
     let canceledHere = false;
 
-    const header = part('div', 'collected-header');
-    header.style.display = 'flex';
-    header.style.flexWrap = 'wrap';
-    header.style.gap = '8px';
-    header.style.alignItems = 'flex-start';
-    header.style.paddingBottom = '8px';
+    // "THE UI CONTROLS ARE DISPLAYED IN THE HEADER AREA": what is done with it, said once, on one line, above what waits.
+    const actions = actionsLine('collected');
     const when = part('div', 'collected-when');
-    when.style.paddingBottom = '8px';
-    const list = part('div', 'collected-said');
-    list.style.flex = '1';
-    list.style.minHeight = '0';
-    list.style.overflowY = 'auto';
+    const list = waitingList('collected', 'What waits');
     // What the node could not deliver, through the one render a failure has.
     const failed = part('div', 'collected-failed-delivery');
     let failedFor = '';
     const whole = part('div', 'collected');
-    whole.style.display = 'flex';
-    whole.style.flexDirection = 'column';
-    whole.style.height = '100%';
-    whole.append(failed, header, when, list);
+    pin(whole, { display: 'flex', 'flex-direction': 'column', gap: '8px', width: '100%' });
+    whole.append(failed, when, actions, list);
     // What is typed and pressed here is not a drag of the element.
     preventDrag(whole);
+    const shown = waitingPill(`collected-${++pills}`, '', whole);
+    const pill = shown.pill;
+    pill.element.title = 'What waits to be said to this agent';
+    pill.element.dataset.collected = '';
 
     const fails = (what: string, err: unknown) => log.error(SEG.ELEMENT, `[Collected] ${what}: ${wordsOf(err)}`);
 
@@ -222,9 +299,8 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
         const mine = all.find(one => one.did === did && one.waiting.length > 0) ?? null;
         waits = mine;
         if (!mine) {
-            overlay?.away();
-            if (overlay && drawnFor.get(did) === overlay) drawnFor.delete(did);
-            overlay = null;
+            shown.said(false);
+            if (drawnFor.get(did) === pill) drawnFor.delete(did);
             wantedOpen.delete(did);
             dueDrawn.delete(did);
             rows.clear();
@@ -237,21 +313,9 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
             return;
         }
         had = true;
-        if (!overlay) {
-            const over = chat.closest<HTMLElement>('[data-element-id]');
-            // The chat is not in its element yet: asked again at the next look.
-            if (!over) return;
-            const held = over.getBoundingClientRect();
-            const field = above?.getBoundingClientRect();
-            const bottom = field && field.height > 0 ? Math.max(8, Math.round(held.bottom - field.top) + 8) : 8;
-            overlay = overlayFrom({
-                id: `collected:${did}`,
-                title: batchSaid(mine),
-                color: '#000',
-                renderContent: () => whole,
-            }, { over, className: 'collected-batch', at: { bottom } });
-            drawnFor.set(did, overlay);
-        }
+        pill.retitle(batchSaid(mine));
+        shown.said(true);
+        drawnFor.set(did, pill);
         dueDrawn.set(did, mine.due);
         // Asked for before it was drawn: opened once it rests, which is a press on it. What was asked
         // for was due at one time, and what is drawn now for another time is not what was asked for.
@@ -259,11 +323,9 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
         if (wanted !== undefined) {
             wantedOpen.delete(did);
             if (wanted === mine.due) {
-                const mineNow = overlay;
-                setTimeout(() => { if (drawnFor.get(did) === mineNow && mineNow.element.dataset.form === 'overlay') mineNow.element.click(); }, 0);
+                setTimeout(() => { if (drawnFor.get(did) === pill && dueDrawn.get(did) === wanted && pill.element.dataset.form === 'pill' && pill.element.isConnected) pill.element.click(); }, 0);
             }
         }
-        overlay.says(batchSaid(mine));
         const held = mine.held_until ? `, held by you until ${momentSaid(new Date(mine.held_until))}` : '';
         when.textContent = `For ${mine.to}. Sent ${sentSaid(mine.due)}${held}.`;
         const failure = failureOf(mine);
@@ -280,34 +342,15 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
             seen.add(one.id);
             let drawn = rows.get(one.id);
             if (!drawn) {
-                const row = part('div', 'collected-one');
+                const { row, who, says } = waitingRow('collected', `What ${one.from} said`);
                 row.dataset.said = one.id;
-                row.style.paddingBottom = '12px';
-                const who = part('div', 'collected-who');
-                const says = part('textarea', 'collected-says');
-                says.rows = 3;
-                says.style.width = '100%';
-                says.style.boxSizing = 'border-box';
-                says.setAttribute('aria-label', `What ${one.from} said`);
                 says.value = one.says;
                 // What the person wrote is the node's once they leave the field.
                 says.addEventListener('change', () => { keep(one.id).catch(() => { /* said beside the field */ }); });
                 const failed = part('div', 'collected-failed');
                 failed.setAttribute('role', 'alert');
                 failed.hidden = true;
-                const to = mine.to;
-                const remove = pressFrom({
-                    id: `collected-remove-${one.id}`,
-                    title: 'Remove',
-                    again: 'never sent',
-                    irrevocable: true,
-                    // Removed by the person: if it was the last, the batch went by their hand and no turn started.
-                    does: async () => {
-                        canceledHere = true;
-                        try { await ask(() => node.cancel(to, one.id)); } finally { if (had) canceledHere = false; }
-                    },
-                });
-                row.append(who, says, failed, remove.element);
+                row.append(failed);
                 list.appendChild(row);
                 drawn = { row, says, who, failed, held: one.says, keeping: Promise.resolve() };
                 rows.set(one.id, drawn);
@@ -356,7 +399,7 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
     const keepAll = async (): Promise<void> => { for (const id of Array.from(rows.keys())) await keep(id); };
 
     const now = pressFrom({
-        id: 'collected-now',
+        id: `collected-now-${pills}`,
         title: 'Send now',
         again: 'it is sent',
         does: async () => {
@@ -371,24 +414,27 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
         },
     });
     const later = pressFrom({
-        id: 'collected-later',
+        id: `collected-later-${pills}`,
         title: 'Later',
         does: async () => { const to = waits?.to; if (to) await ask(() => node.later(to)); },
     });
+    // What is chosen, or, nothing chosen, all of it: what the person saw, each by its id. What came in since waits on.
     const cancel = pressFrom({
-        id: 'collected-cancel',
+        id: `collected-cancel-${pills}`,
         title: 'Cancel',
         again: 'never sent',
         irrevocable: true,
         does: async () => {
             const to = waits?.to;
             if (!to) return;
-            // What is canceled is what the person saw, each by its id: what came in since waits on.
+            // What is taken is what was chosen when it was pressed.
+            const chosen = Array.from(rows).filter(([, drawn]) => drawn.who.getAttribute('aria-pressed') === 'true').map(([id]) => id);
+            const taken = chosen.length ? chosen : Array.from(rows.keys());
             canceledHere = true;
             try {
-                for (const id of Array.from(rows.keys())) await ask(() => node.cancel(to, id));
+                for (const id of taken) await ask(() => node.cancel(to, id));
             } finally {
-                // Something came in meanwhile and still waits: when it goes, it was not this cancel.
+                // Something still waits: when it goes, it was not this cancel.
                 if (had) canceledHere = false;
             }
         },
@@ -431,7 +477,7 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
         if (hours > 0) longer.textContent = `${longerSaid(hours)} longer: sent ${momentSaid(until())}`;
     };
     const confirm = pressFrom({
-        id: 'collected-hold-confirm',
+        id: `collected-hold-confirm-${pills}`,
         title: 'Confirm',
         does: async () => {
             const to = waits?.to;
@@ -468,19 +514,23 @@ export function watchCollected(chat: HTMLElement, did: string, above: HTMLElemen
         sayLonger();
     });
 
-    header.append(now.element, later.element, hold, cancel.element, longer, confirmHeld);
+    actions.append(now.element, later.element, hold, cancel.element, longer, confirmHeld);
 
-    const look = () => { ask(() => node.list()).catch((err: unknown) => fails('list', err)); };
-    look();
-    const looking = setInterval(look, every);
-    declareScroller(list);
-
-    return () => {
-        stopped = true;
-        clearInterval(looking);
-        overlay?.away();
-        if (overlay && drawnFor.get(did) === overlay) drawnFor.delete(did);
-        overlay = null;
-        dueDrawn.delete(did);
+    return {
+        element: pill.element,
+        watch(whose: string): () => void {
+            did = whose;
+            stopped = false;
+            const look = () => { ask(() => node.list()).catch((err: unknown) => fails('list', err)); };
+            look();
+            const looking = setInterval(look, every);
+            return () => {
+                stopped = true;
+                clearInterval(looking);
+                away(pill);
+                if (drawnFor.get(did) === pill) drawnFor.delete(did);
+                dueDrawn.delete(did);
+            };
+        },
     };
 }

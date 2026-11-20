@@ -8,9 +8,9 @@ const { Given, When, Then } = createBdd();
 // Where the pictures of the walk are kept, to be looked at.
 const SHOTS = 'test-results/collected';
 
-const batch = (page: Page) => page.locator('[data-element-id^="collected:"]');
-const chat = (page: Page) => page.locator('[data-element-id]').filter({ has: page.locator('.claude-says') }).last();
-const press = (page: Page, id: string) => batch(page).locator(`[data-press="${id}"]`);
+// "I want you to use the pills for it instead": what waits is a pill in the chat's field (@teranos/elements Pill Form).
+const batch = (page: Page) => page.locator('[data-collected]');
+const press = (page: Page, id: string) => batch(page).locator(`[data-press^="${id}-"]`);
 
 interface Waits { due: string; held_until: string; waiting: { from: string; says: string; id: string; edited: boolean }[] }
 
@@ -60,20 +60,14 @@ Given('I open the Node Agent', async ({ page }) => {
     await expect(page.locator('.claude-says')).toBeVisible();
 });
 
-Then('I see the batch that waits bottom left of the chat, slightly transparent', async ({ page }) => {
-    await expect(batch(page)).toHaveAttribute('data-form', 'overlay');
+Then('I see the batch that waits as a pill above where I type', async ({ page }) => {
+    await expect(batch(page)).toHaveAttribute('data-form', 'pill');
     const mine = (await batch(page).boundingBox())!;
-    const over = (await chat(page).boundingBox())!;
-    const field = (await page.locator('.claude-says').boundingBox())!;
-    // Left in the chat, low in it, and above where I type.
-    expect(mine.x - over.x).toBeLessThan(24);
-    expect(mine.y + mine.height).toBeLessThanOrEqual(field.y);
-    expect(mine.y).toBeGreaterThan(over.y + over.height / 2);
-    const ground = await batch(page).evaluate(el => getComputedStyle(el).backgroundColor);
-    const alpha = Number(ground.slice(ground.lastIndexOf(',') + 1).replace(')', ''));
-    expect(alpha).toBeLessThan(1);
-    expect(alpha).toBeGreaterThan(0.5);
-    await page.screenshot({ path: `${SHOTS}/1-it-waits-bottom-left.png` });
+    const box = (await page.locator('[data-say-box]').boundingBox())!;
+    // "The pills should be above, and outside of inputfield area".
+    expect(mine.y + mine.height).toBeLessThanOrEqual(box.y);
+    expect(mine.x).toBeGreaterThanOrEqual(box.x - 24);
+    await page.screenshot({ path: `${SHOTS}/1-it-waits-above-the-field.png` });
 });
 
 Then('it says how many wait and when they are sent', async ({ page }) => {
@@ -84,38 +78,26 @@ Then('it says how many wait and when they are sent', async ({ page }) => {
     await expect(batch(page)).toContainText(time);
 });
 
-When('I drag the batch up', async ({ page }) => {
-    await expect(batch(page)).toHaveAttribute('data-form', 'overlay');
-    const mine = (await batch(page).boundingBox())!;
-    await page.mouse.move(mine.x + mine.width / 2, mine.y + mine.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(mine.x + mine.width / 2, mine.y - 300, { steps: 8 });
-    await page.mouse.up();
-});
-
-Then('it stands higher in the chat, and nothing opened', async ({ page }) => {
-    await expect(batch(page)).toHaveAttribute('data-form', 'overlay');
-    const mine = (await batch(page).boundingBox())!;
-    const field = (await page.locator('.claude-says').boundingBox())!;
-    expect(field.y - (mine.y + mine.height)).toBeGreaterThan(250);
-    await page.screenshot({ path: `${SHOTS}/2-moved-up.png` });
-});
-
 async function pressTheBatch(page: Page): Promise<void> {
-    await expect(batch(page)).toHaveAttribute('data-form', 'overlay');
+    await expect(batch(page)).toHaveAttribute('data-form', 'pill');
     dueWas = Date.parse((await held(page))!.due);
     await batch(page).click();
-    await expect(batch(page)).toHaveAttribute('data-form', 'panel');
-    await expect.poll(() => batch(page).evaluate(el => el.classList.contains('morphing'))).toBe(false);
+    await expect(batch(page)).toHaveAttribute('data-form', 'pillOpen');
+    await expect.poll(() => batch(page).evaluate(el => el.dataset.pillMoving === undefined)).toBe(true);
 }
 
 When('I press the batch', async ({ page }) => { await pressTheBatch(page); });
 Given('I pressed the batch', async ({ page }) => { await pressTheBatch(page); });
 
-Then('it opens fullscreen', async ({ page }) => {
+Then('it is across its row, and where I type is still there', async ({ page }) => {
     const mine = (await batch(page).boundingBox())!;
-    expect(mine.width).toBeGreaterThanOrEqual(389);
-    expect(mine.height).toBeGreaterThanOrEqual(800);
+    const box = (await page.locator('[data-say-box]').boundingBox())!;
+    // "About it taking over everything for no good reason?": across the row, not the screen.
+    expect(mine.height).toBeLessThan(700);
+    expect(Math.abs(mine.width - box.width)).toBeLessThan(40);
+    // "I want inputfield to still be there".
+    await expect(page.locator('.claude-says')).toBeVisible();
+    expect(mine.y + mine.height).toBeLessThanOrEqual(box.y + 1);
 });
 
 Then('I see who said what', async ({ page }) => {
@@ -129,12 +111,12 @@ Then('I see who said what', async ({ page }) => {
     await page.screenshot({ path: `${SHOTS}/3-who-said-what.png` });
 });
 
-Then('send now, later, hold and cancel are in its header', async ({ page }) => {
-    const header = batch(page).locator('.collected-header');
-    await expect(header.locator('[data-press="collected-now"]')).toBeVisible();
-    await expect(header.locator('[data-press="collected-later"]')).toBeVisible();
+Then('send now, later, hold and cancel are on one line above it', async ({ page }) => {
+    const header = batch(page).locator('.collected-actions');
+    await expect(header.locator('[data-press^="collected-now-"]')).toBeVisible();
+    await expect(header.locator('[data-press^="collected-later-"]')).toBeVisible();
     await expect(header.locator('.collected-hold')).toBeVisible();
-    await expect(header.locator('[data-press="collected-cancel"]')).toBeVisible();
+    await expect(header.locator('[data-press^="collected-cancel-"]')).toBeVisible();
     // The header is above what was said, and stays there.
     const top = (await header.boundingBox())!;
     const first = (await batch(page).locator('.collected-one').first().boundingBox())!;
@@ -170,7 +152,7 @@ Then('the Node Agent receives all of it as one thing said', async ({ page }) => 
 });
 
 Then('nothing waits in the chat', async ({ page }) => {
-    await expect(batch(page)).toHaveCount(0);
+    await expect(batch(page)).toBeHidden();
     expect(await held(page)).toBeNull();
 });
 
@@ -239,8 +221,27 @@ Then('the Node Agent never receives it', async ({ page }) => {
 
 // What waits is the Node Agent's own, whatever harness its chat is in.
 When('I press the codex tab of the chat', async ({ page }) => {
-    await expect(batch(page)).toHaveAttribute('data-form', 'overlay');
+    await expect(batch(page)).toHaveAttribute('data-form', 'pill');
     await page.locator('.agents-tab', { hasText: 'codex' }).click();
     await expect(page.locator('.agents-tab-on')).toHaveText('codex');
     await expect(page.locator('.claude-says')).toBeVisible();
+});
+
+When('I press what Hazel said, and cancel, twice', async ({ page }) => {
+    // "A row pressed is chosen; Cancel takes what is chosen" (@teranos/elements examples/outbox.ts).
+    await batch(page).locator('.collected-who', { hasText: 'Hazel' }).click();
+    await expect(batch(page).locator('.collected-who', { hasText: 'Hazel' })).toHaveAttribute('aria-pressed', 'true');
+    await page.screenshot({ path: `${SHOTS}/12-one-chosen.png` });
+    await press(page, 'collected-cancel').click();
+    await press(page, 'collected-cancel').click();
+});
+
+Then('the Node Agent never receives what Hazel said', async ({ page }) => {
+    await expect.poll(async () => (await became(page)).canceled.map(one => one.says)).toEqual(['the pond is drained']);
+});
+
+Then('what Alder said still waits', async ({ page }) => {
+    await expect.poll(async () => (await held(page))?.waiting.map(one => one.says)).toEqual(['pull request one is open', 'pull request two is open']);
+    await expect(batch(page).locator('.collected-one')).toHaveCount(2);
+    await page.screenshot({ path: `${SHOTS}/13-one-canceled.png` });
 });

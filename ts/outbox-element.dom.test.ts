@@ -129,6 +129,30 @@ describe('What the agent said that waits - the outbox', () => {
         stop();
     });
 
+    test('Spike: deselecting a row makes Cancel remove all own messages only in that batch', async () => {
+        const node = collection(two());
+        const outbox = outboxFrom(node, 60_000);
+        field([outbox.element]);
+        const stop = outbox.watch(MINE);
+        try {
+            await settled();
+            outbox.element.click();
+            await settled();
+            const alder = outbox.element.querySelector<HTMLElement>('.outbox-batch')!;
+            const who = alder.querySelector<HTMLButtonElement>('.outbox-who')!;
+            who.click();
+            who.click();
+            expect(who.getAttribute('aria-pressed')).toBe('false');
+            twice(alder, 'Cancel');
+            await settled();
+            expect(node.canceled).toEqual(['a1', 'a2']);
+            expect(node.all.find(one => one.to === 'Alder')!.waiting.map(one => one.id)).toEqual(['a3']);
+            expect(node.all.find(one => one.to === 'Hazel')!.waiting.map(one => one.id)).toEqual(['h1']);
+            expect(outbox.element.hidden).toBe(false);
+            expect(outbox.element.querySelectorAll('.outbox-batch')).toHaveLength(1);
+        } finally { stop(); }
+    });
+
     test('Spike: it said nothing that waits: no pill is seen', async () => {
         const outbox = outboxFrom(collection(waiting()), 60_000);
         field([outbox.element]);
@@ -201,4 +225,23 @@ describe('What the agent said that waits - the outbox', () => {
         stop();
     });
 
+});
+
+
+describe('Waiting pill lifecycle regressions', () => {
+    if (!USE_JSDOM) { test.skip('Skipped locally (run with USE_JSDOM=1 to enable)', () => {}); return; }
+
+    test('a response arriving after watch stops cannot show the pill again', async () => {
+        const node = collection(waiting());
+        let answer!: (all: Collected[]) => void;
+        node.list = () => new Promise(resolve => { answer = resolve; });
+        const pill = outboxFrom(node, 60_000);
+        field([pill.element]);
+        const stop = pill.watch(DID);
+        stop();
+        answer(waiting().map(one => ({ ...one, waiting: one.waiting.map(message => ({ ...message, from_did: DID })) })));
+        await settled();
+        expect(pill.element.hidden).toBe(true);
+        expect(pill.element.querySelectorAll('textarea')).toHaveLength(0);
+    });
 });

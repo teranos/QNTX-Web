@@ -240,3 +240,22 @@ describe('What waits for the agent - Jenny', () => {
         second();
     });
 });
+
+
+describe('Waiting pill lifecycle regressions', () => {
+    if (!USE_JSDOM) { test.skip('Skipped locally (run with USE_JSDOM=1 to enable)', () => {}); return; }
+
+    test('a response arriving after watch stops cannot show the pill again', async () => {
+        const node = collection(waiting());
+        let answer!: (all: Collected[]) => void;
+        node.list = () => new Promise(resolve => { answer = resolve; });
+        const pill = collectedFrom(() => {}, node, 60_000);
+        field([pill.element]);
+        const stop = pill.watch(DID);
+        stop();
+        answer(waiting());
+        await settled();
+        expect(pill.element.hidden).toBe(true);
+        expect(pill.element.querySelectorAll('textarea')).toHaveLength(0);
+    });
+});

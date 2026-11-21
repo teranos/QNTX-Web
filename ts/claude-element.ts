@@ -447,7 +447,9 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         failed.replaceChildren(sacredEntry(apiError(`claude-${Date.now()}`, new Date().toISOString(), said, { surface: 'claude', region: what })));
     };
 
-    const read = (): Promise<void> => {
+    // `settled`, when given, runs once the session's turns are in hand and before they are shown: a settling turn takes
+    // its live rows away there, so the native chat is never shown the turn twice.
+    const read = (settled?: () => void): Promise<void> => {
         const asked = ++readsAsked;
         return node.read()
         .then(answer => {
@@ -460,6 +462,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             const stood = scroller.scrollTop;
             renderChat(session, answer);
             nativeTurns = saidOf(answer.turns);
+            settled?.();
             mirror();
             if (!drawn) jumpToBottom(scroller); else if (follow) scrollToBottom(scroller); else scroller.scrollTop = stood;
         })
@@ -512,14 +515,11 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         // and the rows of a turn said after it are that turn's.
         const done = Array.from(live.children);
         const doneNatively = nativeLive.slice();
-        const nativeDone = () => {
-            nativeLive = nativeLive.filter(said => !doneNatively.includes(said));
-            // A draft of the turn said after this one is that turn's.
-            if (nativeDraft && doneNatively.includes(nativeDraft)) nativeDraft = null;
-            mirror();
-        };
-        if (reading) void read().then(() => { for (const row of done) row.remove(); nativeDone(); });
-        else { live.replaceChildren(); nativeDone(); }
+        // This turn's draft is done now: a delta of the turn said after it starts that turn's own row.
+        nativeDraft = null;
+        const nativeDone = () => { nativeLive = nativeLive.filter(said => !doneNatively.includes(said)); };
+        if (reading) void read(nativeDone).then(() => { for (const row of done) row.remove(); nativeDone(); mirror(); });
+        else { live.replaceChildren(); nativeDone(); mirror(); }
         draft = null;
         hold(false);
     };
@@ -685,7 +685,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             if (reading) void read();
             else session.textContent = 'Nothing has been said to it yet.';
             if (is.answering) { hold(true); follow(); }
-            void openNativeChat(says.placeholder.replace(/^Say something to (the )?/, ''), {
+            if (!left) void openNativeChat(says.placeholder.replace(/^Say something to (the )?/, ''), {
                 // A chat whose element is gone says nothing to the agent, whether or not its close came through.
                 // What is typed there is said as its own words only: the web field, and a picture held in it,
                 // are not the phone's, and are left as they are.

@@ -687,13 +687,16 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             if (is.answering) { hold(true); follow(); }
             void openNativeChat(says.placeholder.replace(/^Say something to (the )?/, ''), {
                 // A chat whose element is gone says nothing to the agent, whether or not its close came through.
+                // What is typed there is said as its own words only: the web field, and a picture held in it,
+                // are not the phone's, and are left as they are.
                 say: (text) => {
                     if (left) return;
-                    const queues = sending;
-                    says.value = text;
-                    sendIt();
-                    const it = waiting[waiting.length - 1];
-                    if (queues && it) { it.native = nativeRow(text, true, nativeQueued); mirror(); }
+                    const it: Said = { words: text, typed: text, picture: null, mode: modeChosen, model: modelChosen };
+                    if (!sending) { sayIt(it); return; }
+                    waits(it);
+                    waiting.push(it);
+                    it.native = nativeRow(text, true, nativeQueued);
+                    mirror();
                 },
                 // Stop on the phone stops the turn: the web field and its picture are not the phone's.
                 stop: () => { if (!left && answeringNow && node.stop) stopIt(); },

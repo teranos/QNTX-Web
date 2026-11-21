@@ -373,7 +373,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             case 'delta':
                 if (!draft) { draft = liveRow('said', part('span', 'chat-words')); drafted = ''; }
                 drafted += event.text;
-                if (native) { nativeDraft ??= nativeRow('', false); nativeDraft.text = drafted; mirror(); }
+                nativeDraft ??= nativeRow('', false); nativeDraft.text = drafted; mirror();
                 keepingBottom(scroller, () => { draft!.querySelector('.chat-words')!.textContent = drafted; });
                 return;
             case 'text': {
@@ -382,7 +382,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                 const row = draft ?? liveRow('said', part('span', 'chat-words'));
                 keepingBottom(scroller, () => { row.querySelector('.chat-words')!.innerHTML = renderAssistant(event.text); });
                 draft = null;
-                if (native) { (nativeDraft ?? nativeRow('', false)).text = event.text; nativeDraft = null; mirror(); }
+                (nativeDraft ?? nativeRow('', false)).text = event.text; nativeDraft = null; mirror();
                 return;
             }
             case 'thinking':
@@ -548,12 +548,11 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         denied.textContent = '';
         // Your words, at once, where the turn goes on from.
         if (node.live) liveRow('you', chatText(it.words));
-        if (native) {
-            const queued = it.native;
-            if (queued) { nativeQueued = nativeQueued.filter(said => said !== queued); nativeLive.push(queued); }
-            else nativeRow(it.words, true);
-            mirror();
-        }
+        // Kept whether or not the native chat has opened yet: it shows them once it has.
+        const queuedNatively = it.native;
+        if (queuedNatively) { nativeQueued = nativeQueued.filter(said => said !== queuedNatively); nativeLive.push(queuedNatively); }
+        else nativeRow(it.words, true);
+        mirror();
         follow();
         // The picture goes up first, as a file of the node's; what comes back names it to say.
         const carries: Promise<Carried | undefined> = it.picture
@@ -601,6 +600,9 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                 }
                 sending = false;
                 settle();
+                // The phone does not see the web field the words went back to: what was not said, and why, is said there.
+                nativeRow(`Not said: ${it.words}\n${wordsOf(err)}`, false);
+                mirror();
             });
     };
 

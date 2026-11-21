@@ -33,23 +33,41 @@ interface Told {
     text?: string;
 }
 
+// One chat on the phone, held by one element: the one that opened it last. The one it is taken from is told it
+// is closed and is heard no more; the plugin also takes show and close only from the owner its open handed back.
+let holder: { heard: NativeHeard; gone: boolean } | null = null;
+
 /** Opens the native chat, or answers null where there is none. */
 export async function openNativeChat(title: string, heard: NativeHeard): Promise<NativeChat | null> {
     if (!isTauri()) return null;
+    const held = { heard, gone: false };
     const handler = new Channel<Told>();
     handler.onmessage = (told) => {
+        if (held.gone) return;
         if (told.kind === 'say' && told.text) heard.say(told.text);
         else if (told.kind === 'stop') heard.stop();
-        else if (told.kind === 'closed') heard.closed();
+        else if (told.kind === 'closed') { held.gone = true; if (holder === held) holder = null; heard.closed(); }
     };
+    let owner: string;
     try {
-        await invoke('plugin:chat|open', { title, handler });
+        ({ owner } = await invoke<{ owner: string }>('plugin:chat|open', { title, handler }));
     } catch {
         return null;
     }
+    const previous = holder;
+    holder = held;
+    if (previous && previous !== held && !previous.gone) { previous.gone = true; previous.heard.closed(); }
     return {
-        show: (messages, answering) => { void invoke('plugin:chat|show', { messages, answering }).catch(() => undefined); },
-        close: () => { void invoke('plugin:chat|close').catch(() => undefined); },
+        show: (messages, answering) => {
+            if (held.gone) return;
+            void invoke('plugin:chat|show', { owner, messages, answering }).catch(() => undefined);
+        },
+        close: () => {
+            if (held.gone) return;
+            held.gone = true;
+            if (holder === held) holder = null;
+            void invoke('plugin:chat|close', { owner }).catch(() => undefined);
+        },
     };
 }
 

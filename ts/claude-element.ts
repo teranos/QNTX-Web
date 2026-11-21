@@ -332,9 +332,11 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     let nativeLive: NativeSaid[] = [];
     // What was typed there while a turn went: it waits, shown after the turn, and is the live view's once it is said.
     let nativeQueued: NativeSaid[] = [];
+    // What was not said, and why: kept apart from any turn, so no turn's settling takes it away.
+    const nativeFailed: NativeSaid[] = [];
     let nativeDraft: NativeSaid | null = null;
     let nativeSaid = 0;
-    const mirror = () => native?.show([...nativeTurns, ...nativeLive, ...nativeQueued], answeringNow);
+    const mirror = () => native?.show([...nativeTurns, ...nativeFailed, ...nativeLive, ...nativeQueued], answeringNow);
     const nativeRow = (text: string, mine: boolean, into: NativeSaid[] = nativeLive): NativeSaid => {
         const said = { id: `live-${++nativeSaid}`, text, mine, at: Date.now() };
         into.push(said);
@@ -449,11 +451,13 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
 
     // `settled`, when given, runs once the session's turns are in hand and before they are shown: a settling turn takes
     // its live rows away there, so the native chat is never shown the turn twice.
-    const read = (settled?: () => void): Promise<void> => {
+    // Answers whether a transcript was drawn, by this read or by one asked after it.
+    const read = (settled?: () => void): Promise<boolean> => {
         const asked = ++readsAsked;
         return node.read()
         .then(answer => {
-            if (!answer || asked < readDrawn) return;
+            if (!answer) return false;
+            if (asked < readDrawn) return true;
             readDrawn = asked;
             // The column is drawn anew: where it stood is read before, and a
             // reader at the bottom is kept there; one who scrolled up is not moved.
@@ -465,8 +469,9 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             settled?.();
             mirror();
             if (!drawn) jumpToBottom(scroller); else if (follow) scrollToBottom(scroller); else scroller.scrollTop = stood;
+            return true;
         })
-        .catch((err: unknown) => fails('read', err));
+        .catch((err: unknown) => { fails('read', err); return false; });
     };
 
     // "CHAT MUST HAVE SOMETHING THAT ANIMATES"
@@ -518,7 +523,8 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         // This turn's draft is done now: a delta of the turn said after it starts that turn's own row.
         nativeDraft = null;
         const nativeDone = () => { nativeLive = nativeLive.filter(said => !doneNatively.includes(said)); };
-        if (reading) void read(nativeDone).then(() => { for (const row of done) row.remove(); nativeDone(); mirror(); });
+        // Its rows are taken away only once the session's turns are drawn in their place: a read that failed keeps them.
+        if (reading) void read(nativeDone).then(drawn => { if (!drawn) return; for (const row of done) row.remove(); nativeDone(); mirror(); });
         else { live.replaceChildren(); nativeDone(); mirror(); }
         draft = null;
         hold(false);
@@ -601,7 +607,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                 sending = false;
                 settle();
                 // The phone does not see the web field the words went back to: what was not said, and why, is said there.
-                nativeRow(`Not said: ${it.words}\n${wordsOf(err)}`, false);
+                nativeRow(`Not said: ${it.words}\n${wordsOf(err)}`, false, nativeFailed);
                 mirror();
             });
     };

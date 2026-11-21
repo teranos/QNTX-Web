@@ -684,7 +684,9 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             else session.textContent = 'Nothing has been said to it yet.';
             if (is.answering) { hold(true); follow(); }
             void openNativeChat(says.placeholder.replace(/^Say something to (the )?/, ''), {
+                // A chat whose element is gone says nothing to the agent, whether or not its close came through.
                 say: (text) => {
+                    if (left) return;
                     const queues = sending;
                     says.value = text;
                     sendIt();
@@ -692,7 +694,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                     if (queues && it) { it.native = nativeRow(text, true, nativeQueued); mirror(); }
                 },
                 // Stop on the phone stops the turn: the web field and its picture are not the phone's.
-                stop: () => { if (answeringNow && node.stop) stopIt(); },
+                stop: () => { if (!left && answeringNow && node.stop) stopIt(); },
                 closed: () => { native = null; },
             }).then(chat => {
                 if (left) { chat?.close(); return; }

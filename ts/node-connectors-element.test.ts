@@ -553,6 +553,28 @@ describe('Tim: the Costs line under Google Cloud', () => {
     });
 });
 
+// "I got this from you, not from the mail"
+describe('Tim: a namespace gets its own key at Google, from the Costs line', () => {
+    const connected = { asked: true, accepted: true, project_id: 'qntx-506807', service_account: 'qntx-node', costs_wired: true, budgets: [] };
+    const garden = `${NODE.issuer}/auth/google/cloud?project=qntx-506807&thing=key&namespace=garden`;
+
+    test('each namespace without a key has its own Connect, which goes where the node says', async () => {
+        atGoogle = { ...atGoogle, ...connected, key_connects: { shed: `${NODE.issuer}/auth/google/cloud?project=qntx-506807&thing=key&namespace=shed`, garden } };
+        const held = await drawn();
+        const keys = held.querySelector('[data-keys]') as HTMLElement;
+        expect(keys.textContent).toContain('Connect a key for a namespace');
+        const presses = [...keys.querySelectorAll('[data-press]')].map((p) => (p as HTMLElement).dataset.press);
+        expect(presses).toEqual(['google-key-connect-garden', 'google-key-connect-shed']);
+        await press(held, 'google-key-connect-garden');
+        expect(wentTo).toEqual([`${garden}&page=${encodeURIComponent(window.location.pathname)}`]);
+    });
+
+    test('with every namespace keyed, no key is offered', async () => {
+        atGoogle = { ...atGoogle, ...connected, key_connects: {} };
+        expect((await drawn()).querySelector('[data-keys]')).toBeNull();
+    });
+});
+
 describe('Tim: Google is still confirming the node', () => {
     // A binding just made does not hold at once, and ROOT is mailed how it ends.
     test('a connection just made says it is being confirmed, and offers nothing to press', async () => {

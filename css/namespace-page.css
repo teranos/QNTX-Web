@@ -149,6 +149,7 @@
 
 .canvas-ask {
     width: 360px;
+    max-width: 100%;
     margin-bottom: 16px;
     padding: 4px 8px;
     font-family: var(--font-mono);
@@ -213,4 +214,11 @@ body.canvas-disabled [data-element-id="canvas-workspace"] {
     margin-top: 12px;
     font-size: var(--font-size-sm);
     color: #fbbf24;
+}
+
+/* iOS Safari zooms the page on focus for a field under 16px. */
+@media (pointer: coarse) {
+    .canvas-ask {
+        font-size: var(--font-size-field);
+    }
 }

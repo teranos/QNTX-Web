@@ -23,7 +23,7 @@
     display: none;
 }
 
-#system-drawer .drawer-grab-bar {
+.drawer-grab-bar {
     height: 10px;
     cursor: ns-resize;
     flex-shrink: 0;
@@ -35,7 +35,7 @@
     z-index: 1; /* Above sibling content within drawer */
 }
 
-#system-drawer .drawer-grab-bar::after {
+.drawer-grab-bar::after {
     content: '';
     width: 32px;
     height: 3px;
@@ -44,11 +44,11 @@
     transition: background 0.15s;
 }
 
-#system-drawer .drawer-grab-bar:hover {
+.drawer-grab-bar:hover {
     background: rgba(255, 255, 255, 0.06);
 }
 
-#system-drawer .drawer-grab-bar:hover::after {
+.drawer-grab-bar:hover::after {
     background: rgba(255, 255, 255, 0.35);
 }
 
@@ -80,7 +80,7 @@
 }
 
 /* Drawer search input */
-#drawer-search-input {
+.drawer-search-input {
     flex: 1;
     min-width: 0;
     background: var(--bg-almost-black);
@@ -93,11 +93,11 @@
     outline: none;
 }
 
-#drawer-search-input:focus {
+.drawer-search-input:focus {
     border-color: var(--accent-color);
 }
 
-#drawer-search-input::placeholder {
+.drawer-search-input::placeholder {
     color: var(--text-secondary);
 }
 
@@ -298,5 +298,19 @@ body.disconnected #sigma-status .status-dot {
     .status-dot {
         transition: none;
         animation: none;
+    }
+}
+
+/* "making things more mobile friendly". On a phone the search box is the main
+   field, and iOS Safari zooms the page on focus for a field under 16px. The grab
+   bar is the phone's drawer control: finger-sized, and the drag is ours. */
+@media (pointer: coarse) {
+    .drawer-search-input {
+        font-size: var(--font-size-field);
+    }
+
+    .drawer-grab-bar {
+        height: 24px;
+        touch-action: none;
     }
 }

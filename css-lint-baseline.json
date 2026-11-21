@@ -41,7 +41,7 @@
   "css/drawer.css": {
     "scale-unlimited/declaration-strict-value": 30,
     "no-descending-specificity": 3,
-    "selector-max-id": 20
+    "selector-max-id": 13
   },
   "css/element-table.css": {
     "no-descending-specificity": 2
@@ -130,8 +130,7 @@
   },
   "css/toast.css": {
     "scale-unlimited/declaration-strict-value": 19,
-    "declaration-property-value-disallowed-list": 5,
-    "selector-max-id": 1
+    "declaration-property-value-disallowed-list": 5
   },
   "css/type-definition-window.css": {
     "no-descending-specificity": 1

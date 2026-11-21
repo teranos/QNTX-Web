@@ -6,7 +6,7 @@
  * Dark theme: Dark background with light text
  */
 
-#toast-container {
+.toast-container {
     position: fixed;
     top: 20px;
     left: 50%;
@@ -175,5 +175,15 @@
 
     .toast-close {
         transition: none;
+    }
+}
+
+/* On a phone the drawer hangs from the top (responsive.css): toasts hang below
+   it instead of over it, and fit a 375px screen. */
+@media (max-width: 768px) {
+    .toast-container {
+        top: calc(var(--drawer-height, 32px) + env(safe-area-inset-top, 0px) + 8px);
+        min-width: 0;
+        width: calc(100vw - 32px);
     }
 }

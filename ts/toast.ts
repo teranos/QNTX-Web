@@ -44,6 +44,7 @@ export function showToast(message: string, options: ToastOptions = {}): void {
     if (!container) {
         container = document.createElement('div');
         container.id = 'toast-container';
+        container.className = 'toast-container';
         container.setAttribute('aria-live', 'polite');
         container.setAttribute('aria-label', 'Notifications');
         document.body.appendChild(container);

@@ -514,6 +514,22 @@ function googleRow(go: (url: string) => void): HTMLElement {
             },
         }).element);
         costs.append(holding, fields);
+        // "I got this from you, not from the mail": a key of its own for each namespace, in a project of its own.
+        const keyConnects = Object.entries(am.key_connects ?? {}).sort(([a], [b]) => a.localeCompare(b));
+        if (keyConnects.length) {
+            const keys = document.createElement('div');
+            keys.dataset.keys = '';
+            keys.style.cssText = 'display:flex;flex-direction:column;gap:4px';
+            // A press is a box of two lines (@teranos/elements), so it says the namespace, and this says what it does.
+            keys.append(note('Connect a key for a namespace: it spends with a key of its own, in a project of its own, halted by its own budget.'));
+            const presses = document.createElement('div');
+            presses.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px';
+            for (const [namespace, at] of keyConnects) {
+                presses.append(pressFrom({ id: `google-key-connect-${namespace}`, title: namespace, does: () => goFromHere(at) }).element);
+            }
+            keys.append(presses);
+            costs.append(keys);
+        }
         return costs;
     };
     const connect = (am: NodeGoogle) => pressFrom({ id: 'google-connect', title: 'Connect', does: () => goFromHere(am.connect) }).element;

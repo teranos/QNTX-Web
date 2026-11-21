@@ -493,6 +493,16 @@ export interface NodeGoogle {
   items: GoogleSpendItem[];
   /** 「[Opus 5.5] Where ROOT goes to make a namespace's key, by saying yes at Google once: namespace appended.」 */
   key_connect: string;
+  /**
+   * "I got this from you, not from the mail"
+   * 「[Opus 5.5] Connect key for each namespace the node serves that has no key yet, by namespace.」
+   */
+  key_connects: { [key: string]: string };
+}
+
+export interface NodeGoogle_KeyConnectsEntry {
+  key: string;
+  value: string;
 }
 
 /**

@@ -197,6 +197,7 @@ export function initSystemDrawer(): void {
         searchInput = document.createElement('input');
         searchInput.type = 'text';
         searchInput.id = 'drawer-search-input';
+        searchInput.className = 'drawer-search-input';
         searchInput.placeholder = 'Search or command...';
         searchInput.autocomplete = 'off';
 

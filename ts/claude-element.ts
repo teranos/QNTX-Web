@@ -317,7 +317,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     let draft: HTMLElement | null = null;
     let drafted = '';
     // One thing said: its words, what was typed for them, its picture, the mode and model it was said in, and its row while it waits.
-    interface Said { words: string; typed: string; picture: Blob | null; mode: string; model: string; row?: HTMLElement; shown?: boolean }
+    interface Said { words: string; typed: string; picture: Blob | null; mode: string; model: string; row?: HTMLElement; native?: NativeSaid }
     const waiting: Said[] = [];
     // After a refusal, the box holds the first of what waits: it is said ahead of what waits behind it.
     let boxHoldsFirst = false;
@@ -330,12 +330,14 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     let native: NativeChat | null = null;
     let nativeTurns: NativeSaid[] = [];
     let nativeLive: NativeSaid[] = [];
+    // What was typed there while a turn went: it waits, shown after the turn, and is the live view's once it is said.
+    let nativeQueued: NativeSaid[] = [];
     let nativeDraft: NativeSaid | null = null;
     let nativeSaid = 0;
-    const mirror = () => native?.show([...nativeTurns, ...nativeLive], answeringNow);
-    const nativeRow = (text: string, mine: boolean): NativeSaid => {
+    const mirror = () => native?.show([...nativeTurns, ...nativeLive, ...nativeQueued], answeringNow);
+    const nativeRow = (text: string, mine: boolean, into: NativeSaid[] = nativeLive): NativeSaid => {
         const said = { id: `live-${++nativeSaid}`, text, mine, at: Date.now() };
-        nativeLive.push(said);
+        into.push(said);
         return said;
     };
 
@@ -510,7 +512,12 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         // and the rows of a turn said after it are that turn's.
         const done = Array.from(live.children);
         const doneNatively = nativeLive.slice();
-        const nativeDone = () => { nativeLive = nativeLive.filter(said => !doneNatively.includes(said)); nativeDraft = null; mirror(); };
+        const nativeDone = () => {
+            nativeLive = nativeLive.filter(said => !doneNatively.includes(said));
+            // A draft of the turn said after this one is that turn's.
+            if (nativeDraft && doneNatively.includes(nativeDraft)) nativeDraft = null;
+            mirror();
+        };
         if (reading) void read().then(() => { for (const row of done) row.remove(); nativeDone(); });
         else { live.replaceChildren(); nativeDone(); }
         draft = null;
@@ -541,7 +548,12 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         denied.textContent = '';
         // Your words, at once, where the turn goes on from.
         if (node.live) liveRow('you', chatText(it.words));
-        if (native && !it.shown) { nativeRow(it.words, true); mirror(); }
+        if (native) {
+            const queued = it.native;
+            if (queued) { nativeQueued = nativeQueued.filter(said => said !== queued); nativeLive.push(queued); }
+            else nativeRow(it.words, true);
+            mirror();
+        }
         follow();
         // The picture goes up first, as a file of the node's; what comes back names it to say.
         const carries: Promise<Carried | undefined> = it.picture
@@ -677,9 +689,10 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                     says.value = text;
                     sendIt();
                     const it = waiting[waiting.length - 1];
-                    if (queues && it) { it.shown = true; nativeRow(text, true); mirror(); }
+                    if (queues && it) { it.native = nativeRow(text, true, nativeQueued); mirror(); }
                 },
-                stop: () => { if (stops()) stopIt(); },
+                // Stop on the phone stops the turn: the web field and its picture are not the phone's.
+                stop: () => { if (answeringNow && node.stop) stopIt(); },
                 closed: () => { native = null; },
             }).then(chat => {
                 if (left) { chat?.close(); return; }

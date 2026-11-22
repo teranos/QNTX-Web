@@ -369,6 +369,70 @@ describe('Claude - Spike', () => {
         stop();
     });
 
+    // A picture whose upload dropped never reached the say: the node cannot have the words, whatever it is doing.
+    test('a dropped connection while the picture goes up is a refusal, even while the node answers', async () => {
+        const body = document.createElement('div');
+        const sent: string[] = [];
+        shelved = () => Promise.reject(new TypeError('Load failed'));
+        try {
+            const stop = drawClaude(body, node({ say: (says) => { sent.push(says); return Promise.resolve(answered); } }, { ...am, answering: true }), 1);
+            await settled();
+            const pick = body.querySelector<HTMLInputElement>('.claude-pick')!;
+            Object.defineProperty(pick, 'files', { value: [new Blob(['shot'], { type: 'image/png' })], configurable: true });
+            pick.dispatchEvent(new Event('change'));
+            say(body, 'look at this');
+            await settled();
+            expect(sent).toEqual([]);
+            expect(failedShown(body)).toBe(true);
+            expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('look at this');
+            stop();
+        } finally { shelved = null; }
+    });
+
+    // The followed turn is still a turn going: what is said meanwhile waits behind it, and is said once it ended.
+    test('words said while a dropped turn is followed wait behind it, and are said when it ends', async () => {
+        const body = document.createElement('div');
+        let answering = true;
+        const sent: string[] = [];
+        const stop = drawClaude(body, node({
+            am: () => Promise.resolve({ ...am, answering }),
+            say: (says) => { sent.push(says); return sent.length === 1 ? dropped() : Promise.resolve(answered); },
+        }), 1);
+        await settled();
+        say(body, 'first');
+        await settled();
+        say(body, 'second');
+        await settled();
+        expect(sent).toEqual(['first']);
+        expect(Array.from(body.querySelectorAll('.chat-waiting')).map(r => r.querySelector('.chat-text')?.textContent)).toEqual(['second']);
+        answering = false;
+        for (let tries = 0; sent.length < 2 && tries < 50; tries++) await settled();
+        expect(sent).toEqual(['first', 'second']);
+        stop();
+    });
+
+    // Stopping a followed turn is no stop of the next say: its refusal is drawn.
+    test('a followed turn stopped leaves the next say its own refusal', async () => {
+        const body = document.createElement('div');
+        let answering = true;
+        let says = 0;
+        const stop = drawClaude(body, node({
+            am: () => Promise.resolve({ ...am, answering }),
+            say: () => ++says === 1 ? dropped() : Promise.reject(new Error('/api/agent/say: HTTP 500 Claude Code did not answer: exit status 1')),
+            stop: () => { answering = false; return Promise.resolve({ ...am, answering: false }); },
+        }), 1);
+        await settled();
+        say(body, 'first');
+        await settled();
+        body.querySelector<HTMLButtonElement>('.claude-send')!.click();
+        await settled();
+        say(body, 'install htop');
+        await settled();
+        expect(failedShown(body)).toBe(true);
+        expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('install htop');
+        stop();
+    });
+
     // Spike: a tool it reached for and was not allowed is said with the answer.
     test('what it was not allowed is said', async () => {
         const body = document.createElement('div');

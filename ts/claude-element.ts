@@ -452,6 +452,8 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     };
     // A turn the person stopped is no refusal: what it was said with is not said again.
     let stoppedByThePerson = false;
+    // A say whose connection dropped while the node had the words: its turn is followed to its end.
+    let followed = false;
 
     // A row of what waits to be said.
     // "WHEN I PRESS ON THE PENDING MESSAGE AGAIN, IT IS SAYING, SEND NOW? AND THEN YOU CLICK ON IT, AND YOU INTERRUPT AND SEND IT NOW"
@@ -505,15 +507,27 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                     // With live in hand the turn is drawn as it goes; the session is read once it ended.
                     if (is.session) { reading = is.session; if (!node.live) void read(); }
                     if (is.answering) listen();
-                    if (!is.answering && !sending) settle();
+                    if (!is.answering && (!sending || followed)) ended();
                 })
                 .catch((err: unknown) => { fails('follow', err); if (!sending) settle(); });
         }, every);
     };
 
+    // A turn ended: one whose say dropped and was followed ends as a say does, and what waits is said.
+    const ended = () => {
+        if (!followed) { settle(); return; }
+        followed = false;
+        sending = false;
+        settle();
+        const next = waiting.shift();
+        if (next) { next.row?.remove(); sayIt(next); }
+    };
+
     // One thing said, as one turn of the node's.
     const sayIt = (it: Said) => {
         sending = true;
+        // A stop belongs to the turn it was pressed in, never to a say made after it.
+        stoppedByThePerson = false;
         hold(true);
         failed.replaceChildren();
         denied.textContent = '';
@@ -542,8 +556,10 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             sending = false;
             settle();
         };
+        // Only a say that was made can have reached the node: a picture whose upload dropped did not.
+        let made = false;
         carries
-            .then(carried => node.say(it.words, it.mode, carried, it.model))
+            .then(carried => { made = true; return node.say(it.words, it.mode, carried, it.model); })
             .then(answer => {
                 reading = answer.session;
                 if (answer.denied.length > 0) denied.textContent = `It reached for ${answer.denied.join(', ')} and was not allowed.`;
@@ -573,7 +589,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                 // let the connection go), which is not a refusal: the node may have the words and be answering.
                 // It is asked: answering, or holding the words as the last it was said, the turn is the node's
                 // and is followed to its end; neither, and they were refused.
-                if (err instanceof TypeError) {
+                if (err instanceof TypeError && made) {
                     node.am()
                         .then(is => is.answering || node.read().then(read => {
                             const said = (read?.turns ?? []).filter(turn => turn.speaker === 'human' || turn.speaker === 'person');
@@ -581,7 +597,8 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                         }))
                         .then(had => {
                             if (!had) { refused(err); return; }
-                            sending = false;
+                            // Still a turn going: what is said meanwhile waits behind it, as behind any say.
+                            followed = true;
                             follow();
                         }, () => refused(err));
                     return;
@@ -616,7 +633,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         failed.replaceChildren();
         stoppedByThePerson = true;
         node.stop!()
-            .then(is => { if (!is.answering && !sending) settle(); })
+            .then(is => { if (!is.answering && (!sending || followed)) ended(); })
             .catch((err: unknown) => { stoppedByThePerson = false; fails('stop', err); })
             .finally(() => { send.disabled = false; });
     };

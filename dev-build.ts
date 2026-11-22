@@ -47,10 +47,10 @@ function broadcastReload(): void {
     clients.forEach(client => client.write(message));
 }
 
-// "log once per build, not once per event"
-// A file rewritten in a loop on k printed "Changed:" 411,167 times in 14
-// minutes, into a journal on a spinning disk. What changed is said once, as
-// its build starts, with how many times each file was seen.
+// "「[Opus 5.5] log once per build, not once per event」"
+// 「[Opus 5.5] A file rewritten in a loop on k printed "Changed:" 411,167 times in 14」
+// 「[Opus 5.5] minutes, into a journal on a spinning disk. What changed is said once, as」
+// 「[Opus 5.5] its build starts, with how many times each file was seen.」
 const changed: Map<string, number> = new Map();
 
 /** The one line a build's changes are said in: each file once, with its count when it is more than one. */

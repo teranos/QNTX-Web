@@ -1,9 +1,9 @@
-// What is about to be said to the Node Agent, in front of ROOT while they are in the app.
-// "as you may believe, i want to see it on my phone, for the duration of 15 minutes before a collected message is sent, the preview and the buttons to send now, delay and cancel"
-// Out of the app it stands as a Live Activity the node starts, with its
-// answers on it (teranos/QNTX docs/adr/ADR-060). In the app, the Node Agent's
-// chat opens on it. The page hands the node nothing for that: the app's own
-// side does (QNTX-App island/).
+// 「[Opus 5.5] What is about to be said to the Node Agent, in front of ROOT while they are in the app.」
+// "「[Opus 5.5] as you may believe, i want to see it on my phone, for the duration of 15 minutes before a collected message is sent, the preview and the buttons to send now, delay and cancel」"
+// 「[Opus 5.5] Out of the app it stands as a Live Activity the node starts, with its」
+// 「[Opus 5.5] answers on it (teranos/QNTX docs/adr/ADR-060). In the app, the Node Agent's」
+// 「[Opus 5.5] chat opens on it. The page hands the node nothing for that: the app's own」
+// 「[Opus 5.5] side does (QNTX-App island/).」
 
 import { apiJson } from './client';
 import { log, SEG } from './logger.ts';
@@ -25,7 +25,7 @@ export interface Phone {
     visible(): boolean;
 }
 
-// How long before it is sent what waits stands in front of ROOT: the node's own fifteen minutes (QNTX server/phones.go, shownBefore).
+// 「[Opus 5.5] How long before it is sent what waits stands in front of ROOT: the node's own fifteen minutes (QNTX server/phones.go, shownBefore).」
 const ABOUT_TO_MS = 900_000;
 // How often it is asked again while the app stays in front: a batch comes within the fifteen minutes without the app being left.
 const LOOK_MS = 60_000;
@@ -49,10 +49,10 @@ const theApp: Phone = {
 };
 
 /**
- * For as long as the page is open: whoever is signed in is asked each time, so
- * a session that begins later is ROOT's too. In front and as ROOT, the Node
- * Agent's chat is opened on what is about to be said to it, once for each
- * time it is due. What it gives back stops it.
+ * 「[Opus 5.5] For as long as the page is open: whoever is signed in is asked each time, so」
+ * 「[Opus 5.5] a session that begins later is ROOT's too. In front and as ROOT, the Node」
+ * 「[Opus 5.5] Agent's chat is opened on what is about to be said to it, once for each」
+ * 「[Opus 5.5] time it is due. What it gives back stops it.」
  */
 export function rootsPhone(phone: Phone = theApp, every: number = LOOK_MS): () => void {
     let nodeAgent = '';
@@ -66,7 +66,7 @@ export function rootsPhone(phone: Phone = theApp, every: number = LOOK_MS): () =
         try {
             const is = await phone.who();
             if (is.level !== 'ROOT' || !is.identity) {
-                // Nobody, or somebody else: the Node Agent is asked for anew for the next ROOT.
+                // 「[Opus 5.5] Nobody, or somebody else: the Node Agent is asked for anew for the next ROOT.」
                 nodeAgent = '';
                 return;
             }

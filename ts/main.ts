@@ -503,8 +503,8 @@ async function init(): Promise<void> {
             .catch(err => log.error(SEG.UI, '[Init] the mock element was not drawn:', err));
     }
 
-    // In the app, the Node Agent's chat opens on what is about to be said to it (phone.ts).
-    // Who is signed in is asked each time it looks, so one who signs in later is ROOT too.
+    // 「[Fable 5.2] In the app, the Node Agent's chat opens on what is about to be said to it (phone.ts).」
+    // 「[Fable 5.2] Who is signed in is asked each time it looks, so one who signs in later is ROOT too.」
     if (window.__TAURI__) {
         import('./phone.ts')
             .then(({ rootsPhone }) => { rootsPhone(); })

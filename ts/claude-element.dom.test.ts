@@ -417,7 +417,7 @@ describe('Claude - Jenny', () => {
         await settled();
                 expect(button().getAttribute('aria-label')).toBe('Stop');
 
-        // Words typed while it answers: the button says them.
+        // 「[Opus 5.5] Words typed while it answers: the button says them.」
         const box = body.querySelector<HTMLTextAreaElement>('.claude-says')!;
         box.value = 'and then?';
         box.dispatchEvent(new Event('input'));
@@ -470,7 +470,7 @@ describe('Claude - Jenny', () => {
         stop();
     });
 
-    // An agent the node cannot stop keeps its send button.
+    // 「[Opus 5.5] An agent the node cannot stop keeps its send button.」
     test('an agent with no stop keeps its send button while it answers', async () => {
         const body = document.createElement('div');
         const stop = drawClaude(body, node({ say: () => new Promise<ClaudeSaid>(() => {}) }), 1);

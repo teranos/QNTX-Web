@@ -96,8 +96,8 @@ Given('I am ROOT on a phone', async ({ page }) => {
 });
 
 When('I shake it', async ({ page }) => {
-    // The phone's shake is one event on the page (ts/shake.ts); the MOCK element's press raises the same one,
-    // and on a phone the Node Room, which the App opens into, stands in front of that press.
+    // 「[Fable 5.1] The phone's shake is one event on the page (ts/shake.ts); the MOCK element's press raises the same one,」
+    // 「[Fable 5.1] and on a phone the Node Room, which the App opens into, stands in front of that press.」
     await page.evaluate(() => { window.dispatchEvent(new Event('qntx-shake')); });
 });
 

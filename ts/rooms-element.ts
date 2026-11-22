@@ -149,8 +149,8 @@ export function reachableOf(room: Room, agent: RoomAgent): Reachable | undefined
 }
 
 /**
- * The fish each agent in the room is: its model and effort read from its am,
- * where Agents reads it; an agent whose am is not read is the plain fish.
+ * 「[Fable 5.1] The fish each agent in the room is: its model and effort read from its am,」
+ * 「[Fable 5.1] where Agents reads it; an agent whose am is not read is the plain fish.」
  */
 // "and the room itself is the fish is the agent is the model is a different species per model."
 export function fishIn(room: Room, agents: RoomAgent[], read: (at: string) => Promise<unknown> = at => apiJson<unknown>(at)): Promise<Fish[]> {
@@ -383,7 +383,7 @@ export function openRoom(room: Room, rooms: Rooms = theRooms): void {
             id,
             title: room.name,
             symbol: RoomSymbol,
-            // The room's glass, the thinnest: the ground the room holds shows through it.
+            // 「[Fable 5.1] The room's glass, the thinnest: the ground the room holds shows through it.」
             // "and having our things, text be drawn on top, and still make it legible"
             // "make sure a room element bg is more transparent and shows the visual"
             color: glassRoom(),
@@ -403,8 +403,8 @@ export function openRoom(room: Room, rooms: Rooms = theRooms): void {
 }
 
 /**
- * Opens the Node Room: the room `of.node` names. False when the rooms cannot
- * be listed by this person, or no room is the node's.
+ * 「[Fable 5.1] Opens the Node Room: the room `of.node` names. False when the rooms cannot」
+ * 「[Fable 5.1] be listed by this person, or no room is the node's.」
  */
 // "and having the Node Room be the default think i enter into when i open the App on my Phone, with that backdrop"
 export async function openTheNodeRoom(rooms: Rooms = theRooms): Promise<boolean> {

@@ -60,8 +60,8 @@ export function backdrop(layer, { live, room }) {
             lastOnset = t;
             ripples.push({ x: width * (0.2 + 0.6 * Math.random()), y: height * (0.2 + 0.6 * Math.random()), born: t });
         }
-        // Each agent a spring, spread across the water. A stronger model is a wider ring; more effort, a quicker one;
-        // the model's family is the ring's hue.
+        // 「[Fable 5.1] Each agent a spring, spread across the water. A stronger model is a wider ring; more effort, a quicker one;」
+        // 「[Fable 5.1] the model's family is the ring's hue.」
         // "stronger model is stronger bigger fish"
         // "effort translated to speed"
         agents.forEach((agent, i) => {

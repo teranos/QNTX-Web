@@ -39,9 +39,9 @@ export interface Live {
 }
 
 /**
- * An agent as a ground draws it: its name, the harness it runs in, the model
- * it is, and two numbers every ground agrees on — how strong the model is
- * (size) and how much effort it runs at (speed), each 0..1.
+ * 「[Fable 5.1] An agent as a ground draws it: its name, the harness it runs in, the model」
+ * 「[Fable 5.1] it is, and two numbers every ground agrees on — how strong the model is」
+ * 「[Fable 5.1] (size) and how much effort it runs at (speed), each 0..1.」
  */
 // "and the room itself is the fish is the agent is the model is a different species per model."
 // "stronger model is stronger bigger fish"
@@ -51,13 +51,13 @@ export interface Fish { name: string; harness: string; model: string; effort: st
 /** A room holding the ground: its name, and the agents in it, each a fish. */
 export interface RoomHeld { name: string; agents: Fish[] }
 
-// How strong a model is, by its name: the page's one reading of it, so pond and piranha agree.
+// 「[Fable 5.1] How strong a model is, by its name: the page's one reading of it, so pond and piranha agree.」
 const STRENGTH: Array<[string, number]> = [
     ['fable', 1], ['opus', 0.9], ['sonnet', 0.6], ['haiku', 0.3],
     ['pro', 0.8], ['flash', 0.4],
     ['nano', 0.2], ['mini', 0.4], ['gpt', 0.8], ['codex', 0.8],
 ];
-// How fast it runs, by the effort it was given.
+// 「[Fable 5.1] How fast it runs, by the effort it was given.」
 const SPEED: Record<string, number> = { low: 0.4, medium: 0.6, high: 0.8, xhigh: 0.9, max: 1 };
 
 /** The fish an agent is: strength from its model's name, speed from its effort; 0.5 and 0.6 when unknown. */
@@ -264,7 +264,7 @@ export function holdBackdrop(by: string, holds: Omit<Held, 'live'>): () => void 
     };
 }
 
-// The element holding the ground now: who, what it holds, the node it draws in, and how to stop the ground drawn for it.
+// 「[Fable 5.1] The element holding the ground now: who, what it holds, the node it draws in, and how to stop the ground drawn for it.」
 let holding: { by: string; holds: Omit<Held, 'live'>; node: HTMLElement; stop: () => void } | null = null;
 
 /** The chosen ground drawn in node for the element holding it; false when the ground is plain. */

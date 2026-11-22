@@ -99,7 +99,7 @@ export function roomBody(text: string, fetchFile: typeof apiFetch = apiFetch, at
         },
     });
     element.append(serializer.serializeFragment(defaultMarkdownParser.parse(text).content));
-    // What was sent with it is the node's to serve, read as the page reads the node.
+    // 「[Opus 5.5] What was sent with it is the node's to serve, read as the page reads the node.」
     for (const attachment of attachments) {
         const resource = { url: backendUrl() + attachment.url, file: attachment.url };
         const name = attachment.name || 'file';

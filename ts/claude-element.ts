@@ -428,12 +428,17 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         failed.replaceChildren(sacredEntry(apiError(`claude-${Date.now()}`, new Date().toISOString(), said, { surface: 'claude', region: what })));
     };
 
+    // How many turns of the person's the session holds, as far as this chat knows: a say whose connection
+    // dropped is the node's only when the session holds one more of them than when it was made.
+    let spoken: number | null = null;
+    const spokenIn = (read: SessionRead | null | undefined) => (read?.turns ?? []).filter(turn => turn.speaker === 'human' || turn.speaker === 'person').length;
     const read = (): Promise<void> => {
         const asked = ++readsAsked;
         return node.read()
         .then(answer => {
             if (!answer || asked < readDrawn) return;
             readDrawn = asked;
+            spoken = Math.max(spoken ?? 0, spokenIn(answer));
             // The column is drawn anew: where it stood is read before, and a
             // reader at the bottom is kept there; one who scrolled up is not moved.
             const drawn = session.querySelector('.chat-col') !== null;
@@ -561,6 +566,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         };
         // Only a say that was made can have reached the node: a picture whose upload dropped did not.
         let made = false;
+        const before = spoken;
         carries
             .then(carried => { made = true; return node.say(it.words, it.mode, carried, it.model); })
             .then(answer => {
@@ -572,6 +578,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                 // read here as well, the answer stood in the session and in the live view until the second read came back.
             })
             .then(() => {
+                if (spoken !== null) spoken = Math.max(spoken, (before ?? 0) + 1);
                 stoppedByThePerson = false;
                 sending = false;
                 settle();
@@ -597,8 +604,9 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                 if (err instanceof TypeError) {
                     node.am()
                         .then(is => is.answering || node.read().then(read => {
+                            // The same words said before are no proof: only a turn of the person's more than there was.
                             const said = (read?.turns ?? []).filter(turn => turn.speaker === 'human' || turn.speaker === 'person');
-                            return said[said.length - 1]?.text === it.words;
+                            return before !== null && said.length > before && said[said.length - 1]?.text === it.words;
                         }))
                         .then(had => {
                             if (!had) { refused(err); return; }
@@ -607,6 +615,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                             // Still a turn going: what is said meanwhile waits behind it, as behind any say.
                             followed = true;
                             taken++;
+                            if (spoken !== null) spoken = Math.max(spoken, (before ?? 0) + 1);
                             follow();
                         }, () => refused(err));
                     return;
@@ -693,7 +702,11 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             }
             reading = is.session;
             if (reading) void read();
-            else session.textContent = 'Nothing has been said to it yet.';
+            else {
+                session.textContent = 'Nothing has been said to it yet.';
+                // No session yet: none of the person's turns in it.
+                spoken = Math.max(spoken ?? 0, 0);
+            }
             if (is.answering) { hold(true); follow(); }
         })
         .catch((err: unknown) => {

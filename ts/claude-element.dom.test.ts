@@ -349,7 +349,8 @@ describe('Claude - Spike', () => {
     test('a dropped connection for words the node already has in its session is no failure', async () => {
         const body = document.createElement('div');
         const had: SessionRead = { ...session, turns: [...session.turns, { at: '2026-10-05T09:01:00Z', speaker: 'human', text: 'install htop', of: 'p-4' }] };
-        const stop = drawClaude(body, node({ say: dropped, read: () => Promise.resolve(had) }));
+        let said = false;
+        const stop = drawClaude(body, node({ say: () => { said = true; return dropped(); }, read: () => Promise.resolve(said ? had : session) }));
         await settled();
         say(body, 'install htop');
         await settled();
@@ -366,6 +367,19 @@ describe('Claude - Spike', () => {
         await settled();
         expect(failedShown(body)).toBe(true);
         expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('install htop');
+        stop();
+    });
+
+    // The same words said again, and lost on the way: the session's last words are the earlier saying of them, no new one.
+    test('a dropped connection for words said before, and not again, is a refusal', async () => {
+        const body = document.createElement('div');
+        const before: SessionRead = { ...session, turns: [...session.turns, { at: '2026-10-05T09:01:00Z', speaker: 'human', text: 'continue', of: 'p-4' }] };
+        const stop = drawClaude(body, node({ say: dropped, read: () => Promise.resolve(before) }, { ...am, session: SESSION }));
+        await settled();
+        say(body, 'continue');
+        await settled();
+        expect(failedShown(body)).toBe(true);
+        expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('continue');
         stop();
     });
 

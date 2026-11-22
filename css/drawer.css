@@ -209,7 +209,7 @@
 
 
 /* Grey by default. Green was the default, so an indicator nobody had wired to
-   a state — sigma, database — was lit from the moment it existed and could
+   a state — database — was lit from the moment it existed and could
    never go out. Lit has to be earned by a state class. */
 .status-dot {
     width: 8px;
@@ -220,7 +220,6 @@
     transition: background 0.3s, box-shadow 0.3s;
 }
 
-.status-indicator.sigma-active .status-dot,
 .status-indicator.database-active .status-dot {
     background: #2ecc71;
     box-shadow: 0 0 4px rgba(46, 204, 113, 0.5);
@@ -272,15 +271,13 @@
 
 /* Disconnected state — mute non-connection indicators (stale data) */
 body.disconnected #pulse-status,
-body.disconnected #database-status,
-body.disconnected #sigma-status {
+body.disconnected #database-status {
     opacity: 0.35;
     pointer-events: none;
 }
 
 body.disconnected #pulse-status .status-dot,
-body.disconnected #database-status .status-dot,
-body.disconnected #sigma-status .status-dot {
+body.disconnected #database-status .status-dot {
     background: #666;
     box-shadow: none;
 }

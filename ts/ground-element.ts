@@ -488,7 +488,7 @@ export function renderSessions(body: HTMLElement, reads: TranscriptRead[], onCho
 // Every turn is a row a hook wrote, and sky is what carries those to the node
 // (ground source/stream.d).
 function saySky(into: HTMLElement, reads: TranscriptRead[]): void {
-    const rows = reads.reduce((sum, read) => sum + read.turns.length + read.folded, 0);
+    const rows = reads.reduce((sum, read) => sum + read.turns.length, 0);
     into.replaceChildren();
     if (rows === 0) return;
     into.appendChild(make('div', 'gr-told', `${rows.toLocaleString('en')} rows came up through sky, in ${sessionsRead(reads.length)}.`));
@@ -620,11 +620,9 @@ function sayRuns(into: HTMLElement, reads: TranscriptRead[]): void {
     const turns = reads.flatMap(read => read.turns);
     const events = tally(turns.map(eventOf).filter((event): event is string => event !== null));
     const controls = tally(turns.filter(turn => turn.speaker === 'ground').map(controlOf));
-    const folded = reads.reduce((sum, read) => sum + read.folded, 0);
     into.replaceChildren();
     if (events.length > 0) into.append(make('div', 'gr-label', `Hooks Ground ran on, in ${sessionsRead(reads.length)}:`), counted(events, 'gr-chips'));
     if (controls.length > 0) into.append(make('div', 'gr-label', 'Controls that spoke, and how often:'), counted(controls, 'gr-counted'));
-    if (folded > 0) into.appendChild(make('div', 'gr-label', `${folded.toLocaleString('en')} more rows are folded into sigmas, and no turn is read back from one.`));
 }
 
 /** What the picture is handed once it stands: what the node does for Ground, the row it says, and the sessions it read. */

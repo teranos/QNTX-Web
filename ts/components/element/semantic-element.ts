@@ -17,7 +17,6 @@ import { sendMessage, apiFetch, connectivity } from '../../client';
 import type { Attestation } from '../../generated/proto/plugin/grpc/protocol/atsstore';
 import { tooltip } from '../tooltip';
 import { attestationResultRow, RESULT_ROW_PALETTE } from './attestation-result-row';
-import { isSigmaAttestation, renderSigmaResultLine } from './sigma-element';
 import { isTypeAttestation, groupTypeAttestations, renderTypeResultLine } from './type-result-line';
 import { uiState } from '../../state/ui';
 import { syncStateManager } from '../../state/sync-state';
@@ -516,7 +515,7 @@ export function updateSemanticElementResults(elementId: string, attestation: Att
         return;
     }
 
-    const resultItem = isSigmaAttestation(attestation) ? renderSigmaResultLine(attestation) : renderAttestation(attestation, score);
+    const resultItem = renderAttestation(attestation, score);
 
     // Insert sorted by score (highest first)
     const thisScore = score ?? 0;

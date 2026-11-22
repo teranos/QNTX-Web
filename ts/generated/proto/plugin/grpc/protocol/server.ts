@@ -118,26 +118,6 @@ export interface JobUpdateMessage_MetadataEntry {
   value: string;
 }
 
-/** StorageWarningMessage represents bounded storage warning */
-export interface StorageWarningMessage {
-  /** "storage_warning" */
-  type: string;
-  /** Actor approaching limit */
-  actor: string;
-  /** Context approaching limit */
-  context: string;
-  /** Current attestation count */
-  current: number;
-  /** Configured limit */
-  limit: number;
-  /** Percentage full (0-100) */
-  fill_percentage: number;
-  /** Human-readable time until hitting limit */
-  time_until_full: string;
-  /** Unix timestamp */
-  timestamp: number;
-}
-
 /**
  * RichSearchMatch represents a single match from rich string field search.
  * Mirrors storage.RichSearchMatch in ats/storage/rich_search.go.
@@ -193,7 +173,7 @@ export interface SystemCapabilitiesMessage {
   /**
    * store is which store the node keeps (ADR-023) — sqlite or parquet.
    * Distinct from storage_backend, which is the implementation behind it.
-   * Namespaces exist only under parquet, and sigma only under sqlite.
+   * Namespaces exist only under parquet.
    */
   store: string;
   /** rust or go: which storage implementation is active. */

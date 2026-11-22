@@ -187,16 +187,14 @@ const MESSAGE_HANDLERS = {
             path: data.path
         });
 
-        // Update database stats element + sigma panel
-        dispatch('database_stats', () => import('../default-elements.js').then(({ updateDatabaseStats, updateSigmaPanel }) => {
+        // Update database stats element
+        dispatch('database_stats', () => import('../default-elements.js').then(({ updateDatabaseStats }) => {
             updateDatabaseStats(data);
-            updateSigmaPanel(data);
         }));
 
         // Update status indicators
         dispatch('database_stats', () => import('../status-indicators.js').then(({ statusIndicators }) => {
             statusIndicators.handleDatabaseStats(data.total_attestations);
-            statusIndicators.handleSigmaStats(data.distillation);
         }));
     },
 

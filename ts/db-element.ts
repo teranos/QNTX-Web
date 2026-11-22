@@ -2,90 +2,47 @@ import { sendMessage } from './client';
 import { log, SEG } from './logger';
 import { escapeHtml } from './html-utils';
 import { renderSparkline } from '@teranos/elements';
-import { renderSparklines, windowOf, seriesOf, labelsOf, seenOver, formatIn, type Seen, type Window } from './components/sparkline';
-import { DB, Watcher } from './sym';
-import { seedEvictions, recordEviction as recordEvictionEvent, getEvictionSummary, hasEvictions, renderEvictionChart, getPredicateBreakdown, type PredicateDetail } from './eviction-chart';
-import { getWatchersByPredicate, setDilation, eyeStyle } from './watcher-predicates';
+import { renderSparklines, windowOf, seenOver, type Seen, type Window } from './components/sparkline';
+import { DB } from './sym';
+import { setDilation } from './watcher-predicates';
 import type { Element } from '@teranos/elements';
 
 let dbStatsElement: HTMLElement | null = null;
 let dbStats: any = null;
 
-// Chart viewport: indices into sorted allKeys array
-let chartViewStart = 0;
-let chartViewEnd = 0; // 0 = will be set to allKeys.length on first render
-let allSortedKeys: string[] = [];
-
 // Section containers (created once, survive re-renders)
 let sectionOverview: HTMLElement | null = null;
-let sectionChart: HTMLElement | null = null;
 let sectionPredicates: HTMLElement | null = null;
-let sectionEvictions: HTMLElement | null = null;
 let sectionPerformance: HTMLElement | null = null;
 
 export function updateDatabaseStats(stats: any): void {
     dbStats = stats;
-    if (stats.recent_evictions) {
-        seedEvictions(stats.recent_evictions);
-    }
-    if (dbStatsElement) {
-        renderDbStats();
-    }
-}
-
-export function recordEviction(data: { event_type: string; actor: string; context: string; entity: string; deletions_count: number; message: string }): void {
-    recordEvictionEvent(data);
     if (dbStatsElement) {
         renderDbStats();
     }
 }
 
 function createSections(root: HTMLElement): void {
-    sectionChart = document.createElement('div');
-    sectionChart.className = 'db-section-chart';
-
     sectionOverview = document.createElement('div');
     sectionOverview.className = 'db-section-overview';
 
-    // 3-column grid below the chart
+    // 2-column grid below the overview
     const columns = document.createElement('div');
-    columns.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 8px;';
+    columns.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px;';
 
     sectionPredicates = document.createElement('div');
     sectionPredicates.className = 'db-section-predicates';
-
-    sectionEvictions = document.createElement('div');
-    sectionEvictions.className = 'db-section-evictions';
 
     sectionPerformance = document.createElement('div');
     sectionPerformance.className = 'db-section-performance';
 
     columns.appendChild(sectionPredicates);
-    columns.appendChild(sectionEvictions);
     columns.appendChild(sectionPerformance);
 
-    // Chart is the hero — full width at the top
-    root.appendChild(sectionChart);
     root.appendChild(sectionOverview);
     root.appendChild(columns);
 }
 
-// Color palette for predicate lines
-const PREDICATE_COLORS = [
-    '#4ade80', // green
-    '#60a5fa', // blue
-    '#f59e0b', // amber
-    '#ef4444', // red
-    '#a78bfa', // purple
-    '#f472b6', // pink
-    '#2dd4bf', // teal
-    '#fb923c', // orange
-    '#818cf8', // indigo
-    '#34d399', // emerald
-];
-
-// renderStatsError shows the whole envelope: what failed, where, every detail
-// and hint the error chain carried, and the id it is logged under.
 function renderStatsError(err: any): string {
     if (typeof err === 'string') {
         return `<div class="element-error">${escapeHtml(err)}</div>`;
@@ -229,27 +186,15 @@ function recordSpendHTML(spend: Spend[] | undefined, failed: any): string {
 }
 
 function renderDbStats(): void {
-    if (!dbStatsElement || !sectionChart || !sectionOverview || !sectionPredicates || !sectionEvictions || !sectionPerformance) return;
+    if (!dbStatsElement || !sectionOverview || !sectionPredicates || !sectionPerformance) return;
 
     if (!dbStats) {
-        sectionChart.innerHTML = `<div class="element-loading">Loading database statistics...</div>`;
+        sectionOverview.innerHTML = `<div class="element-loading">Loading database statistics...</div>`;
         return;
     }
     if (dbStats.error) {
-        sectionChart.innerHTML = renderStatsError(dbStats.error);
+        sectionOverview.innerHTML = renderStatsError(dbStats.error);
         return;
-    }
-
-    // -- Chart: multi-predicate timeseries with range selector --
-    // The key is absent on a backend that does not distil, where a chart of
-    // distillation output is not empty but meaningless.
-    if ('predicate_histograms' in dbStats) {
-        renderChartWithControls(sectionChart, dbStats.predicate_histograms);
-    } else {
-        // A node that persists to the record rather than distilling has no
-        // histograms. The per-namespace line this drew instead was read by
-        // scanning every landing table every 30 s, and that scan is gone.
-        renderChartWithControls(sectionChart, null);
     }
 
     // -- Overview: compact stats row --
@@ -272,7 +217,7 @@ function renderDbStats(): void {
         ${landingsHTML(dbStats.landings, dbStats.landings_error, String(dbStats.path ?? ''))}
     `;
 
-    // -- Predicates: what the record cost, then types + distillation --
+    // -- Predicates: what the record cost, then types --
     let predicatesHTML = recordSpendHTML(dbStats.record_spend, dbStats.record_spend_error);
 
     // Rich fields / types
@@ -294,50 +239,6 @@ function renderDbStats(): void {
         }
     }
 
-    // Distillation summary
-    if (dbStats.distillation) {
-        const d = dbStats.distillation;
-        const preserved = d.preserved_count ? d.preserved_count.toLocaleString() : '0';
-        const oldest = d.oldest ? formatAge(d.oldest) : '';
-        const newest = d.newest ? formatAge(d.newest) : '';
-        const timeRange = oldest && newest ? `${oldest} - ${newest}` : '';
-
-        predicatesHTML += `
-            <div style="margin-bottom: 4px;">
-                <span class="label">Distillation:</span>
-                <span class="element-value">${d.sigmas} sigmas, ${preserved} original preserved</span>
-                ${timeRange ? `<span style="color: #64748b; margin-left: 8px;">${timeRange}</span>` : ''}
-            </div>
-        `;
-
-        // Predicate list: each over time, most recently seen first, colored the
-        // way the chart colors it.
-        if (d.predicates && d.predicates.length > 0) {
-            const watcherMap = getWatchersByPredicate();
-            const histograms: Record<string, Record<string, number>> = dbStats.predicate_histograms ?? {};
-            const keys = Array.from(new Set(Object.values(histograms).flatMap(h => Object.keys(h)))).sort();
-            const recent = byRecent(histograms);
-            const charted = recent.slice(0, 10);
-            const named = (d.predicates as Array<{ predicate: string }>).map(p => p.predicate);
-            const ordered = [...recent.filter(p => named.includes(p)), ...named.filter(p => !recent.includes(p))];
-            const predRows = ordered.map((predicate) => {
-                const at = charted.indexOf(predicate);
-                const color = at >= 0 ? PREDICATE_COLORS[at % PREDICATE_COLORS.length] : 'transparent';
-                const hist = histograms[predicate] ?? {};
-                const line = renderSparkline(keys.map(k => hist[k] ?? 0), keys, predicate);
-                const info = watcherMap.get(predicate);
-                const eyes = info ? (() => { const s = eyeStyle(info); return `<span style="color: ${s.color}; text-shadow: ${s.shadow}; cursor: default;" title="${info.names.join(', ')}">${Watcher.repeat(info.names.length)}</span>`; })() : '';
-                return `<div class="distillation-row" style="display: flex; align-items: center; gap: 6px; padding: 2px 0;">
-                    <span style="width: 8px; height: 8px; border-radius: 50%; background: ${color}; flex-shrink: 0;"></span>
-                    <span style="color: #e2e8f0; word-break: break-word; overflow-wrap: break-word; flex: 1;">${predicate}${eyes}</span>
-                    <span style="flex-shrink: 0; display: inline-flex;">${line}</span>
-                    <span style="color: #94a3b8; white-space: nowrap;">${lastActiveKey(hist)}</span>
-                </div>`;
-            }).join('');
-            predicatesHTML += `<div style="margin-top: 4px;">${predRows}</div>`;
-        }
-    }
-
     sectionPredicates.innerHTML = predicatesHTML ? `<div style="padding: 8px 0; border-bottom: 1px solid var(--border-on-dark);">${predicatesHTML}</div>` : '';
 
     // Wire type links. Both sections, because a namespace's own predicates and
@@ -356,323 +257,12 @@ function renderDbStats(): void {
         });
     }
 
-    // -- Evictions --
-    if (hasEvictions()) {
-        const summary = getEvictionSummary();
-        const breakdown = getPredicateBreakdown();
-
-        let predicateRows = '';
-        if (breakdown.length > 0) {
-            // One window for every predicate, so their lines share an axis.
-            const w = windowOf(breakdown.flatMap(b => b.evictedAt));
-            const items = breakdown.map((b, i) => {
-                const age = b.oldestEvicted ? formatAge(b.oldestEvicted) : '';
-                return `<div class="eviction-pred-row" data-pred-idx="${i}" style="display: flex; align-items: center; gap: 8px; padding: 2px 0; cursor: pointer;">
-                    <span style="color: #e2e8f0; word-break: break-word; overflow-wrap: break-word; flex: 1;">${b.predicate}</span>
-                    ${age ? `<span style="color: #64748b; white-space: nowrap;" title="oldest evicted">${age}</span>` : ''}
-                    <span style="flex-shrink: 0; display: inline-flex;">${renderSparkline(seriesOf(b.evictedAt, w), labelsOf(w), b.predicate)}</span>
-                    <span style="color: #94a3b8; white-space: nowrap;">${formatIn(b.lastEviction, w.unit)}</span>
-                </div>
-                <div class="eviction-pred-detail" data-pred-detail="${i}" style="display: none;"></div>`;
-            }).join('');
-            predicateRows = `
-                <div style="margin-top: 6px;" class="eviction-predicates-container">
-                    <span class="label" style="">Evicted predicates:</span>
-                    ${items}
-                </div>
-            `;
-        }
-
-        sectionEvictions.innerHTML = `
-            <div style="padding: 8px 0; border-bottom: 1px solid var(--border-on-dark);">
-                <div style="margin-bottom: 4px;">
-                    <span class="label">Evictions:</span>
-                    <span class="element-value">${summary.count} events, ${summary.totalEvicted.toLocaleString()} attestations evicted</span>
-                </div>
-                <div class="eviction-chart-container"></div>
-                ${predicateRows}
-            </div>
-        `;
-
-        const chartContainer = sectionEvictions.querySelector('.eviction-chart-container');
-        if (chartContainer) {
-            renderEvictionChart(chartContainer as HTMLElement);
-        }
-
-        // Wire predicate drill-down
-        sectionEvictions.querySelectorAll('.eviction-pred-row').forEach(el => {
-            el.addEventListener('click', () => {
-                const idx = parseInt((el as HTMLElement).dataset.predIdx ?? '', 10);
-                const detail = sectionEvictions!.querySelector(`[data-pred-detail="${idx}"]`) as HTMLElement;
-                if (!detail || isNaN(idx)) return;
-                if (detail.style.display === 'none') {
-                    detail.style.display = 'block';
-                    renderPredicateDetail(detail, breakdown[idx]);
-                } else {
-                    detail.style.display = 'none';
-                }
-            });
-        });
-    } else {
-        sectionEvictions.innerHTML = '';
-    }
-
     // -- Performance --
     if (dbStats.performance || dbStats.live) {
         renderPerformanceSection(sectionPerformance, dbStats.performance, dbStats.live);
     } else {
         sectionPerformance.innerHTML = '';
     }
-}
-
-// The last time key a predicate was seen in. Keys are time buckets that sort as
-// text, so the greatest key with anything in it is the most recent.
-function lastActiveKey(hist: Record<string, number>): string {
-    let last = '';
-    for (const [key, value] of Object.entries(hist)) {
-        if (value > 0 && key > last) last = key;
-    }
-    return last;
-}
-
-// Predicates most recently seen first. "The axis of time is more useful than a
-// tally": which ones are drawn, and in what order, follows when, not how many.
-function byRecent(histograms: Record<string, Record<string, number>>): string[] {
-    return Object.keys(histograms).sort((a, b) => {
-        const la = lastActiveKey(histograms[a]);
-        const lb = lastActiveKey(histograms[b]);
-        if (la !== lb) return la < lb ? 1 : -1;
-        return a.localeCompare(b);
-    });
-}
-
-function renderChartWithControls(container: HTMLElement, histograms: Record<string, Record<string, number>> | null): void {
-    if (!histograms) {
-        container.innerHTML = '<div style="padding: 16px; color: #64748b;">No histogram data yet (waiting for distillation)</div>';
-        return;
-    }
-
-    // Build full sorted key set once
-    const keySet = new Set<string>();
-    for (const pred of Object.keys(histograms)) {
-        for (const key of Object.keys(histograms[pred])) {
-            keySet.add(key);
-        }
-    }
-    allSortedKeys = Array.from(keySet).sort();
-    if (allSortedKeys.length === 0) return;
-
-    // Initialize viewport to show all on first render
-    if (chartViewEnd === 0 || chartViewEnd > allSortedKeys.length) {
-        chartViewStart = 0;
-        chartViewEnd = allSortedKeys.length;
-    }
-
-    let chartArea = container.querySelector('.db-chart-area') as HTMLElement;
-    if (!chartArea) {
-        chartArea = document.createElement('div');
-        chartArea.className = 'db-chart-area';
-        chartArea.style.cursor = 'grab';
-        container.appendChild(chartArea);
-
-        // Wheel: deltaY = zoom, deltaX = pan
-        chartArea.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            const total = allSortedKeys.length;
-            const span = chartViewEnd - chartViewStart;
-
-            if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-                // Zoom: deltaY > 0 = zoom out, < 0 = zoom in
-                const zoomFactor = e.deltaY > 0 ? 1.15 : 0.85;
-                const newSpan = Math.max(64, Math.min(total, Math.round(span * zoomFactor)));
-                const center = (chartViewStart + chartViewEnd) / 2;
-                chartViewStart = Math.max(0, Math.round(center - newSpan / 2));
-                chartViewEnd = Math.min(total, chartViewStart + newSpan);
-                if (chartViewStart === 0) chartViewEnd = Math.min(total, newSpan);
-            } else {
-                // Pan: deltaX > 0 = pan right (forward), < 0 = pan left (back)
-                const panAmount = Math.max(1, Math.round(span * 0.05)) * Math.sign(e.deltaX);
-                const newStart = Math.max(0, Math.min(total - span, chartViewStart + panAmount));
-                chartViewEnd = newStart + span;
-                chartViewStart = newStart;
-            }
-
-            renderViewport(chartArea!, histograms!);
-        }, { passive: false });
-    }
-
-    renderViewport(chartArea, histograms);
-}
-
-function renderViewport(chartArea: HTMLElement, histograms: Record<string, Record<string, number>>): void {
-    // Slice keys to viewport
-    const viewKeys = allSortedKeys.slice(chartViewStart, chartViewEnd);
-    if (viewKeys.length === 0) return;
-
-    // Build filtered histograms for visible range
-    const filtered: Record<string, Record<string, number>> = {};
-    for (const [pred, hist] of Object.entries(histograms)) {
-        const filt: Record<string, number> = {};
-        for (const key of viewKeys) {
-            if (hist[key]) filt[key] = hist[key];
-        }
-        if (Object.keys(filt).length > 0) {
-            filtered[pred] = filt;
-        }
-    }
-
-    // Show viewport indicator
-    const total = allSortedKeys.length;
-    const pct = ((chartViewEnd - chartViewStart) / total * 100).toFixed(0);
-    const rangeLabel = viewKeys.length < total
-        ? `${viewKeys[0]} \u2014 ${viewKeys[viewKeys.length - 1]} (${pct}%)`
-        : 'all';
-
-    renderTimeseriesChart(chartArea, Object.keys(filtered).length > 0 ? filtered : null, rangeLabel);
-}
-
-// Render multi-series timeseries chart from predicate histogram data. Exported for tests.
-export function renderTimeseriesChart(container: HTMLElement, histograms: Record<string, Record<string, number>> | null, rangeLabel?: string): void {
-    if (!histograms) {
-        container.innerHTML = '<div style="padding: 16px; color: #64748b;">No histogram data yet (waiting for distillation)</div>';
-        return;
-    }
-
-    const predicates = Object.keys(histograms);
-    if (predicates.length === 0) {
-        container.innerHTML = '<div style="padding: 16px; color: #64748b;">No histogram data</div>';
-        return;
-    }
-
-    // Collect all time keys across all predicates, sorted
-    const allKeysSet = new Set<string>();
-    for (const pred of predicates) {
-        for (const key of Object.keys(histograms[pred])) {
-            allKeysSet.add(key);
-        }
-    }
-    const allKeys = Array.from(allKeysSet).sort();
-    if (allKeys.length === 0) return;
-
-    // The ten most recently seen, most recent first.
-    const sortedPredicates = byRecent(histograms).slice(0, 10);
-
-    // Build series data
-    const series: { predicate: string; color: string; points: { key: string; value: number }[] }[] = [];
-    for (let i = 0; i < sortedPredicates.length; i++) {
-        const pred = sortedPredicates[i];
-        const color = PREDICATE_COLORS[i % PREDICATE_COLORS.length];
-        const hist = histograms[pred];
-        const points = allKeys.map(key => ({ key, value: hist[key] || 0 }));
-        series.push({ predicate: pred, color, points });
-    }
-
-    // Chart dimensions
-    const chartWidth = container.clientWidth || 800;
-    const chartHeight = 200;
-    const marginLeft = 50;
-    const marginRight = 16;
-    const marginTop = 8;
-    const marginBottom = 24;
-    const plotWidth = chartWidth - marginLeft - marginRight;
-    const plotHeight = chartHeight - marginTop - marginBottom;
-
-    // Find max value across all series
-    let maxValue = 0;
-    for (const s of series) {
-        for (const p of s.points) {
-            if (p.value > maxValue) maxValue = p.value;
-        }
-    }
-    if (maxValue === 0) maxValue = 1;
-
-    // X scale: index-based
-    const xScale = (i: number) => marginLeft + (i / Math.max(1, allKeys.length - 1)) * plotWidth;
-    const yScale = (v: number) => marginTop + plotHeight - (v / maxValue) * plotHeight;
-
-    // Build SVG paths
-    const paths = series.map(s => {
-        const d = s.points.map((p, i) => {
-            const x = xScale(i);
-            const y = yScale(p.value);
-            return `${i === 0 ? 'M' : 'L'}${x},${y}`;
-        }).join(' ');
-        return `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="1.5" opacity="0.8" />`;
-    }).join('\n');
-
-    // Y-axis labels
-    const yTicks = 4;
-    const yLabels: string[] = [];
-    for (let i = 0; i <= yTicks; i++) {
-        const val = (maxValue / yTicks) * i;
-        const y = yScale(val);
-        const label = val >= 1000 ? `${(val / 1000).toFixed(1)}k` : Math.round(val).toString();
-        yLabels.push(`<text x="${marginLeft - 4}" y="${y}" text-anchor="end" dominant-baseline="middle" fill="#64748b">${label}</text>`);
-        yLabels.push(`<line x1="${marginLeft}" y1="${y}" x2="${marginLeft + plotWidth}" y2="${y}" stroke="#1e293b" stroke-width="0.5" />`);
-    }
-
-    // X-axis labels (show ~8 labels max)
-    // Determine if data spans multiple days
-    const firstDate = allKeys[0].substring(0, 10);
-    const lastDate = allKeys[allKeys.length - 1].substring(0, 10);
-    const multiDay = firstDate !== lastDate;
-
-    const xLabelStep = Math.max(1, Math.floor(allKeys.length / 8));
-    const xLabels: string[] = [];
-    let lastLabelDate = '';
-    for (let i = 0; i < allKeys.length; i += xLabelStep) {
-        const x = xScale(i);
-        const key = allKeys[i];
-        let label: string;
-
-        if (multiDay) {
-            // Show "MM-DD HH:MM" for multi-day spans
-            const date = key.substring(5, 10);
-            const time = key.length >= 13 ? key.substring(11) : '';
-            if (date !== lastLabelDate) {
-                label = time ? `${date} ${time}` : date;
-                lastLabelDate = date;
-            } else {
-                label = time || date;
-            }
-        } else if (key.length >= 13) {
-            label = key.substring(11);
-        } else if (key.length === 10) {
-            label = key.substring(5);
-        } else {
-            label = key;
-        }
-        xLabels.push(`<text x="${x}" y="${chartHeight - 4}" text-anchor="middle" fill="#64748b">${label}</text>`);
-    }
-
-    // Legend
-    const watcherMap = getWatchersByPredicate();
-    const legendItems = series.map(s => {
-        const last = lastActiveKey(histograms[s.predicate]);
-        const info = watcherMap.get(s.predicate);
-        const eyes = info ? (() => { const st = eyeStyle(info); return `<span style="color: ${st.color}; text-shadow: ${st.shadow}; cursor: default;" title="${info.names.join(', ')}">${Watcher.repeat(info.names.length)}</span>`; })() : '';
-        return `<span style="display: inline-flex; align-items: center; gap: 4px; margin-right: 12px;">
-            <span style="width: 8px; height: 8px; border-radius: 50%; background: ${s.color};"></span>
-            <span style="color: #e2e8f0;">${s.predicate}${eyes}</span>
-            <span style="color: #64748b;">${last}</span>
-        </span>`;
-    }).join('');
-
-    const rangeIndicator = rangeLabel
-        ? `<div style=" color: #475569; text-align: right; padding: 2px 0;">${rangeLabel} \u2014 scroll to zoom, swipe to pan</div>`
-        : '';
-
-    container.innerHTML = `
-        <div style="padding: 8px 0;">
-            ${rangeIndicator}
-            <svg viewBox="0 0 ${chartWidth} ${chartHeight}" style="width: 100%; height: ${chartHeight}px;">
-                ${yLabels.join('\n')}
-                ${xLabels.join('\n')}
-                ${paths}
-            </svg>
-            <div style="padding: 4px 0; display: flex; flex-wrap: wrap;">${legendItems}</div>
-        </div>
-    `;
 }
 
 interface PerfEntry {
@@ -814,42 +404,6 @@ function renderPerformanceSection(container: HTMLElement, perf: PerfData | null,
     `;
 }
 
-function formatAge(timestamp: string | number): string {
-    const ms = typeof timestamp === 'string' ? new Date(timestamp).getTime() : timestamp;
-    const ago = Date.now() - ms;
-    const minutes = Math.floor(ago / 60000);
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    return `${days}d ago`;
-}
-
-function renderPredicateDetail(container: HTMLElement, detail: PredicateDetail): void {
-    const rows: string[] = [];
-    const s = (label: string, value: string) =>
-        `<div style=" color: #94a3b8; padding: 1px 0;"><span style="color: #64748b;">${label}:</span> ${value}</div>`;
-
-    const cap = (items: string[], limit: number) => {
-        if (items.length <= limit) return items.join(', ');
-        return items.slice(0, limit).join(', ') + ` (+${items.length - limit} more)`;
-    };
-
-    if (detail.actors.length > 0) {
-        rows.push(s('actors', cap(detail.actors, 5)));
-    }
-    if (detail.contexts.length > 0) {
-        rows.push(s('contexts', cap(detail.contexts, 5)));
-    }
-    if (detail.oldestEvicted) {
-        rows.push(s('oldest evicted data', formatAge(detail.oldestEvicted)));
-    }
-    rows.push(s('last eviction', formatAge(detail.lastEviction)));
-
-    container.innerHTML = `<div style="padding: 4px 0 4px 12px; border-left: 2px solid #334155; margin: 2px 0 4px 4px; word-break: break-word; overflow-wrap: break-word;">${rows.join('')}</div>`;
-}
-
-// Who this is for: whoever reaches these (audience.ts). It draws what /ws sends.
 export const needs = ['/ws'] as const;
 
 export function createDbElement(): Element {

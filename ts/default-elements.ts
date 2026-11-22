@@ -11,7 +11,6 @@ import { forTheViewer, askTheNode, type Audience } from './audience';
 import { createCanvasElement, needs as canvasNeeds } from './components/element/canvas/canvas-element';
 import { createDbElement, needs as dbNeeds } from './db-element';
 import { createEmbeddingsElement, needs as embeddingsNeeds } from './embeddings-element';
-import { createSigmaPanel, needs as sigmaNeeds } from './sigma-panel';
 import { createPluginElement, needs as pluginNeeds } from './plugin-panel.ts';
 import { createPulseElement, needs as pulseNeeds } from './pulse-panel.ts';
 import { createHandlersElement, needs as handlersNeeds } from './handlers-panel.ts';
@@ -32,8 +31,7 @@ import { createConnectorElement, needs as connectorNeeds, restConnectorsInSideba
 import { createParityElement, needs as parityNeeds } from './parity-element.ts';
 import { log, SEG } from './logger.ts';
 
-export { updateDatabaseStats, recordEviction } from './db-element';
-export { updateSigmaPanel } from './sigma-panel';
+export { updateDatabaseStats } from './db-element';
 
 // The build and the backends are what the node is, so ≡ holds them. The names
 // the socket already calls stay, and forward.
@@ -56,8 +54,6 @@ export async function registerDefaultElements(hasCanvas: boolean = true): Promis
         ...(hasCanvas ? [{ needs: canvasNeeds, create: createCanvasElement }] : []),
         // Database Statistics Element
         { needs: dbNeeds, create: createDbElement },
-        // Sigma Overview Panel
-        { needs: sigmaNeeds, create: createSigmaPanel },
         // Embeddings Element
         { needs: embeddingsNeeds, create: createEmbeddingsElement },
         // ⍟ — who is looking

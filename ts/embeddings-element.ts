@@ -4,7 +4,6 @@ import { apiFetch } from './client';
 import { log, SEG } from './logger';
 import { escapeHtml, el } from './html-utils';
 import { spawnAttestationAsWindow } from './components/element/attestation-element';
-import { isSigmaAttestation, spawnSigmaAsWindow } from './components/element/sigma-element';
 import { tooltip } from './components/tooltip';
 import { uiState } from './state/ui';
 import type { EmbeddingsState, ProjectionPoint, TimelinePoint } from './state/ui';
@@ -1063,11 +1062,7 @@ async function renderClusterDetail(clusterID: number): Promise<void> {
 }
 
 function openAttestationWindow(attestation: any): void {
-    if (isSigmaAttestation(attestation)) {
-        spawnSigmaAsWindow(attestation);
-    } else {
-        spawnAttestationAsWindow(attestation);
-    }
+    spawnAttestationAsWindow(attestation);
 }
 
 function renderScatterHighlighted(container: HTMLElement, data: ProjectionPoint[], highlightCluster: number): void {

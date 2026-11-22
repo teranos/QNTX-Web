@@ -30,7 +30,6 @@ import { sendMessage, connectivity } from '../../client';
 import type { Attestation } from '../../generated/proto/plugin/grpc/protocol/atsstore';
 import { queryAttestations, axFilter, EVERY_ROW } from '../../ats-wasm';
 import { tooltip } from '../tooltip';
-import { isSigmaAttestation, renderSigmaResultLine } from './sigma-element';
 import { isTypeAttestation, groupTypeAttestations, renderTypeResultLine } from './type-result-line';
 import { tripletKey, groupByTriplet, renderTripletResultLine, fitTimeAxes } from './triplet-element';
 import { renderTriple } from './attestation-triple';
@@ -154,18 +153,8 @@ export function createAxElement(item: Element): HTMLElement {
                 for (const group of groupTypeAttestations(typeAtts)) {
                     resultsContainer.appendChild(renderTypeResultLine(group));
                 }
-                // Separate sigmas from regular attestations
-                const sigmaAtts: Attestation[] = [];
-                const regularAtts: Attestation[] = [];
-                for (const att of otherAtts) {
-                    if (isSigmaAttestation(att)) {
-                        sigmaAtts.push(att);
-                    } else {
-                        regularAtts.push(att);
-                    }
-                }
-                // Group regular attestations by triplet
-                for (const [key, group] of groupByTriplet(regularAtts)) {
+                // Group attestations by triplet
+                for (const [key, group] of groupByTriplet(otherAtts)) {
                     let row: HTMLElement;
                     if (group.length === 1) {
                         row = renderAttestation(group[0]);
@@ -178,10 +167,6 @@ export function createAxElement(item: Element): HTMLElement {
                     resultsContainer.appendChild(row);
                 }
                 fitTimeAxes(resultsContainer);
-                // Render sigmas after triplet groups
-                for (const att of sigmaAtts) {
-                    resultsContainer.appendChild(renderSigmaResultLine(att));
-                }
                 (element as any)._localIds = displayedIds;
 
                 if (localResults.length === 0) {
@@ -368,13 +353,6 @@ export function updateAxElementResults(elementId: string, attestation: Attestati
             }
         }
         log.debug(SEG.ELEMENT, `[AxElement] Added type result to ${elementId}: ${subject}`);
-        return;
-    }
-
-    // Sigma attestations render directly
-    if (isSigmaAttestation(attestation)) {
-        resultsContainer.insertBefore(renderSigmaResultLine(attestation), resultsContainer.firstChild);
-        log.debug(SEG.ELEMENT, `[AxElement] Added sigma result to ${elementId}:`, attestation.id);
         return;
     }
 

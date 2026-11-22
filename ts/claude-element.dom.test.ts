@@ -328,6 +328,47 @@ describe('Claude - Spike', () => {
         stop();
     });
 
+    // "The way that we do this error message is weird if we can still message": the phone lost the say's
+    // connection (WebKit: TypeError "Load failed") while the node went on with the turn. No answer came back,
+    // which is not a refusal: what the node says of the turn decides.
+    const dropped = () => Promise.reject(new TypeError('Load failed'));
+    const failedShown = (body: HTMLElement) => body.querySelector('.claude-failed sacred-error') !== null;
+
+    test('a dropped connection while the node still answers is no failure: the words stay said, and the turn is followed', async () => {
+        const body = document.createElement('div');
+        const stop = drawClaude(body, node({ say: dropped }, { ...am, answering: true }), 1);
+        await settled();
+        say(body, 'Please own 1808, 1809 and 1810');
+        await settled();
+        expect(failedShown(body)).toBe(false);
+        expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('');
+        expect(body.querySelectorAll('.chat-waiting').length).toBe(0);
+        stop();
+    });
+
+    test('a dropped connection for words the node already has in its session is no failure', async () => {
+        const body = document.createElement('div');
+        const had: SessionRead = { ...session, turns: [...session.turns, { at: '2026-10-05T09:01:00Z', speaker: 'human', text: 'install htop', of: 'p-4' }] };
+        const stop = drawClaude(body, node({ say: dropped, read: () => Promise.resolve(had) }));
+        await settled();
+        say(body, 'install htop');
+        await settled();
+        expect(failedShown(body)).toBe(false);
+        expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('');
+        stop();
+    });
+
+    test('a dropped connection for words the node never had is a refusal: drawn, and the words kept', async () => {
+        const body = document.createElement('div');
+        const stop = drawClaude(body, node({ say: dropped }));
+        await settled();
+        say(body, 'install htop');
+        await settled();
+        expect(failedShown(body)).toBe(true);
+        expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('install htop');
+        stop();
+    });
+
     // Spike: a tool it reached for and was not allowed is said with the answer.
     test('what it was not allowed is said', async () => {
         const body = document.createElement('div');

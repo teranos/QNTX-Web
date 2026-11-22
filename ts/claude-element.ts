@@ -524,6 +524,24 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         const carries: Promise<Carried | undefined> = it.picture
             ? uploadFile(pictureFile(it.picture)).then(stored => ({ file_id: stored.id }))
             : Promise.resolve(undefined);
+        // A refusal does not cost the words, nor the picture they were said with: what was
+        // refused waits again ahead of what waited behind it, and none of it is said until Say.
+        const refused = (err: unknown) => {
+            fails('say', err);
+            waits(it);
+            for (const one of waiting) queued.appendChild(one.row!);
+            waiting.unshift(it);
+            // An empty box takes it back, as it was typed, to be said again or changed.
+            if (!says.value.trim() && !picture) {
+                waiting.shift();
+                it.row!.remove();
+                says.value = it.typed;
+                carry(it.picture);
+                boxHoldsFirst = true;
+            }
+            sending = false;
+            settle();
+        };
         carries
             .then(carried => node.say(it.words, it.mode, carried, it.model))
             .then(answer => {
@@ -550,22 +568,25 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                     if (next) { next.row?.remove(); sayIt(next); }
                     return;
                 }
-                fails('say', err);
-                // A refusal does not cost the words, nor the picture they were said with: what was
-                // refused waits again ahead of what waited behind it, and none of it is said until Say.
-                waits(it);
-                for (const one of waiting) queued.appendChild(one.row!);
-                waiting.unshift(it);
-                // An empty box takes it back, as it was typed, to be said again or changed.
-                if (!says.value.trim() && !picture) {
-                    waiting.shift();
-                    it.row!.remove();
-                    says.value = it.typed;
-                    carry(it.picture);
-                    boxHoldsFirst = true;
+                // "The way that we do this error message is weird if we can still message"
+                // No answer came back at all (fetch rejects with a TypeError, WebKit's "Load failed": the phone
+                // let the connection go), which is not a refusal: the node may have the words and be answering.
+                // It is asked: answering, or holding the words as the last it was said, the turn is the node's
+                // and is followed to its end; neither, and they were refused.
+                if (err instanceof TypeError) {
+                    node.am()
+                        .then(is => is.answering || node.read().then(read => {
+                            const said = (read?.turns ?? []).filter(turn => turn.speaker === 'human' || turn.speaker === 'person');
+                            return said[said.length - 1]?.text === it.words;
+                        }))
+                        .then(had => {
+                            if (!had) { refused(err); return; }
+                            sending = false;
+                            follow();
+                        }, () => refused(err));
+                    return;
                 }
-                sending = false;
-                settle();
+                refused(err);
             });
     };
 

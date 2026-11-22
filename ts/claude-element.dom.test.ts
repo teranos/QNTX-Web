@@ -328,6 +328,299 @@ describe('Claude - Spike', () => {
         stop();
     });
 
+    // "The way that we do this error message is weird if we can still message": the phone lost the say's
+    // connection (WebKit: TypeError "Load failed") while the node went on with the turn. No answer came back,
+    // which is not a refusal: what the node says of the turn decides.
+    const dropped = () => Promise.reject(new TypeError('Load failed'));
+    const failedShown = (body: HTMLElement) => body.querySelector('.claude-failed sacred-error') !== null;
+
+    test('a dropped connection while the node still answers is no failure: the words stay said, and the turn is followed', async () => {
+        const body = document.createElement('div');
+        const stop = drawClaude(body, node({ say: dropped }, { ...am, answering: true }), 1);
+        await settled();
+        say(body, 'Please own 1808, 1809 and 1810');
+        await settled();
+        expect(failedShown(body)).toBe(false);
+        expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('');
+        expect(body.querySelectorAll('.chat-waiting').length).toBe(0);
+        stop();
+    });
+
+    test('a dropped connection for words the node already has in its session is no failure', async () => {
+        const body = document.createElement('div');
+        const had: SessionRead = { ...session, turns: [...session.turns, { at: '2026-10-05T09:01:00Z', speaker: 'human', text: 'install htop', of: 'p-4' }] };
+        let said = false;
+        const stop = drawClaude(body, node({ say: () => { said = true; return dropped(); }, read: () => Promise.resolve(said ? had : session) }));
+        await settled();
+        say(body, 'install htop');
+        await settled();
+        expect(failedShown(body)).toBe(false);
+        expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('');
+        stop();
+    });
+
+    test('a dropped connection for words the node never had is a refusal: drawn, and the words kept', async () => {
+        const body = document.createElement('div');
+        const stop = drawClaude(body, node({ say: dropped }));
+        await settled();
+        say(body, 'install htop');
+        await settled();
+        expect(failedShown(body)).toBe(true);
+        expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('install htop');
+        stop();
+    });
+
+    // The same words said again, and lost on the way: the session's last words are the earlier saying of them, no new one.
+    test('a dropped connection for words said before, and not again, is a refusal', async () => {
+        const body = document.createElement('div');
+        const before: SessionRead = { ...session, turns: [...session.turns, { at: '2026-10-05T09:01:00Z', speaker: 'human', text: 'continue', of: 'p-4' }] };
+        const stop = drawClaude(body, node({ say: dropped, read: () => Promise.resolve(before) }, { ...am, session: SESSION }));
+        await settled();
+        say(body, 'continue');
+        await settled();
+        expect(failedShown(body)).toBe(true);
+        expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('continue');
+        stop();
+    });
+
+    // Stopped, the session is read before what waits is said: the next say counts from the turn the node kept.
+    // Where it cannot be read (no session yet, or the read fails), the count is not known, and a dropped say is refused.
+    const stoppedThenDropped = async (opened: ClaudeAm, reads: (recorded: boolean) => Promise<SessionRead | undefined>) => {
+        const body = document.createElement('div');
+        let recorded = false;
+        let says = 0;
+        let stopFirst: (err: Error) => void = () => {};
+        const stop = drawClaude(body, node({
+            say: () => {
+                if (++says > 1) return dropped();
+                recorded = true;
+                return new Promise<ClaudeSaid>((_, reject) => { stopFirst = reject; });
+            },
+            stop: () => { stopFirst(new Error('stopped')); return Promise.resolve({ ...am, answering: false }); },
+            read: () => reads(recorded),
+            // Drawn as it goes, the session is not read while the turn is followed: only once it ended.
+            live: () => () => {},
+        }, opened), 1);
+        await settled();
+        say(body, 'continue');
+        await settled();
+        say(body, 'continue');
+        await settled();
+        body.querySelector<HTMLButtonElement>('.claude-send')!.click();
+        for (let tries = 0; says < 2 && tries < 50; tries++) await settled();
+        await settled();
+        expect(says).toBe(2);
+        expect(failedShown(body)).toBe(true);
+        stop();
+    };
+    const kept: SessionRead = { ...session, turns: [...session.turns, { at: '2026-10-05T09:01:00Z', speaker: 'human', text: 'continue', of: 'p-4' }] };
+
+    test('the same words waiting behind a stopped turn, dropped and never had, are a refusal', () =>
+        stoppedThenDropped({ ...am, session: SESSION }, recorded => Promise.resolve(recorded ? kept : session)));
+
+    test('in a new chat, the same words waiting behind a first turn stopped, dropped and never had, are a refusal', () =>
+        stoppedThenDropped(am, () => Promise.resolve({ ...session, turns: [{ at: '2026-10-05T09:01:00Z', speaker: 'human', text: 'continue', of: 'p-1' }] })));
+
+    test('the same words waiting behind a stopped turn whose session could not be read, dropped, are a refusal', () => {
+        // The read after the stop fails; the one asked after the dropped say answers.
+        let afterStop = 0;
+        return stoppedThenDropped({ ...am, session: SESSION }, recorded =>
+            !recorded ? Promise.resolve(session)
+            : ++afterStop === 1 ? Promise.reject(new Error('/api/agent/session: HTTP 502'))
+            : Promise.resolve(kept));
+    });
+
+    // A read asked before the stop says nothing of the turn stopped: landing after it, it is no count to go by.
+    test('a read from before the stop, landing after it, gives the next say no count: dropped, it is a refusal', async () => {
+        const body = document.createElement('div');
+        let phase: 'open' | 'hold' | 'fail' | 'kept' = 'open';
+        const held: Array<(read: SessionRead) => void> = [];
+        let says = 0;
+        let stopFirst: (err: Error) => void = () => {};
+        const stop = drawClaude(body, node({
+            say: () => {
+                if (++says > 1) return dropped();
+                phase = 'hold';
+                return new Promise<ClaudeSaid>((_, reject) => { stopFirst = reject; });
+            },
+            stop: () => { phase = 'fail'; stopFirst(new Error('stopped')); return Promise.resolve({ ...am, answering: false }); },
+            read: () => {
+                if (phase === 'open') return Promise.resolve(session);
+                if (phase === 'hold') return new Promise<SessionRead>(resolve => { held.push(resolve); });
+                if (phase === 'fail') {
+                    // The read after the stop fails; the reads asked before it land now, with the session as it was.
+                    phase = 'kept';
+                    for (const resolve of held.splice(0)) resolve(session);
+                    return Promise.reject(new Error('/api/agent/session: HTTP 502'));
+                }
+                return Promise.resolve(kept);
+            },
+        }, { ...am, session: SESSION }), 1);
+        await settled();
+        say(body, 'continue');
+        await settled();
+        say(body, 'continue');
+        await settled();
+        expect(held.length).toBeGreaterThan(0);
+        body.querySelector<HTMLButtonElement>('.claude-send')!.click();
+        for (let tries = 0; says < 2 && tries < 50; tries++) await settled();
+        await settled();
+        expect(says).toBe(2);
+        expect(failedShown(body)).toBe(true);
+        stop();
+    });
+
+    // A picture whose upload dropped never reached the say: the node cannot have the words, whatever it is doing.
+    test('a dropped connection while the picture goes up is a refusal, even while the node answers', async () => {
+        const body = document.createElement('div');
+        const sent: string[] = [];
+        shelved = () => Promise.reject(new TypeError('Load failed'));
+        try {
+            const stop = drawClaude(body, node({ say: (says) => { sent.push(says); return Promise.resolve(answered); } }, { ...am, answering: true }), 1);
+            await settled();
+            const pick = body.querySelector<HTMLInputElement>('.claude-pick')!;
+            Object.defineProperty(pick, 'files', { value: [new Blob(['shot'], { type: 'image/png' })], configurable: true });
+            pick.dispatchEvent(new Event('change'));
+            say(body, 'look at this');
+            await settled();
+            expect(sent).toEqual([]);
+            expect(failedShown(body)).toBe(true);
+            expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('look at this');
+            stop();
+        } finally { shelved = null; }
+    });
+
+    // Stopped while the picture went up, and the upload then failed: nothing was said, so nothing is let go.
+    test('a picture whose upload fails after a stop is a refusal: the words are kept', async () => {
+        const body = document.createElement('div');
+        const sent: string[] = [];
+        let fail: (err: Error) => void = () => {};
+        shelved = () => new Promise<realFiles.FileUploadResult>((_, reject) => { fail = reject; });
+        try {
+            const stop = drawClaude(body, node({
+                say: (says) => { sent.push(says); return Promise.resolve(answered); },
+                stop: () => Promise.resolve({ ...am, answering: false }),
+            }), 1);
+            await settled();
+            const pick = body.querySelector<HTMLInputElement>('.claude-pick')!;
+            Object.defineProperty(pick, 'files', { value: [new Blob(['shot'], { type: 'image/png' })], configurable: true });
+            pick.dispatchEvent(new Event('change'));
+            say(body, 'look at this');
+            await settled();
+            body.querySelector<HTMLButtonElement>('.claude-send')!.click();
+            await settled();
+            fail(new TypeError('Load failed'));
+            await settled();
+            expect(sent).toEqual([]);
+            expect(failedShown(body)).toBe(true);
+            expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('look at this');
+            stop();
+        } finally { shelved = null; }
+    });
+
+    // The followed turn is still a turn going: what is said meanwhile waits behind it, and is said once it ended.
+    test('words said while a dropped turn is followed wait behind it, and are said when it ends', async () => {
+        const body = document.createElement('div');
+        let answering = true;
+        const sent: string[] = [];
+        const stop = drawClaude(body, node({
+            am: () => Promise.resolve({ ...am, answering }),
+            say: (says) => { sent.push(says); return sent.length === 1 ? dropped() : Promise.resolve(answered); },
+        }), 1);
+        await settled();
+        say(body, 'first');
+        await settled();
+        say(body, 'second');
+        await settled();
+        expect(sent).toEqual(['first']);
+        expect(Array.from(body.querySelectorAll('.chat-waiting')).map(r => r.querySelector('.chat-text')?.textContent)).toEqual(['second']);
+        answering = false;
+        for (let tries = 0; sent.length < 2 && tries < 50; tries++) await settled();
+        expect(sent).toEqual(['first', 'second']);
+        stop();
+    });
+
+    // A poll asked before the dropped say was taken as the node's says nothing of the followed turn.
+    test('a poll answered late, from before the turn was followed, does not end it', async () => {
+        const body = document.createElement('div');
+        let answering = false;
+        let holding = false;
+        const held: Array<(is: ClaudeAm) => void> = [];
+        const sent: string[] = [];
+        let drop: (err: Error) => void = () => {};
+        const stop = drawClaude(body, node({
+            am: () => holding ? new Promise<ClaudeAm>(resolve => { held.push(resolve); }) : Promise.resolve({ ...am, answering }),
+            say: (says) => { sent.push(says); return sent.length === 1 ? new Promise<ClaudeSaid>((_, reject) => { drop = reject; }) : Promise.resolve(answered); },
+        }), 1);
+        await settled();
+        holding = true;
+        say(body, 'first');
+        await settled();
+        expect(held.length).toBeGreaterThan(0);
+        holding = false;
+        answering = true;
+        drop(new TypeError('Load failed'));
+        await settled();
+        say(body, 'second');
+        await settled();
+        // What the node said of the turn before it had the words comes back now.
+        for (const resolve of held.splice(0)) resolve({ ...am, answering: false });
+        await settled();
+        expect(sent).toEqual(['first']);
+        answering = false;
+        for (let tries = 0; sent.length < 2 && tries < 50; tries++) await settled();
+        expect(sent).toEqual(['first', 'second']);
+        stop();
+    });
+
+    // "The chat was left: what the node answers after that starts nothing": a dropped say asked about
+    // as the chat is left is not followed, and what waited is not said.
+    test('a dropped say answered for after the chat was left starts nothing', async () => {
+        const body = document.createElement('div');
+        let answering = true;
+        let holding = false;
+        const held: Array<(is: ClaudeAm) => void> = [];
+        const sent: string[] = [];
+        const stop = drawClaude(body, node({
+            am: () => holding ? new Promise<ClaudeAm>(resolve => { held.push(resolve); }) : Promise.resolve({ ...am, answering }),
+            say: (says) => { sent.push(says); return sent.length === 1 ? dropped() : Promise.resolve(answered); },
+        }), 1);
+        await settled();
+        holding = true;
+        say(body, 'first');
+        say(body, 'second');
+        await settled();
+        stop();
+        holding = false;
+        for (const resolve of held.splice(0)) resolve({ ...am, answering: true });
+        await settled();
+        answering = false;
+        for (let tries = 0; tries < 20; tries++) await settled();
+        expect(sent).toEqual(['first']);
+    });
+
+    // Stopping a followed turn is no stop of the next say: its refusal is drawn.
+    test('a followed turn stopped leaves the next say its own refusal', async () => {
+        const body = document.createElement('div');
+        let answering = true;
+        let says = 0;
+        const stop = drawClaude(body, node({
+            am: () => Promise.resolve({ ...am, answering }),
+            say: () => ++says === 1 ? dropped() : Promise.reject(new Error('/api/agent/say: HTTP 500 Claude Code did not answer: exit status 1')),
+            stop: () => { answering = false; return Promise.resolve({ ...am, answering: false }); },
+        }), 1);
+        await settled();
+        say(body, 'first');
+        await settled();
+        body.querySelector<HTMLButtonElement>('.claude-send')!.click();
+        await settled();
+        say(body, 'install htop');
+        await settled();
+        expect(failedShown(body)).toBe(true);
+        expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('install htop');
+        stop();
+    });
+
     // Spike: a tool it reached for and was not allowed is said with the answer.
     test('what it was not allowed is said', async () => {
         const body = document.createElement('div');

@@ -428,12 +428,19 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         failed.replaceChildren(sacredEntry(apiError(`claude-${Date.now()}`, new Date().toISOString(), said, { surface: 'claude', region: what })));
     };
 
+    // How many turns of the person's the session holds, as far as this chat knows: a say whose connection
+    // dropped is the node's only when the session holds one more of them than when it was made.
+    let spoken: number | null = null;
+    // Only a read asked from here on may set it: one asked before a stop says nothing of the turn stopped.
+    let countsFrom = 0;
+    const spokenIn = (read: SessionRead | null | undefined) => (read?.turns ?? []).filter(turn => turn.speaker === 'human' || turn.speaker === 'person').length;
     const read = (): Promise<void> => {
         const asked = ++readsAsked;
         return node.read()
         .then(answer => {
             if (!answer || asked < readDrawn) return;
             readDrawn = asked;
+            if (asked >= countsFrom) spoken = Math.max(spoken ?? 0, spokenIn(answer));
             // The column is drawn anew: where it stood is read before, and a
             // reader at the bottom is kept there; one who scrolled up is not moved.
             const drawn = session.querySelector('.chat-col') !== null;
@@ -452,6 +459,10 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     };
     // A turn the person stopped is no refusal: what it was said with is not said again.
     let stoppedByThePerson = false;
+    // A say whose connection dropped while the node had the words: its turn is followed to its end.
+    let followed = false;
+    // Counts the turns taken as followed: what the node said before one was taken says nothing of it.
+    let taken = 0;
 
     // A row of what waits to be said.
     // "WHEN I PRESS ON THE PENDING MESSAGE AGAIN, IT IS SAYING, SEND NOW? AND THEN YOU CLICK ON IT, AND YOU INTERRUPT AND SEND IT NOW"
@@ -483,16 +494,17 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         else status.replaceChildren(context);
     };
 
-    const settle = () => {
+    const settle = (): Promise<void> => {
         if (following) { clearInterval(following); following = null; }
         if (listening) { listening(); listening = null; }
         // The turn is in the session now, read whole: its rows of the live view are done once it is drawn,
         // and the rows of a turn said after it are that turn's.
         const done = Array.from(live.children);
-        if (reading) void read().then(() => { for (const row of done) row.remove(); });
-        else live.replaceChildren();
+        const drawn = reading ? read().then(() => { for (const row of done) row.remove(); }) : Promise.resolve();
+        if (!reading) live.replaceChildren();
         draft = null;
         hold(false);
+        return drawn;
     };
 
     // A turn that is going is read again and again until the node says it ended.
@@ -500,20 +512,33 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         if (following) return;
         listen();
         following = setInterval(() => {
+            const asked = taken;
             node.am()
                 .then(is => {
                     // With live in hand the turn is drawn as it goes; the session is read once it ended.
                     if (is.session) { reading = is.session; if (!node.live) void read(); }
                     if (is.answering) listen();
-                    if (!is.answering && !sending) settle();
+                    if (asked === taken && !is.answering && (!sending || followed)) ended();
                 })
                 .catch((err: unknown) => { fails('follow', err); if (!sending) settle(); });
         }, every);
     };
 
+    // A turn ended: one whose say dropped and was followed ends as a say does, and what waits is said.
+    const ended = () => {
+        if (!followed) { settle(); return; }
+        followed = false;
+        sending = false;
+        settle();
+        const next = waiting.shift();
+        if (next) { next.row?.remove(); sayIt(next); }
+    };
+
     // One thing said, as one turn of the node's.
     const sayIt = (it: Said) => {
         sending = true;
+        // A stop belongs to the turn it was pressed in, never to a say made after it.
+        stoppedByThePerson = false;
         hold(true);
         failed.replaceChildren();
         denied.textContent = '';
@@ -524,8 +549,29 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         const carries: Promise<Carried | undefined> = it.picture
             ? uploadFile(pictureFile(it.picture)).then(stored => ({ file_id: stored.id }))
             : Promise.resolve(undefined);
+        // A refusal does not cost the words, nor the picture they were said with: what was
+        // refused waits again ahead of what waited behind it, and none of it is said until Say.
+        const refused = (err: unknown) => {
+            fails('say', err);
+            waits(it);
+            for (const one of waiting) queued.appendChild(one.row!);
+            waiting.unshift(it);
+            // An empty box takes it back, as it was typed, to be said again or changed.
+            if (!says.value.trim() && !picture) {
+                waiting.shift();
+                it.row!.remove();
+                says.value = it.typed;
+                carry(it.picture);
+                boxHoldsFirst = true;
+            }
+            sending = false;
+            settle();
+        };
+        // Only a say that was made can have reached the node: a picture whose upload dropped did not.
+        let made = false;
+        const before = spoken;
         carries
-            .then(carried => node.say(it.words, it.mode, carried, it.model))
+            .then(carried => { made = true; return node.say(it.words, it.mode, carried, it.model); })
             .then(answer => {
                 reading = answer.session;
                 if (answer.denied.length > 0) denied.textContent = `It reached for ${answer.denied.join(', ')} and was not allowed.`;
@@ -535,37 +581,56 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                 // read here as well, the answer stood in the session and in the live view until the second read came back.
             })
             .then(() => {
+                if (spoken !== null) spoken = Math.max(spoken, (before ?? 0) + 1);
                 stoppedByThePerson = false;
                 sending = false;
                 settle();
                 const next = waiting.shift();
                 if (next) { next.row?.remove(); sayIt(next); }
             }, (err: unknown) => {
+                // A say never made was never said, stopped or not: its words and picture are refused, kept.
+                if (!made) { refused(err); return; }
                 // Stopped by the person: the turn ended as they asked, and what waits is said.
                 if (stoppedByThePerson) {
                     stoppedByThePerson = false;
-                    sending = false;
-                    settle();
-                    const next = waiting.shift();
-                    if (next) { next.row?.remove(); sayIt(next); }
+                    // Whether the node kept the stopped turn is not known until the session is read: unread
+                    // (no session yet, or the read failed), a say that drops after it is refused, its words kept.
+                    spoken = null;
+                    countsFrom = readsAsked + 1;
+                    // Whether the node kept the stopped turn is read, not guessed: what waits is said once the
+                    // session is read, so it counts from the turns the node holds. Until then it is still a say going.
+                    void settle().then(() => {
+                        sending = false;
+                        const next = waiting.shift();
+                        if (next) { next.row?.remove(); sayIt(next); }
+                    });
                     return;
                 }
-                fails('say', err);
-                // A refusal does not cost the words, nor the picture they were said with: what was
-                // refused waits again ahead of what waited behind it, and none of it is said until Say.
-                waits(it);
-                for (const one of waiting) queued.appendChild(one.row!);
-                waiting.unshift(it);
-                // An empty box takes it back, as it was typed, to be said again or changed.
-                if (!says.value.trim() && !picture) {
-                    waiting.shift();
-                    it.row!.remove();
-                    says.value = it.typed;
-                    carry(it.picture);
-                    boxHoldsFirst = true;
+                // "The way that we do this error message is weird if we can still message"
+                // No answer came back at all (fetch rejects with a TypeError, WebKit's "Load failed": the phone
+                // let the connection go), which is not a refusal: the node may have the words and be answering.
+                // It is asked: answering, or holding the words as the last it was said, the turn is the node's
+                // and is followed to its end; neither, and they were refused.
+                if (err instanceof TypeError) {
+                    node.am()
+                        .then(is => is.answering || node.read().then(read => {
+                            // The same words said before are no proof: only a turn of the person's more than there was.
+                            const said = (read?.turns ?? []).filter(turn => turn.speaker === 'human' || turn.speaker === 'person');
+                            return before !== null && said.length > before && said[said.length - 1]?.text === it.words;
+                        }))
+                        .then(had => {
+                            if (!had) { refused(err); return; }
+                            // "The chat was left: what the node answers after that starts nothing."
+                            if (left) return;
+                            // Still a turn going: what is said meanwhile waits behind it, as behind any say.
+                            followed = true;
+                            taken++;
+                            if (spoken !== null) spoken = Math.max(spoken, (before ?? 0) + 1);
+                            follow();
+                        }, () => refused(err));
+                    return;
                 }
-                sending = false;
-                settle();
+                refused(err);
             });
     };
 
@@ -594,8 +659,9 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         send.disabled = true;
         failed.replaceChildren();
         stoppedByThePerson = true;
+        const asked = taken;
         node.stop!()
-            .then(is => { if (!is.answering && !sending) settle(); })
+            .then(is => { if (asked === taken && !is.answering && (!sending || followed)) ended(); })
             .catch((err: unknown) => { stoppedByThePerson = false; fails('stop', err); })
             .finally(() => { send.disabled = false; });
     };
@@ -646,7 +712,11 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
             }
             reading = is.session;
             if (reading) void read();
-            else session.textContent = 'Nothing has been said to it yet.';
+            else {
+                session.textContent = 'Nothing has been said to it yet.';
+                // No session yet: none of the person's turns in it.
+                spoken = Math.max(spoken ?? 0, 0);
+            }
             if (is.answering) { hold(true); follow(); }
         })
         .catch((err: unknown) => {

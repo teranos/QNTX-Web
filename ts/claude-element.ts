@@ -591,6 +591,9 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                 // Stopped by the person: the turn ended as they asked, and what waits is said.
                 if (stoppedByThePerson) {
                     stoppedByThePerson = false;
+                    // Whether the node kept the stopped turn is not known until the session is read: unread
+                    // (no session yet, or the read failed), a say that drops after it is refused, its words kept.
+                    spoken = null;
                     // Whether the node kept the stopped turn is read, not guessed: what waits is said once the
                     // session is read, so it counts from the turns the node holds. Until then it is still a say going.
                     void settle().then(() => {

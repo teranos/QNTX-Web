@@ -384,9 +384,9 @@ describe('Claude - Spike', () => {
     });
 
     // Stopped, the session is read before what waits is said: the next say counts from the turn the node kept.
-    test('the same words waiting behind a stopped turn, dropped and never had, are a refusal', async () => {
+    // Where it cannot be read (no session yet, or the read fails), the count is not known, and a dropped say is refused.
+    const stoppedThenDropped = async (opened: ClaudeAm, reads: (recorded: boolean) => Promise<SessionRead | undefined>) => {
         const body = document.createElement('div');
-        const kept: SessionRead = { ...session, turns: [...session.turns, { at: '2026-10-05T09:01:00Z', speaker: 'human', text: 'continue', of: 'p-4' }] };
         let recorded = false;
         let says = 0;
         let stopFirst: (err: Error) => void = () => {};
@@ -397,10 +397,10 @@ describe('Claude - Spike', () => {
                 return new Promise<ClaudeSaid>((_, reject) => { stopFirst = reject; });
             },
             stop: () => { stopFirst(new Error('stopped')); return Promise.resolve({ ...am, answering: false }); },
-            read: () => Promise.resolve(recorded ? kept : session),
+            read: () => reads(recorded),
             // Drawn as it goes, the session is not read while the turn is followed: only once it ended.
             live: () => () => {},
-        }, { ...am, session: SESSION }), 1);
+        }, opened), 1);
         await settled();
         say(body, 'continue');
         await settled();
@@ -412,6 +412,22 @@ describe('Claude - Spike', () => {
         expect(says).toBe(2);
         expect(failedShown(body)).toBe(true);
         stop();
+    };
+    const kept: SessionRead = { ...session, turns: [...session.turns, { at: '2026-10-05T09:01:00Z', speaker: 'human', text: 'continue', of: 'p-4' }] };
+
+    test('the same words waiting behind a stopped turn, dropped and never had, are a refusal', () =>
+        stoppedThenDropped({ ...am, session: SESSION }, recorded => Promise.resolve(recorded ? kept : session)));
+
+    test('in a new chat, the same words waiting behind a first turn stopped, dropped and never had, are a refusal', () =>
+        stoppedThenDropped(am, () => Promise.resolve({ ...session, turns: [{ at: '2026-10-05T09:01:00Z', speaker: 'human', text: 'continue', of: 'p-1' }] })));
+
+    test('the same words waiting behind a stopped turn whose session could not be read, dropped, are a refusal', () => {
+        // The read after the stop fails; the one asked after the dropped say answers.
+        let afterStop = 0;
+        return stoppedThenDropped({ ...am, session: SESSION }, recorded =>
+            !recorded ? Promise.resolve(session)
+            : ++afterStop === 1 ? Promise.reject(new Error('/api/agent/session: HTTP 502'))
+            : Promise.resolve(kept));
     });
 
     // A picture whose upload dropped never reached the say: the node cannot have the words, whatever it is doing.

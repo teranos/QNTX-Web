@@ -411,6 +411,39 @@ describe('Claude - Spike', () => {
         stop();
     });
 
+    // A poll asked before the dropped say was taken as the node's says nothing of the followed turn.
+    test('a poll answered late, from before the turn was followed, does not end it', async () => {
+        const body = document.createElement('div');
+        let answering = false;
+        let holding = false;
+        const held: Array<(is: ClaudeAm) => void> = [];
+        const sent: string[] = [];
+        let drop: (err: Error) => void = () => {};
+        const stop = drawClaude(body, node({
+            am: () => holding ? new Promise<ClaudeAm>(resolve => { held.push(resolve); }) : Promise.resolve({ ...am, answering }),
+            say: (says) => { sent.push(says); return sent.length === 1 ? new Promise<ClaudeSaid>((_, reject) => { drop = reject; }) : Promise.resolve(answered); },
+        }), 1);
+        await settled();
+        holding = true;
+        say(body, 'first');
+        await settled();
+        expect(held.length).toBeGreaterThan(0);
+        holding = false;
+        answering = true;
+        drop(new TypeError('Load failed'));
+        await settled();
+        say(body, 'second');
+        await settled();
+        // What the node said of the turn before it had the words comes back now.
+        for (const resolve of held.splice(0)) resolve({ ...am, answering: false });
+        await settled();
+        expect(sent).toEqual(['first']);
+        answering = false;
+        for (let tries = 0; sent.length < 2 && tries < 50; tries++) await settled();
+        expect(sent).toEqual(['first', 'second']);
+        stop();
+    });
+
     // Stopping a followed turn is no stop of the next say: its refusal is drawn.
     test('a followed turn stopped leaves the next say its own refusal', async () => {
         const body = document.createElement('div');

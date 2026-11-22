@@ -454,6 +454,8 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     let stoppedByThePerson = false;
     // A say whose connection dropped while the node had the words: its turn is followed to its end.
     let followed = false;
+    // Counts the turns taken as followed: what the node said before one was taken says nothing of it.
+    let taken = 0;
 
     // A row of what waits to be said.
     // "WHEN I PRESS ON THE PENDING MESSAGE AGAIN, IT IS SAYING, SEND NOW? AND THEN YOU CLICK ON IT, AND YOU INTERRUPT AND SEND IT NOW"
@@ -502,12 +504,13 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         if (following) return;
         listen();
         following = setInterval(() => {
+            const asked = taken;
             node.am()
                 .then(is => {
                     // With live in hand the turn is drawn as it goes; the session is read once it ended.
                     if (is.session) { reading = is.session; if (!node.live) void read(); }
                     if (is.answering) listen();
-                    if (!is.answering && (!sending || followed)) ended();
+                    if (asked === taken && !is.answering && (!sending || followed)) ended();
                 })
                 .catch((err: unknown) => { fails('follow', err); if (!sending) settle(); });
         }, every);
@@ -599,6 +602,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                             if (!had) { refused(err); return; }
                             // Still a turn going: what is said meanwhile waits behind it, as behind any say.
                             followed = true;
+                            taken++;
                             follow();
                         }, () => refused(err));
                     return;
@@ -632,8 +636,9 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         send.disabled = true;
         failed.replaceChildren();
         stoppedByThePerson = true;
+        const asked = taken;
         node.stop!()
-            .then(is => { if (!is.answering && (!sending || followed)) ended(); })
+            .then(is => { if (asked === taken && !is.answering && (!sending || followed)) ended(); })
             .catch((err: unknown) => { stoppedByThePerson = false; fails('stop', err); })
             .finally(() => { send.disabled = false; });
     };

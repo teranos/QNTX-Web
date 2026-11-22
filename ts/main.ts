@@ -306,7 +306,7 @@ async function init(): Promise<void> {
     // "on my OK"
     // "not me searhing for it in the ui"
     // A link naming a token opens that token, where Revoke and Enable are.
-    // With press=revoke it asks for that one press, and says so.
+    // 「[Fable 5.2] With press=revoke it asks for that one press, and says so.」
     const token = new URLSearchParams(location.search).get('token');
     if (token && who) {
         const { openTokenElement } = await import('./token-element.ts');

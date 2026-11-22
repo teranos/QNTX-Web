@@ -389,6 +389,34 @@ describe('Claude - Spike', () => {
         } finally { shelved = null; }
     });
 
+    // Stopped while the picture went up, and the upload then failed: nothing was said, so nothing is let go.
+    test('a picture whose upload fails after a stop is a refusal: the words are kept', async () => {
+        const body = document.createElement('div');
+        const sent: string[] = [];
+        let fail: (err: Error) => void = () => {};
+        shelved = () => new Promise<realFiles.FileUploadResult>((_, reject) => { fail = reject; });
+        try {
+            const stop = drawClaude(body, node({
+                say: (says) => { sent.push(says); return Promise.resolve(answered); },
+                stop: () => Promise.resolve({ ...am, answering: false }),
+            }), 1);
+            await settled();
+            const pick = body.querySelector<HTMLInputElement>('.claude-pick')!;
+            Object.defineProperty(pick, 'files', { value: [new Blob(['shot'], { type: 'image/png' })], configurable: true });
+            pick.dispatchEvent(new Event('change'));
+            say(body, 'look at this');
+            await settled();
+            body.querySelector<HTMLButtonElement>('.claude-send')!.click();
+            await settled();
+            fail(new TypeError('Load failed'));
+            await settled();
+            expect(sent).toEqual([]);
+            expect(failedShown(body)).toBe(true);
+            expect(body.querySelector<HTMLTextAreaElement>('.claude-says')!.value).toBe('look at this');
+            stop();
+        } finally { shelved = null; }
+    });
+
     // The followed turn is still a turn going: what is said meanwhile waits behind it, and is said once it ended.
     test('words said while a dropped turn is followed wait behind it, and are said when it ends', async () => {
         const body = document.createElement('div');

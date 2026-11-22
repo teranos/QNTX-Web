@@ -578,6 +578,8 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                 const next = waiting.shift();
                 if (next) { next.row?.remove(); sayIt(next); }
             }, (err: unknown) => {
+                // A say never made was never said, stopped or not: its words and picture are refused, kept.
+                if (!made) { refused(err); return; }
                 // Stopped by the person: the turn ended as they asked, and what waits is said.
                 if (stoppedByThePerson) {
                     stoppedByThePerson = false;
@@ -592,7 +594,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                 // let the connection go), which is not a refusal: the node may have the words and be answering.
                 // It is asked: answering, or holding the words as the last it was said, the turn is the node's
                 // and is followed to its end; neither, and they were refused.
-                if (err instanceof TypeError && made) {
+                if (err instanceof TypeError) {
                     node.am()
                         .then(is => is.answering || node.read().then(read => {
                             const said = (read?.turns ?? []).filter(turn => turn.speaker === 'human' || turn.speaker === 'person');

@@ -383,6 +383,37 @@ describe('Claude - Spike', () => {
         stop();
     });
 
+    // Stopped, the session is read before what waits is said: the next say counts from the turn the node kept.
+    test('the same words waiting behind a stopped turn, dropped and never had, are a refusal', async () => {
+        const body = document.createElement('div');
+        const kept: SessionRead = { ...session, turns: [...session.turns, { at: '2026-10-05T09:01:00Z', speaker: 'human', text: 'continue', of: 'p-4' }] };
+        let recorded = false;
+        let says = 0;
+        let stopFirst: (err: Error) => void = () => {};
+        const stop = drawClaude(body, node({
+            say: () => {
+                if (++says > 1) return dropped();
+                recorded = true;
+                return new Promise<ClaudeSaid>((_, reject) => { stopFirst = reject; });
+            },
+            stop: () => { stopFirst(new Error('stopped')); return Promise.resolve({ ...am, answering: false }); },
+            read: () => Promise.resolve(recorded ? kept : session),
+            // Drawn as it goes, the session is not read while the turn is followed: only once it ended.
+            live: () => () => {},
+        }, { ...am, session: SESSION }), 1);
+        await settled();
+        say(body, 'continue');
+        await settled();
+        say(body, 'continue');
+        await settled();
+        body.querySelector<HTMLButtonElement>('.claude-send')!.click();
+        for (let tries = 0; says < 2 && tries < 50; tries++) await settled();
+        await settled();
+        expect(says).toBe(2);
+        expect(failedShown(body)).toBe(true);
+        stop();
+    });
+
     // A picture whose upload dropped never reached the say: the node cannot have the words, whatever it is doing.
     test('a dropped connection while the picture goes up is a refusal, even while the node answers', async () => {
         const body = document.createElement('div');

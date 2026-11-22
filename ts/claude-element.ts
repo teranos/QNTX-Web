@@ -492,16 +492,17 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         else status.replaceChildren(context);
     };
 
-    const settle = () => {
+    const settle = (): Promise<void> => {
         if (following) { clearInterval(following); following = null; }
         if (listening) { listening(); listening = null; }
         // The turn is in the session now, read whole: its rows of the live view are done once it is drawn,
         // and the rows of a turn said after it are that turn's.
         const done = Array.from(live.children);
-        if (reading) void read().then(() => { for (const row of done) row.remove(); });
-        else live.replaceChildren();
+        const drawn = reading ? read().then(() => { for (const row of done) row.remove(); }) : Promise.resolve();
+        if (!reading) live.replaceChildren();
         draft = null;
         hold(false);
+        return drawn;
     };
 
     // A turn that is going is read again and again until the node says it ended.
@@ -590,10 +591,13 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                 // Stopped by the person: the turn ended as they asked, and what waits is said.
                 if (stoppedByThePerson) {
                     stoppedByThePerson = false;
-                    sending = false;
-                    settle();
-                    const next = waiting.shift();
-                    if (next) { next.row?.remove(); sayIt(next); }
+                    // Whether the node kept the stopped turn is read, not guessed: what waits is said once the
+                    // session is read, so it counts from the turns the node holds. Until then it is still a say going.
+                    void settle().then(() => {
+                        sending = false;
+                        const next = waiting.shift();
+                        if (next) { next.row?.remove(); sayIt(next); }
+                    });
                     return;
                 }
                 // "The way that we do this error message is weird if we can still message"

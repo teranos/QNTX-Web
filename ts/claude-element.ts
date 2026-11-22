@@ -602,6 +602,8 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                         }))
                         .then(had => {
                             if (!had) { refused(err); return; }
+                            // "The chat was left: what the node answers after that starts nothing."
+                            if (left) return;
                             // Still a turn going: what is said meanwhile waits behind it, as behind any say.
                             followed = true;
                             taken++;

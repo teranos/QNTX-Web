@@ -472,6 +472,32 @@ describe('Claude - Spike', () => {
         stop();
     });
 
+    // "The chat was left: what the node answers after that starts nothing": a dropped say asked about
+    // as the chat is left is not followed, and what waited is not said.
+    test('a dropped say answered for after the chat was left starts nothing', async () => {
+        const body = document.createElement('div');
+        let answering = true;
+        let holding = false;
+        const held: Array<(is: ClaudeAm) => void> = [];
+        const sent: string[] = [];
+        const stop = drawClaude(body, node({
+            am: () => holding ? new Promise<ClaudeAm>(resolve => { held.push(resolve); }) : Promise.resolve({ ...am, answering }),
+            say: (says) => { sent.push(says); return sent.length === 1 ? dropped() : Promise.resolve(answered); },
+        }), 1);
+        await settled();
+        holding = true;
+        say(body, 'first');
+        say(body, 'second');
+        await settled();
+        stop();
+        holding = false;
+        for (const resolve of held.splice(0)) resolve({ ...am, answering: true });
+        await settled();
+        answering = false;
+        for (let tries = 0; tries < 20; tries++) await settled();
+        expect(sent).toEqual(['first']);
+    });
+
     // Stopping a followed turn is no stop of the next say: its refusal is drawn.
     test('a followed turn stopped leaves the next say its own refusal', async () => {
         const body = document.createElement('div');

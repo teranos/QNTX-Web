@@ -431,6 +431,8 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
     // How many turns of the person's the session holds, as far as this chat knows: a say whose connection
     // dropped is the node's only when the session holds one more of them than when it was made.
     let spoken: number | null = null;
+    // Only a read asked from here on may set it: one asked before a stop says nothing of the turn stopped.
+    let countsFrom = 0;
     const spokenIn = (read: SessionRead | null | undefined) => (read?.turns ?? []).filter(turn => turn.speaker === 'human' || turn.speaker === 'person').length;
     const read = (): Promise<void> => {
         const asked = ++readsAsked;
@@ -438,7 +440,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
         .then(answer => {
             if (!answer || asked < readDrawn) return;
             readDrawn = asked;
-            spoken = Math.max(spoken ?? 0, spokenIn(answer));
+            if (asked >= countsFrom) spoken = Math.max(spoken ?? 0, spokenIn(answer));
             // The column is drawn anew: where it stood is read before, and a
             // reader at the bottom is kept there; one who scrolled up is not moved.
             const drawn = session.querySelector('.chat-col') !== null;
@@ -594,6 +596,7 @@ export function drawClaude(body: HTMLElement, node: NodeAgent = theNode, every: 
                     // Whether the node kept the stopped turn is not known until the session is read: unread
                     // (no session yet, or the read failed), a say that drops after it is refused, its words kept.
                     spoken = null;
+                    countsFrom = readsAsked + 1;
                     // Whether the node kept the stopped turn is read, not guessed: what waits is said once the
                     // session is read, so it counts from the turns the node holds. Until then it is still a say going.
                     void settle().then(() => {

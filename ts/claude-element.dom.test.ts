@@ -430,6 +430,46 @@ describe('Claude - Spike', () => {
             : Promise.resolve(kept));
     });
 
+    // A read asked before the stop says nothing of the turn stopped: landing after it, it is no count to go by.
+    test('a read from before the stop, landing after it, gives the next say no count: dropped, it is a refusal', async () => {
+        const body = document.createElement('div');
+        let phase: 'open' | 'hold' | 'fail' | 'kept' = 'open';
+        const held: Array<(read: SessionRead) => void> = [];
+        let says = 0;
+        let stopFirst: (err: Error) => void = () => {};
+        const stop = drawClaude(body, node({
+            say: () => {
+                if (++says > 1) return dropped();
+                phase = 'hold';
+                return new Promise<ClaudeSaid>((_, reject) => { stopFirst = reject; });
+            },
+            stop: () => { phase = 'fail'; stopFirst(new Error('stopped')); return Promise.resolve({ ...am, answering: false }); },
+            read: () => {
+                if (phase === 'open') return Promise.resolve(session);
+                if (phase === 'hold') return new Promise<SessionRead>(resolve => { held.push(resolve); });
+                if (phase === 'fail') {
+                    // The read after the stop fails; the reads asked before it land now, with the session as it was.
+                    phase = 'kept';
+                    for (const resolve of held.splice(0)) resolve(session);
+                    return Promise.reject(new Error('/api/agent/session: HTTP 502'));
+                }
+                return Promise.resolve(kept);
+            },
+        }, { ...am, session: SESSION }), 1);
+        await settled();
+        say(body, 'continue');
+        await settled();
+        say(body, 'continue');
+        await settled();
+        expect(held.length).toBeGreaterThan(0);
+        body.querySelector<HTMLButtonElement>('.claude-send')!.click();
+        for (let tries = 0; says < 2 && tries < 50; tries++) await settled();
+        await settled();
+        expect(says).toBe(2);
+        expect(failedShown(body)).toBe(true);
+        stop();
+    });
+
     // A picture whose upload dropped never reached the say: the node cannot have the words, whatever it is doing.
     test('a dropped connection while the picture goes up is a refusal, even while the node answers', async () => {
         const body = document.createElement('div');

@@ -183,4 +183,17 @@ table.element-table th {
     .element-table .element-wide-only {
         display: none;
     }
+
+    /* The package's fit lets nothing in an element keep a width of its own, so
+       side by side in a third of a phone the two halves were squeezed into
+       each other and broke inside their words: "act" over "ive". Stacked, each
+       half has the cell's whole width, and wraps, if it must, between words. */
+    .token-pill {
+        flex-direction: column;
+    }
+
+    .token-pill > span + span {
+        border-left: 0;
+        border-top: 1px solid var(--door-lamp-dim, #1d7a4c);
+    }
 }
